@@ -1,3 +1,25 @@
 spring:
   application:
     name: vera-backend
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://ep-cool-frog-akm70vld-pooler.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require}
+    username: ${SPRING_DATASOURCE_USERNAME:neondb_owner}
+    password: ${SPRING_DATASOURCE_PASSWORD:npg_rN9t0LpBlUIG}
+    driver-class-name: org.postgresql.Driver
+
+    jpa:
+      hibernate:
+        ddl-auto: update
+
+      show-sql: true
+      properties:
+        hibernate:
+          format_sql: true
+
+  web:
+    error:
+      include-message: always
+
+server:
+  port: 8080
