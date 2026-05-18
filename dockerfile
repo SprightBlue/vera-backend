@@ -1,10 +1,10 @@
-FROM maven:3.9.6-eclipse-temurin-25 AS build
-WORKDIR /app
+FROM eclipse-temurin:25-jdk AS build
+WORKDIR /vera
 COPY . .
-RUN mvn clean package -DskipTests
+RUN chmod +x mvnw && ./mvnw clean package -DskipTests
 
-FROM eclipse-temurin:25-jdk-alpine
-WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+FROM eclipse-temurin:25-jre-alpine
+WORKDIR /vera
+COPY --from=build /vera/target/*.jar vera.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-Xmx350m", "-Xms200m", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Xmx350m", "-Xms200m", "-jar", "vera.jar"]
