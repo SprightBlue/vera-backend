@@ -14,9 +14,9 @@ public class DashboardController {
 
         Map<String, Object> data = new HashMap<>();
 
-        data.put("alerts", 5);
-        data.put("analyses", 22);
-        data.put("highRisk", 2);
+        data.put("alerts", 10);
+        data.put("analyses", 2);
+        data.put("highRisk", 3);
 
         return data;
     }

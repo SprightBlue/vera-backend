@@ -25,6 +25,7 @@ public class SecurityConfig {
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/api/hola").permitAll()
                         .requestMatchers("/dashboard").permitAll()
+                        .requestMatchers("/alerts").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
