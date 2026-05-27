@@ -1,34 +1,24 @@
 package com.unlam.verabackend.analysis.infrastructure.dto;
 
-import lombok.Getter;
-
 import java.util.List;
 
-@Getter
-public class GeminiApiRequest {
+public record GeminiApiRequest(
+        List<Content> contents,
+        GenerationConfig generationConfig
+) {
+    public record Content(List<Part> parts) {}
+    public record Part(String text) {}
 
-    private final List<Content> contents;
+    public record GenerationConfig(
+            String responseMimeType,
+            Double temperature
+    ) {}
 
-    public GeminiApiRequest(String prompt) {
-        this.contents = List.of(new Content(List.of(new Part(prompt))));
-    }
+    public static GeminiApiRequest forPrompt(String prompt) {
+        Part part = new Part(prompt);
+        Content content = new Content(List.of(part));
+        GenerationConfig config = new GenerationConfig("application/json", 0.1);
 
-    @Getter
-    public static class Content {
-        private final List<Part> parts;
-
-        public Content(List<Part> parts) {
-            this.parts = parts;
-        }
-    }
-
-    @Getter
-    public static class Part {
-        private final String text;
-
-        public Part(String text) {
-            this.text = text;
-        }
+        return new GeminiApiRequest(List.of(content), config);
     }
 }
-

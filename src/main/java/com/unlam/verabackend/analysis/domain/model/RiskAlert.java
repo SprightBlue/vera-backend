@@ -8,18 +8,19 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Setter
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Message {
+public class RiskAlert {
     private UUID id;
-    private Long userId;
-    private String content;
-    private MessageSource source;
-    private LocalDateTime receivedAt;
+    private UUID analysisId;
+    private Long caregiverId;
+    private boolean received;
+    private LocalDateTime createdAt;
 
-    public MessageSource getSource() {
-        return this.source != null ? this.source : MessageSource.UNKNOWN;
+    public void markAsReceived() {
+        if (this.received) return;
+        this.received = true;
     }
 }

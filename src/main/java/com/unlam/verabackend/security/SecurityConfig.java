@@ -45,13 +45,16 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/api/analysis/**").permitAll()
-                .requestMatchers("/error").permitAll()
-                .anyRequest().authenticated()
+                    .requestMatchers("/").permitAll()
+                    .requestMatchers("/index.html").permitAll()
+                    .requestMatchers("/api/v1/auth/**").permitAll()
+                    .requestMatchers("/api/analysis/**").permitAll()
+                    .requestMatchers("/api/alerts/**").permitAll()
+                    .requestMatchers("/error").permitAll()
+                    .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

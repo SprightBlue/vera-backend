@@ -1,96 +1,108 @@
 package com.unlam.verabackend.analysis.presentation.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unlam.verabackend.analysis.domain.model.Analysis;
+import com.unlam.verabackend.analysis.domain.model.Message;
 import com.unlam.verabackend.analysis.domain.model.RiskLevel;
-import com.unlam.verabackend.analysis.domain.ports.in.AnalyzeTextUseCase;
-import com.unlam.verabackend.analysis.presentation.dto.AnalyzeRequestDto;
-import com.unlam.verabackend.analysis.presentation.dto.AnalysisResultDto;
-import com.unlam.verabackend.analysis.presentation.dto.ErrorDto;
+import com.unlam.verabackend.analysis.domain.ports.in.AnalyzeMessageUseCase;
+import com.unlam.verabackend.analysis.presentation.dto.MessagePresentation;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class AnalyzeControllerTest {
 
-    @Mock
-    private AnalyzeTextUseCase analyzeTextUseCase;
+    private MockMvc mockMvc;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private AnalyzeController controller;
+    @Mock
+    private AnalyzeMessageUseCase analyzeMessageUseCase;
 
     @BeforeEach
     void setUp() {
-        controller = new AnalyzeController(analyzeTextUseCase);
+        this.mockMvc = MockMvcBuilders.standaloneSetup(new AnalyzeController(analyzeMessageUseCase)).build();
     }
 
     @Test
-    void analyzeSuccessReturnsDto() {
-        AnalyzeRequestDto request = new AnalyzeRequestDto();
-        UUID messageId = UUID.randomUUID();
-        request.setId(messageId);
-        request.setUserId(1L);
-        request.setContent("Hola, este es un mensaje de prueba.");
+    @DisplayName("POST /api/analysis - Debe retornar 200 OK y mapear correctamente la respuesta del análisis")
+    void analyze_WhenValidRequest_ShouldReturnOkAndDto() throws Exception {
+        MessagePresentation requestDto = new MessagePresentation(10L, "¡Ganaste un premio urgente!", "WHATSAPP");
+        UUID mockAnalysisId = UUID.randomUUID();
+        UUID mockMessageId = UUID.randomUUID();
 
-        Analysis analysis = new Analysis(
-                UUID.randomUUID(),
-                messageId,
-                false,
-                RiskLevel.LOW,
-                "Sin patrones",
-                "Segui con normalidad",
+        Analysis mockAnalysis = new Analysis(
+                mockAnalysisId,
+                mockMessageId,
+                RiskLevel.HIGH,
+                String.valueOf(List.of("Urgencia falsa")),
+                "Ignorar el mensaje",
                 LocalDateTime.now()
         );
 
-        when(analyzeTextUseCase.analyzeMessage(any())).thenReturn(analysis);
+        when(analyzeMessageUseCase.analyzeMessage(any(Message.class))).thenReturn(mockAnalysis);
 
-        ResponseEntity<?> resp = controller.analyze(request);
-        assertEquals(200, resp.getStatusCode().value());
-        assertInstanceOf(AnalysisResultDto.class, resp.getBody());
-        AnalysisResultDto dto = (AnalysisResultDto) resp.getBody();
-        assertEquals(analysis.getId(), dto.getId());
-        assertEquals(analysis.getMessageId(), dto.getMessageId());
-        assertEquals(analysis.isThreat(), dto.isThreat());
+        mockMvc.perform(post("/api/analysis")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(mockAnalysisId.toString()))
+                .andExpect(jsonPath("$.messageId").value(mockMessageId.toString()))
+                .andExpect(jsonPath("$.riskLevel").value("Alto"))
+                .andExpect(jsonPath("$.recommendation").value("Ignorar el mensaje"));
     }
 
     @Test
-    void analyzeEmptyMessageReturnsBadRequest() {
-        AnalyzeRequestDto request = new AnalyzeRequestDto();
-        request.setId(UUID.randomUUID());
-        request.setUserId(1L);
-        request.setContent("   ");
-
-        when(analyzeTextUseCase.analyzeMessage(any())).thenThrow(new IllegalArgumentException("El mensaje no puede estar vacio"));
-
-        ResponseEntity<?> resp = controller.analyze(request);
-        assertEquals(400, resp.getStatusCode().value());
-        assertInstanceOf(ErrorDto.class, resp.getBody());
-        ErrorDto err = (ErrorDto) resp.getBody();
-        assertEquals("El mensaje no puede estar vacio", err.getMessage());
+    @DisplayName("POST /api/analysis - Debe retornar 400 Bad Request si el payload es nulo")
+    void analyze_WhenRequestBodyIsNull_ShouldReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/api/analysis")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(""))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    void analyzeFailureReturnsServerError() {
-        AnalyzeRequestDto request = new AnalyzeRequestDto();
-        request.setId(UUID.randomUUID());
-        request.setUserId(1L);
-        request.setContent("Hola");
+    @DisplayName("POST /api/analysis - Debe retornar 400 Bad Request si el caso de uso arroja error de validación")
+    void analyze_WhenUseCaseThrowsIllegalArgument_ShouldReturnBadRequest() throws Exception {
+        MessagePresentation requestDto = new MessagePresentation(10L, "   ", "WHATSAPP");
 
-        when(analyzeTextUseCase.analyzeMessage(any())).thenThrow(new RuntimeException("Upstream error"));
+        when(analyzeMessageUseCase.analyzeMessage(any(Message.class)))
+                .thenThrow(new IllegalArgumentException("El mensaje a analizar no puede ser nulo"));
 
-        ResponseEntity<?> resp = controller.analyze(request);
-        assertEquals(500, resp.getStatusCode().value());
-        assertInstanceOf(ErrorDto.class, resp.getBody());
-        ErrorDto err = (ErrorDto) resp.getBody();
-        assertEquals("Upstream error", err.getMessage());
+        mockMvc.perform(post("/api/analysis")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("El mensaje a analizar no puede ser nulo"));
+    }
+
+    @Test
+    @DisplayName("POST /api/analysis - Debe retornar 500 Internal Server Error si ocurre un fallo no controlado")
+    void analyze_WhenUnexpectedException_ShouldReturnInternalServerError() throws Exception {
+        MessagePresentation requestDto = new MessagePresentation(10L, "Texto seguro", "TELEGRAM");
+
+        when(analyzeMessageUseCase.analyzeMessage(any(Message.class)))
+                .thenThrow(new RuntimeException("Error crítico de timeout externo"));
+
+        mockMvc.perform(post("/api/analysis")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("Ocurrió un error interno al procesar el análisis: Error crítico de timeout externo"));
     }
 }

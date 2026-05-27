@@ -4,14 +4,25 @@ import lombok.Getter;
 
 @Getter
 public enum MessageSource {
-    UNKNOWN("Origen No Especificado"),
+    UNKNOWN("Origen Desconocido"),
     WHATSAPP("WhatsApp"),
     TELEGRAM("Telegram");
 
-    private final String name;
+    private final String displayName;
 
-    MessageSource(String name) {
-        this.name = name;
+    MessageSource(String displayName) {
+        this.displayName = displayName;
     }
 
+    public static MessageSource fromString(String value) {
+        if (value == null) return UNKNOWN;
+
+        for (MessageSource source : MessageSource.values()) {
+            if (source.name().equalsIgnoreCase(value.trim()) ||
+                    source.getDisplayName().equalsIgnoreCase(value.trim())) {
+                return source;
+            }
+        }
+        return UNKNOWN;
+    }
 }

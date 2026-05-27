@@ -1,46 +1,36 @@
 package com.unlam.verabackend.analysis.infrastructure.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Setter
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "messages")
 public class MessageEntity {
 
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(columnDefinition = "text", nullable = false)
+    @Column(name = "content", columnDefinition = "text", nullable = false)
     private String content;
 
     @Column(name = "source_id", length = 50, nullable = false)
     private String sourceId;
 
-    @Column(name = "received_at", nullable = false)
+    @Column(name = "received_at", nullable = false, updatable = false)
     private LocalDateTime receivedAt;
-
-    public MessageEntity() {
-    }
-
-    public MessageEntity(UUID id, Long userId, String content, String sourceId, LocalDateTime receivedAt) {
-        this.id = id;
-        this.userId = userId;
-        this.content = content;
-        this.sourceId = sourceId;
-        this.receivedAt = receivedAt;
-    }
 
 }

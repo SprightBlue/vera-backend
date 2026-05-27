@@ -1,35 +1,36 @@
 package com.unlam.verabackend.analysis.infrastructure.repository;
 
 import com.unlam.verabackend.analysis.domain.model.Message;
+import com.unlam.verabackend.analysis.domain.model.MessageSource;
 import com.unlam.verabackend.analysis.domain.ports.out.MessageRepositoryPort;
 import com.unlam.verabackend.analysis.infrastructure.entity.MessageEntity;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-public class NeonMessageRepository implements MessageRepositoryPort {
+public class MessageRepositoryAdapter implements MessageRepositoryPort {
 
     private final MessageJpaRepository jpaRepository;
 
-    public NeonMessageRepository(MessageJpaRepository jpaRepository) {
+    public MessageRepositoryAdapter(MessageJpaRepository jpaRepository) {
         this.jpaRepository = jpaRepository;
     }
 
     @Override
     @Transactional
-    public void save(Message message) {
-        MessageEntity entity = toEntity(message);
+    public void save(Message domain) {
+        if (domain == null) return;
+        MessageEntity entity = toEntity(domain);
         jpaRepository.save(entity);
     }
 
-    private MessageEntity toEntity(Message message) {
-        String sourceId = message.getSource() != null ? message.getSource().name() : "UNKNOWN";
+    private MessageEntity toEntity(Message domain) {
         return new MessageEntity(
-                message.getId(),
-                message.getUserId(),
-                message.getContent(),
-                sourceId,
-                message.getReceivedAt()
+                domain.getId(),
+                domain.getUserId(),
+                domain.getContent(),
+                domain.getSource() != null ? domain.getSource().name() : MessageSource.UNKNOWN.name(),
+                domain.getReceivedAt()
         );
     }
 }

@@ -1,37 +1,21 @@
 package com.unlam.verabackend.analysis.infrastructure.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
 import java.util.List;
 
-@Getter
-@Setter
-@NoArgsConstructor
-public class GeminiApiResponse {
+public record GeminiApiResponse(List<Candidate> candidates) {
 
-    private List<Candidate> candidates;
+    public record Candidate(Content content) {}
+    public record Content(List<Part> parts) {}
+    public record Part(String text) {}
 
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public static class Candidate {
-        private Content content;
-    }
+    public String getFirstText() {
+        if (candidates != null && !candidates.isEmpty() &&
+                candidates.getFirst().content() != null &&
+                candidates.getFirst().content().parts() != null &&
+                !candidates.getFirst().content().parts().isEmpty()) {
 
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public static class Content {
-        private List<Part> parts;
-    }
-
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public static class Part {
-        private String text;
+            return candidates.getFirst().content().parts().getFirst().text();
+        }
+        return null;
     }
 }
-
