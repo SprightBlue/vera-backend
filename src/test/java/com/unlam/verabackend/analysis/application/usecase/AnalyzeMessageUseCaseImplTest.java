@@ -1,10 +1,11 @@
 package com.unlam.verabackend.analysis.application.usecase;
 
-import com.unlam.verabackend.analysis.application.service.AnalysisService;
-import com.unlam.verabackend.analysis.domain.model.*;
-import com.unlam.verabackend.analysis.domain.ports.out.*;
-import com.unlam.verabackend.analysis.infrastructure.dto.GeminiDto;
-import com.unlam.verabackend.analysis.infrastructure.dto.SafeBrowsingDto;
+import com.unlam.verabackend.application.service.AnalysisService;
+import com.unlam.verabackend.domain.model.*;
+import com.unlam.verabackend.domain.ports.out.*;
+import com.unlam.verabackend.infrastructure.dto.GeminiDto;
+import com.unlam.verabackend.infrastructure.dto.SafeBrowsingDto;
+import com.unlam.verabackend.application.usecase.AnalyzeMessageUseCaseImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,11 +1,12 @@
 package com.unlam.verabackend.analysis.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.unlam.verabackend.analysis.domain.model.Analysis;
-import com.unlam.verabackend.analysis.domain.model.Message;
-import com.unlam.verabackend.analysis.domain.model.RiskLevel;
-import com.unlam.verabackend.analysis.domain.ports.in.AnalyzeMessageUseCase;
-import com.unlam.verabackend.analysis.presentation.dto.MessagePresentation;
+import com.unlam.verabackend.domain.model.Analysis;
+import com.unlam.verabackend.domain.model.Message;
+import com.unlam.verabackend.domain.model.RiskLevel;
+import com.unlam.verabackend.domain.ports.in.AnalyzeMessageUseCase;
+import com.unlam.verabackend.presentation.controller.AnalyzeController;
+import com.unlam.verabackend.presentation.dto.MessagePresentation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

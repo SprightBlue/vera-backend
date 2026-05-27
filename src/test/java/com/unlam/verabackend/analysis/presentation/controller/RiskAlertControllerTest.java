@@ -1,7 +1,8 @@
 package com.unlam.verabackend.analysis.presentation.controller;
 
-import com.unlam.verabackend.analysis.domain.model.RiskAlert;
-import com.unlam.verabackend.analysis.domain.ports.in.MarkAlertAsReceivedUseCase;
+import com.unlam.verabackend.domain.model.RiskAlert;
+import com.unlam.verabackend.domain.ports.in.MarkAlertAsReceivedUseCase;
+import com.unlam.verabackend.presentation.controller.RiskAlertController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
