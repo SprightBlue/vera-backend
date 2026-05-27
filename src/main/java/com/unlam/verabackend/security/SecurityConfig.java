@@ -30,16 +30,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    // ✅ Solo UserRepository en el constructor — sin JwtAuthenticationFilter
     private final UserRepository userRepository;
 
-    // JwtAuthenticationFilter se inyecta como parámetro del método @Bean,
-    // no en el constructor. Así Spring rompe el ciclo: construye los beans
-    // independientes primero y los conecta al armar el FilterChain.
+ 
     @Bean
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
-        JwtAuthenticationFilter jwtAuthFilter  // ← inyección por parámetro
+        JwtAuthenticationFilter jwtAuthFilter  
     ) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
@@ -81,7 +78,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of("http://localhost:5173",
+            "https://vera-frontend-gamma.vercel.app"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(true);
