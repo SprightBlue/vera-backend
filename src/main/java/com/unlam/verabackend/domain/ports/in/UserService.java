@@ -1,4 +1,4 @@
-package com.unlam.verabackend.domain.ports.out;
+package com.unlam.verabackend.domain.ports.in;
 
 import com.unlam.verabackend.presentation.dto.AuthResponse;
 import com.unlam.verabackend.presentation.dto.LoginRequest;

@@ -1,4 +1,4 @@
-package com.unlam.verabackend.analysis.presentation.controller;
+package com.unlam.verabackend.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unlam.verabackend.domain.model.Analysis;

@@ -1,4 +1,4 @@
-package com.unlam.verabackend.analysis.presentation.controller;
+package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.domain.model.RiskAlert;
 import com.unlam.verabackend.domain.ports.in.MarkAlertAsReceivedUseCase;
