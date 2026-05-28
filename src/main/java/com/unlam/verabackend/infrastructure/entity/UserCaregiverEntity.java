@@ -13,31 +13,44 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "user_caregivers", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_user_caregiver", columnNames = {"user_id", "caregiver_id"})
-})
+@Table(name = "user_caregivers")
 public class UserCaregiverEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Usuario dueño del panel
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "caregiver_id", nullable = false)
-    private Long caregiverId;
+    // Persona protegida
+    @Column(name = "protected_person_name", nullable = false)
+    private String protectedPersonName;
 
-    @Column(name = "relationship_type_id", length = 50, nullable = false)
+    // Relación
+    @Column(name = "relationship_type_id", nullable = false)
     private String relationshipTypeId;
 
-    @Column(name = "phone", length = 50, nullable = false)
+    // Contacto
+    @Column(name = "phone")
     private String phone;
 
-    @Column(name = "email", length = 255, nullable = false)
+    @Column(name = "email")
     private String email;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    // Configuración
+
+    @Column(name = "high_risk_alerts_enabled")
+    private Boolean highRiskAlertsEnabled;
+
+    @Column(name = "weekly_summary_enabled")
+    private Boolean weeklySummaryEnabled;
+
+    @Column(name = "notification_sensitivity")
+    private String notificationSensitivity;
+
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
 }
