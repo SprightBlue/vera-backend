@@ -1,4 +1,4 @@
-package com.unlam.verabackend.application.service;
+package com.unlam.verabackend.application.helper;
 
 import com.unlam.verabackend.domain.model.Analysis;
 import com.unlam.verabackend.domain.model.Message;
@@ -18,7 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-public class AnalysisService {
+public class AnalysisHelper {
 
     public List<String> extractAllUrls(String content) {
         if (content == null || content.isBlank()) return List.of();

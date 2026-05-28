@@ -3,7 +3,7 @@ package com.unlam.verabackend.presentation.controller;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
-import com.unlam.verabackend.domain.ports.out.UserService;
+import com.unlam.verabackend.domain.ports.in.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

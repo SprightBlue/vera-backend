@@ -1,4 +1,4 @@
-package com.unlam.verabackend.analysis.application.usecase;
+package com.unlam.verabackend.application.usecase;
 
 import com.unlam.verabackend.domain.model.RiskAlert;
 import com.unlam.verabackend.domain.ports.out.RiskAlertRepositoryPort;

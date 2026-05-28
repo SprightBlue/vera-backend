@@ -1,11 +1,10 @@
-package com.unlam.verabackend.analysis.application.usecase;
+package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.AnalysisService;
+import com.unlam.verabackend.application.helper.AnalysisHelper;
 import com.unlam.verabackend.domain.model.*;
 import com.unlam.verabackend.domain.ports.out.*;
 import com.unlam.verabackend.infrastructure.dto.GeminiDto;
 import com.unlam.verabackend.infrastructure.dto.SafeBrowsingDto;
-import com.unlam.verabackend.application.usecase.AnalyzeMessageUseCaseImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,7 +38,7 @@ class AnalyzeMessageUseCaseImplTest {
     @Mock private UserCaregiverRepositoryPort userCaregiverRepositoryPort;
     @Mock private RiskAlertRepositoryPort riskAlertRepositoryPort;
 
-    @Spy private AnalysisService analysisService;
+    @Spy private AnalysisHelper analysisHelper;
 
     private AnalyzeMessageUseCaseImpl useCase;
 
@@ -50,7 +49,7 @@ class AnalyzeMessageUseCaseImplTest {
                 analysisRepositoryPort,
                 safeBrowsingApiPort,
                 geminiApiPort,
-                analysisService,
+                analysisHelper,
                 userCaregiverRepositoryPort,
                 riskAlertRepositoryPort
         );
