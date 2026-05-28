@@ -45,63 +45,45 @@ public class UserCaregiverRepositoryAdapter implements UserCaregiverRepositoryPo
                 .toList();
     }
 
-    private UserCaregiver toDomain(UserCaregiverEntity entity) {
+   private UserCaregiver toDomain(UserCaregiverEntity entity) {
 
     return new UserCaregiver(
-
             entity.getId(),
-
             entity.getUserId(),
-
-            entity.getProtectedPersonName(),
-
+            entity.getFullName(),
             RelationshipType.fromString(
                     entity.getRelationshipTypeId()
             ),
-
             entity.getPhone(),
-
             entity.getEmail(),
-
             entity.getHighRiskAlertsEnabled(),
-
             entity.getWeeklySummaryEnabled(),
-
             entity.getNotificationSensitivity(),
-
             entity.getCreatedAt()
-
     );
 
 }
 
+
+
    private UserCaregiverEntity toEntity(UserCaregiver domain) {
 
     return new UserCaregiverEntity(
-
             domain.getId(),
-
             domain.getUserId(),
-
-            domain.getProtectedPersonName(),
-
+            domain.getFullName(),
             domain.getRelationshipType() != null
                     ? domain.getRelationshipType().name()
                     : RelationshipType.UNDEFINED.name(),
-
             domain.getPhone(),
-
             domain.getEmail(),
-
             domain.getHighRiskAlertsEnabled(),
-
             domain.getWeeklySummaryEnabled(),
-
             domain.getNotificationSensitivity(),
-
             domain.getCreatedAt()
-
     );
+
+
 
 }
 }

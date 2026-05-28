@@ -20,26 +20,20 @@ public class UserCaregiverEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Usuario dueño del panel
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    // Persona protegida
     @Column(name = "protected_person_name", nullable = false)
-    private String protectedPersonName;
+    private String fullName;
 
-    // Relación
     @Column(name = "relationship_type_id", nullable = false)
     private String relationshipTypeId;
 
-    // Contacto
     @Column(name = "phone")
     private String phone;
 
     @Column(name = "email")
     private String email;
-
-    // Configuración
 
     @Column(name = "high_risk_alerts_enabled")
     private Boolean highRiskAlertsEnabled;
@@ -50,7 +44,7 @@ public class UserCaregiverEntity {
     @Column(name = "notification_sensitivity")
     private String notificationSensitivity;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
 }

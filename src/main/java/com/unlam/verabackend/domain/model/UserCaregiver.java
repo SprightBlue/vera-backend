@@ -15,29 +15,20 @@ public class UserCaregiver {
 
     private Long id;
 
-    // Usuario dueño del panel
     private Long userId;
 
-    // Persona protegida
-    private String protectedPersonName;
+    private String fullName;
 
-    // Relación
     private RelationshipType relationshipType;
 
-    // Datos de contacto
     private String phone;
 
     private String email;
 
-    // Configuración de protección
-
-    // Alertas inmediatas de riesgo alto
     private Boolean highRiskAlertsEnabled;
 
-    // Resumen semanal
     private Boolean weeklySummaryEnabled;
 
-    // LOW | MEDIUM | HIGH
     private String notificationSensitivity;
 
     private LocalDateTime createdAt;
