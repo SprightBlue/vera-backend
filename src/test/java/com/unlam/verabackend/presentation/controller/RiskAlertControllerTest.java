@@ -1,82 +1,98 @@
 package com.unlam.verabackend.presentation.controller;
 
-import com.unlam.verabackend.domain.model.RiskAlert;
-import com.unlam.verabackend.domain.ports.in.MarkAlertAsReceivedUseCase;
-import com.unlam.verabackend.presentation.controller.RiskAlertController;
+import com.unlam.verabackend.domain.model.*;
+import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class RiskAlertControllerTest {
-
-    private MockMvc mockMvc;
+public class RiskAlertControllerTest {
 
     @Mock
-    private MarkAlertAsReceivedUseCase markAlertAsReceivedUseCase;
+    private ManageRiskAlertUseCase manageRiskAlertUseCase;
+
+    @InjectMocks
+    private RiskAlertController riskAlertController;
+
+    private RiskAlert mockAlert;
+    private String mockAlertId;
 
     @BeforeEach
     void setUp() {
-        this.mockMvc = MockMvcBuilders.standaloneSetup(new RiskAlertController(markAlertAsReceivedUseCase)).build();
+        mockAlertId = UUID.randomUUID().toString();
+        UUID mockAnalysisId = UUID.randomUUID();
+
+        DomainUser mockElderly = new DomainUser(1L, "Abuelo Juan", "abuelo@mail.com", Role.ROLE_USER, LocalDateTime.now(), LocalDateTime.now(), true, true);
+        DomainUser mockCaregiver = new DomainUser(2L, "Cuidador Pedro", "pedro@mail.com", Role.ROLE_ADMIN, LocalDateTime.now(), LocalDateTime.now(), true, true);
+
+        Analysis mockAnalysis = new Analysis(mockAnalysisId, mockElderly, "Contenido sospechoso", MessageSource.TELEGRAM, RiskLevel.HIGH, "patron", "recom", LocalDateTime.now());
+
+        mockAlert = new RiskAlert(UUID.fromString(mockAlertId), mockAnalysis, mockCaregiver, false, LocalDateTime.now());
     }
 
     @Test
-    @DisplayName("POST /api/alerts/{id}/received - Debe marcar la alerta como recibida y retornar 200 OK con el DTO")
-    void received_WhenAlertExists_ShouldReturnOkAndUpdatedAlert() throws Exception {
-        UUID alertId = UUID.randomUUID();
-        UUID analysisId = UUID.randomUUID();
-        RiskAlert mockAlert = new RiskAlert(alertId, analysisId, 505L, true, LocalDateTime.now());
+    void shouldReturnActiveAlertsList() {
+        Long caregiverId = 2L;
+        when(manageRiskAlertUseCase.getActiveAlertsByCaregiver(caregiverId)).thenReturn(List.of(mockAlert));
 
-        when(markAlertAsReceivedUseCase.markAsReceived(alertId)).thenReturn(mockAlert);
+        ResponseEntity<List<RiskAlertController.RiskAlertResponse>> responseEntity = riskAlertController.getActiveAlerts(caregiverId);
 
-        mockMvc.perform(post("/api/alerts/{alertId}/received", alertId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(alertId.toString()))
-                .andExpect(jsonPath("$.analysisId").value(analysisId.toString()))
-                .andExpect(jsonPath("$.caregiverId").value(505))
-                .andExpect(jsonPath("$.received").value(true));
+        assertNotNull(responseEntity);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+
+        List<RiskAlertController.RiskAlertResponse> body = responseEntity.getBody();
+        assertNotNull(body);
+        assertEquals(1, body.size());
+
+        assertEquals(mockAlertId, body.getFirst().alertId());
+        assertEquals("Abuelo Juan", body.getFirst().protectedUserName());
+        assertEquals("Contenido sospechoso", body.getFirst().messageContent());
+        assertEquals("Telegram", body.getFirst().source());
+        assertEquals("HIGH", body.getFirst().riskLevel());
+        assertEquals("patron", body.getFirst().suspiciousPatterns());
+
+        verify(manageRiskAlertUseCase, times(1)).getActiveAlertsByCaregiver(caregiverId);
     }
 
     @Test
-    @DisplayName("POST /api/alerts/{id}/received - Debe retornar 404 Not Found si la alerta no existe en la base de datos")
-    void received_WhenAlertDoesNotExist_ShouldReturnNotFound() throws Exception {
-        UUID nonExistentId = UUID.randomUUID();
-        String expectedErrorMessage = "No se encontro la alerta con el ID especificado: " + nonExistentId;
+    void shouldReturnNoContentWhenAlertIsMarkedAsSolved() {
+        doNothing().when(manageRiskAlertUseCase).markAlertAsSolved(mockAlertId);
 
-        when(markAlertAsReceivedUseCase.markAsReceived(nonExistentId))
-                .thenThrow(new IllegalStateException(expectedErrorMessage));
+        ResponseEntity<Void> responseEntity = riskAlertController.solveAlert(mockAlertId);
 
-        mockMvc.perform(post("/api/alerts/{alertId}/received", nonExistentId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound())
-                .andExpect(content().string(expectedErrorMessage));
+        assertNotNull(responseEntity);
+        assertEquals(HttpStatus.NO_CONTENT, responseEntity.getStatusCode());
+
+        verify(manageRiskAlertUseCase, times(1)).markAlertAsSolved(mockAlertId);
     }
 
     @Test
-    @DisplayName("POST /api/alerts/{id}/received - Debe retornar 500 Internal Error si salta una excepción genérica")
-    void received_WhenUnexpectedError_ShouldReturnInternalServerError() throws Exception {
-        UUID alertId = UUID.randomUUID();
+    void shouldReturnContactMailtoLink() {
+        String expectedMailto = "mailto:abuelo@mail.com?subject=Seguimiento";
+        when(manageRiskAlertUseCase.getContactLinkForUser(mockAlertId)).thenReturn(expectedMailto);
 
-        when(markAlertAsReceivedUseCase.markAsReceived(alertId))
-                .thenThrow(new RuntimeException("Conexión perdida con el hilo de persistencia"));
+        ResponseEntity<RiskAlertController.ContactLinkResponse> responseEntity = riskAlertController.getContactLink(mockAlertId);
 
-        mockMvc.perform(post("/api/alerts/{alertId}/received", alertId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isInternalServerError())
-                .andExpect(content().string("Error interno al actualizar el estado de la alerta: Conexión perdida con el hilo de persistencia"));
+        assertNotNull(responseEntity);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+
+        RiskAlertController.ContactLinkResponse body = responseEntity.getBody();
+        assertNotNull(body);
+        assertEquals(expectedMailto, body.link());
+
+        verify(manageRiskAlertUseCase, times(1)).getContactLinkForUser(mockAlertId);
     }
 }

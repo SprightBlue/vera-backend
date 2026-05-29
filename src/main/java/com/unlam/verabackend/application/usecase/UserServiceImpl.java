@@ -4,7 +4,7 @@ import com.unlam.verabackend.infrastructure.provider.JwtService;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
-import com.unlam.verabackend.infrastructure.entity.Role;
+import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import com.unlam.verabackend.domain.ports.in.UserService;
