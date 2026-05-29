@@ -12,9 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "user_caregivers", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_user_caregiver", columnNames = {"user_id", "caregiver_id"})
-})
+@Table(name = "user_caregivers")
 public class UserCaregiverEntity {
 
     @Id
@@ -25,19 +23,28 @@ public class UserCaregiverEntity {
     @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_caregivers_user"))
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "caregiver_id", nullable = false, foreignKey = @ForeignKey(name = "fk_caregivers_caregiver"))
-    private User caregiver;
+    @Column(name = "protected_person_name", nullable = false)
+    private String fullName;
 
-    @Column(name = "relationship_type_id", length = 50, nullable = false)
+    @Column(name = "relationship_type_id", nullable = false)
     private String relationshipTypeId;
 
-    @Column(name = "phone", length = 50, nullable = false)
+    @Column(name = "phone")
     private String phone;
 
-    @Column(name = "email", length = 255, nullable = false)
+    @Column(name = "email")
     private String email;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "high_risk_alerts_enabled")
+    private Boolean highRiskAlertsEnabled;
+
+    @Column(name = "weekly_summary_enabled")
+    private Boolean weeklySummaryEnabled;
+
+    @Column(name = "notification_sensitivity")
+    private String notificationSensitivity;
+
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
+
 }

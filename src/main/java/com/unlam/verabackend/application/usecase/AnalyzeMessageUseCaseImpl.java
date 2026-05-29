@@ -1,8 +1,19 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.domain.model.*;
+import com.unlam.verabackend.application.service.AnalysisService;
+import com.unlam.verabackend.domain.model.Analysis;
+import com.unlam.verabackend.domain.model.Message;
+import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.ports.in.AnalyzeMessageUseCase;
-import com.unlam.verabackend.domain.ports.out.*;
+import com.unlam.verabackend.domain.ports.out.AnalysisRepositoryPort;
+import com.unlam.verabackend.domain.ports.out.GeminiApiPort;
+import com.unlam.verabackend.domain.ports.out.MessageRepositoryPort;
+import com.unlam.verabackend.domain.ports.out.RiskAlertRepositoryPort;
+import com.unlam.verabackend.domain.ports.out.SafeBrowsingApiPort;
+import com.unlam.verabackend.domain.ports.out.UserCaregiverRepositoryPort;
+import com.unlam.verabackend.infrastructure.dto.GeminiDto;
+import com.unlam.verabackend.infrastructure.dto.SafeBrowsingDto;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -10,52 +21,96 @@ import java.util.List;
 @Service
 public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
 
-    private final AnalysisRepository analysisRepository;
-    private final RiskAlertRepository riskAlertRepository;
-    private final UserCaregiverRepository userCaregiverRepository;
+    private final MessageRepositoryPort messageRepositoryPort;
+
+    private final AnalysisRepositoryPort analysisRepositoryPort;
+
     private final SafeBrowsingApiPort safeBrowsingApiPort;
+
     private final GeminiApiPort geminiApiPort;
 
-    public AnalyzeMessageUseCaseImpl(AnalysisRepository analysisRepository,
-                                     RiskAlertRepository riskAlertRepository,
-                                     UserCaregiverRepository userCaregiverRepository,
-                                     SafeBrowsingApiPort safeBrowsingApiPort,
-                                     GeminiApiPort geminiApiPort) {
-        this.analysisRepository = analysisRepository;
-        this.riskAlertRepository = riskAlertRepository;
-        this.userCaregiverRepository = userCaregiverRepository;
+    private final AnalysisService analysisService;
+
+    private final UserCaregiverRepositoryPort userCaregiverRepositoryPort;
+
+    private final RiskAlertRepositoryPort riskAlertRepositoryPort;
+
+    public AnalyzeMessageUseCaseImpl(
+            MessageRepositoryPort messageRepositoryPort,
+            AnalysisRepositoryPort analysisRepositoryPort,
+            SafeBrowsingApiPort safeBrowsingApiPort,
+            GeminiApiPort geminiApiPort,
+            AnalysisService analysisService,
+            UserCaregiverRepositoryPort userCaregiverRepositoryPort,
+            RiskAlertRepositoryPort riskAlertRepositoryPort
+    ) {
+
+        this.messageRepositoryPort = messageRepositoryPort;
+
+        this.analysisRepositoryPort = analysisRepositoryPort;
+
         this.safeBrowsingApiPort = safeBrowsingApiPort;
+
         this.geminiApiPort = geminiApiPort;
+
+        this.analysisService = analysisService;
+
+        this.userCaregiverRepositoryPort = userCaregiverRepositoryPort;
+
+        this.riskAlertRepositoryPort = riskAlertRepositoryPort;
+
     }
 
     @Override
     @Transactional
-    public Analysis analyzeMessage(DomainUser domainUser, String content, MessageSource source) {
-        if (content == null || content.isBlank()) throw new IllegalArgumentException("El contenido no puede estar vacío");
-        if (domainUser == null || domainUser.getId() == null) throw new IllegalArgumentException("Usuario de dominio requerido");
+    public Analysis analyzeMessage(Message message) {
+
+        if (
+                message == null
+                        || message.getContent() == null
+                        || message.getContent().isBlank()
+        ) {
+
+            throw new IllegalArgumentException(
+                    "El mensaje a analizar no puede ser nulo"
+            );
+
+        }
 
         UrlValidation urlValidation = safeBrowsingApiPort.checkUrlsInContent(content);
 
-        MessageAssessment messageAssessment = geminiApiPort.analyzeMessageContent(content, urlValidation);
+        List<String> urls =
+                analysisService.extractAllUrls(message.getContent());
 
-        Analysis analysis = Analysis.create(
-                domainUser, content, source,
-                messageAssessment.riskLevel(), messageAssessment.suspiciousPatterns(), messageAssessment.recommendation()
-        );
-        analysisRepository.save(analysis);
+        SafeBrowsingDto safeBrowsingDto =
+                safeBrowsingApiPort.checkUrls(urls);
+
+        String prompt =
+                analysisService.buildPrompt(
+                        message.getContent(),
+                        urls,
+                        safeBrowsingDto
+                );
+
+        GeminiDto geminiDto =
+                geminiApiPort.analyzeMessage(prompt);
+
+        Analysis analysis =
+                analysisService.buildAnalysis(message, geminiDto);
+
+        analysisRepositoryPort.save(analysis);
 
         if (RiskLevel.HIGH.equals(analysis.getRiskLevel())) {
-            dispatchAlertsToCaregivers(analysis);
+
+            // TODO:
+            // Cuando exista vinculación real entre usuarios
+            // y cuidadores mediante invitaciones/deeplinks,
+            // generar alertas automáticas.
+
         }
 
         return analysis;
+
     }
 
-    private void dispatchAlertsToCaregivers(Analysis analysis) {
-        List<UserCaregiver> relations = userCaregiverRepository.findByUserId(analysis.getUser().getId());
-        for (UserCaregiver relation : relations) {
-            RiskAlert alert = RiskAlert.createActive(analysis, relation.getCaregiver());
-            riskAlertRepository.save(alert);
-        }
-    }
 }
