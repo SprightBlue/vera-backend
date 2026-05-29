@@ -192,3 +192,5 @@ INSERT INTO relationship_types (id, name) VALUES
     ('FAMILY_MEMBER', 'Familiar'),
     ('TRUSTED_CONTACT', 'Contacto de Confianza'),
     ('PROFESSIONAL', 'Soporte Profesional');
+
+    DELETE FROM users;

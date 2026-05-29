@@ -7,7 +7,9 @@ import com.unlam.verabackend.infrastructure.entity.Role;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import com.unlam.verabackend.domain.ports.out.UserService;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,45 +20,105 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+
     private final PasswordEncoder passwordEncoder;
+
     private final JwtService jwtService;
+
     private final AuthenticationManager authenticationManager;
 
     @Override
     public AuthResponse register(RegisterRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("El correo electrónico ya está registrado");
+
+            throw new RuntimeException(
+                "El correo electrónico ya está registrado"
+            );
+
         }
 
         User user = new User();
+
         user.setFullName(request.getFullName());
+
         user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        user.setPassword(
+            passwordEncoder.encode(
+                request.getPassword()
+            )
+        );
+
         user.setRole(Role.ROLE_USER);
 
         userRepository.save(user);
 
-        String token = jwtService.generateToken(user);
+        String token =
+            jwtService.generateToken(user);
+
         return new AuthResponse(
+
             token,
+
             user.getEmail(),
+
             user.getFullName(),
+
             user.getRole().name()
+
         );
+
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
+
+        try {
+
+            authenticationManager.authenticate(
+
                 new UsernamePasswordAuthenticationToken(
+
                     request.getEmail(),
-                    request.getPassword())
+
+                    request.getPassword()
+
+                )
+
+            );
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                "Email o contraseña incorrectos"
+            );
+
+        }
+
+        User user = userRepository
+            .findByEmail(request.getEmail())
+            .orElseThrow(() ->
+                new RuntimeException(
+                    "Usuario no encontrado"
+                )
+            );
+
+        String token =
+            jwtService.generateToken(user);
+
+        return new AuthResponse(
+
+            token,
+
+            user.getEmail(),
+
+            user.getFullName(),
+
+            user.getRole().name()
+
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        String token = jwtService.generateToken(user);
-        return new AuthResponse(token, user.getEmail(), user.getFullName(), user.getRole().name());
     }
+
 }
