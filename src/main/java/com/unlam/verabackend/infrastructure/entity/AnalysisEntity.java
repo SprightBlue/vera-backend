@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -21,9 +20,15 @@ public class AnalysisEntity {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "message_id", nullable = false, foreignKey = @ForeignKey(name = "fk_analyses_messages"))
-    private MessageEntity message;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_analyses_user"))
+    private User user;
+
+    @Column(name = "content", columnDefinition = "text", nullable = false)
+    private String content;
+
+    @Column(name = "source_id", length = 50, nullable = false)
+    private String contentSourceId;
 
     @Column(name = "risk_level_id", length = 50, nullable = false)
     private String riskLevelId;
@@ -36,5 +41,4 @@ public class AnalysisEntity {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
 }

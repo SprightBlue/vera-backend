@@ -11,18 +11,12 @@ public enum RiskLevel {
 
     private final String displayName;
 
-    RiskLevel(String displayName) {
-        this.displayName = displayName;
-    }
+    RiskLevel(String displayName) { this.displayName = displayName; }
 
     public static RiskLevel fromString(String value) {
         if (value == null) return UNDEFINED;
-
         for (RiskLevel level : RiskLevel.values()) {
-            if (level.name().equalsIgnoreCase(value.trim()) ||
-                    level.getDisplayName().equalsIgnoreCase(value.trim())) {
-                return level;
-            }
+            if (level.name().equalsIgnoreCase(value.trim())) return level;
         }
         return UNDEFINED;
     }

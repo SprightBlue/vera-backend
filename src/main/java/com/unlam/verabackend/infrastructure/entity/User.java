@@ -1,5 +1,6 @@
 package com.unlam.verabackend.infrastructure.entity;
 
+import com.unlam.verabackend.domain.model.Role;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -67,7 +68,7 @@ public class User implements UserDetails {
         return List.of(new SimpleGrantedAuthority(role.name()));
     }
 
-     @Override
+    @Override
     public String getUsername() {
         return email;
     }

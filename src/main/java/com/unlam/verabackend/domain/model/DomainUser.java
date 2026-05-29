@@ -10,12 +10,13 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserCaregiver {
+public class DomainUser {
     private Long id;
-    private DomainUser user;
-    private DomainUser caregiver;
-    private RelationshipType relationshipType;
-    private String phone;
+    private String fullName;
     private String email;
+    private Role role;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private boolean accountNonLocked;
+    private boolean enabled;
 }

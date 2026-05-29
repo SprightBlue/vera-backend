@@ -1,7 +1,8 @@
 package com.unlam.verabackend.domain.ports.out;
 
-import com.unlam.verabackend.infrastructure.dto.GeminiDto;
+import com.unlam.verabackend.domain.model.UrlValidation;
+import com.unlam.verabackend.domain.model.MessageAssessment;
 
 public interface GeminiApiPort {
-    GeminiDto analyzeMessage(String prompt);
+    MessageAssessment analyzeMessageContent(String content, UrlValidation urlValidation);
 }

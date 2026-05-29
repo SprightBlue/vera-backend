@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
 
 @Getter
@@ -22,11 +21,13 @@ public class UserCaregiverEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_caregivers_user"))
+    private User user;
 
-    @Column(name = "caregiver_id", nullable = false)
-    private Long caregiverId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "caregiver_id", nullable = false, foreignKey = @ForeignKey(name = "fk_caregivers_caregiver"))
+    private User caregiver;
 
     @Column(name = "relationship_type_id", length = 50, nullable = false)
     private String relationshipTypeId;
@@ -39,5 +40,4 @@ public class UserCaregiverEntity {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
 }

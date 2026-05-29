@@ -1,146 +1,128 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.helper.AnalysisHelper;
 import com.unlam.verabackend.domain.model.*;
 import com.unlam.verabackend.domain.ports.out.*;
-import com.unlam.verabackend.infrastructure.dto.GeminiDto;
-import com.unlam.verabackend.infrastructure.dto.SafeBrowsingDto;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class AnalyzeMessageUseCaseImplTest {
+public class AnalyzeMessageUseCaseImplTest {
 
-    @Mock private MessageRepositoryPort messageRepositoryPort;
-    @Mock private AnalysisRepositoryPort analysisRepositoryPort;
-    @Mock private SafeBrowsingApiPort safeBrowsingApiPort;
-    @Mock private GeminiApiPort geminiApiPort;
-    @Mock private UserCaregiverRepositoryPort userCaregiverRepositoryPort;
-    @Mock private RiskAlertRepositoryPort riskAlertRepositoryPort;
+    @Mock
+    private AnalysisRepository analysisRepository;
+    @Mock
+    private RiskAlertRepository riskAlertRepository;
+    @Mock
+    private UserCaregiverRepository userCaregiverRepository;
+    @Mock
+    private SafeBrowsingApiPort safeBrowsingApiPort;
+    @Mock
+    private GeminiApiPort geminiApiPort;
 
-    @Spy private AnalysisHelper analysisHelper;
+    @InjectMocks
+    private AnalyzeMessageUseCaseImpl analyzeMessageUseCase;
 
-    private AnalyzeMessageUseCaseImpl useCase;
+    private DomainUser mockUser;
+    private UrlValidation cleanUrlValidation;
+    private UrlValidation maliciousUrlValidation;
+    private MessageAssessment lowRiskAssessment;
+    private MessageAssessment highRiskAssessment;
 
     @BeforeEach
     void setUp() {
-        useCase = new AnalyzeMessageUseCaseImpl(
-                messageRepositoryPort,
-                analysisRepositoryPort,
-                safeBrowsingApiPort,
-                geminiApiPort,
-                analysisHelper,
-                userCaregiverRepositoryPort,
-                riskAlertRepositoryPort
-        );
+        mockUser = new DomainUser(1L, "Juan Pérez", "juan@mail.com", Role.ROLE_USER, LocalDateTime.now(), LocalDateTime.now(), true, true);
+        cleanUrlValidation = new UrlValidation(false, List.of());
+        maliciousUrlValidation = new UrlValidation(true, List.of("MALWARE"));
+
+        lowRiskAssessment = new MessageAssessment(RiskLevel.LOW.name(), "Ninguno", "Todo ok");
+        highRiskAssessment = new MessageAssessment(RiskLevel.HIGH.name(), "Patrón sospechoso", "Ojo, no respondas");
     }
 
     @Test
-    @DisplayName("Debe lanzar IllegalArgumentException si el objeto Message recibido es nulo")
-    void analyzeMessage_WhenMessageIsNull_ShouldThrowException() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> useCase.analyzeMessage(null));
+    void shouldSaveAnalysisAndNotDispatchAlertsWhenRiskIsLow() {
+        String content = "Hola, cómo estás?";
+        when(safeBrowsingApiPort.checkUrlsInContent(content)).thenReturn(cleanUrlValidation);
+        when(geminiApiPort.analyzeMessageContent(content, cleanUrlValidation)).thenReturn(lowRiskAssessment);
 
-        assertEquals("El mensaje a analizar no puede ser nulo", exception.getMessage());
-        verifyNoInteractions(messageRepositoryPort, analysisRepositoryPort, safeBrowsingApiPort, geminiApiPort);
-    }
-
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {"   ", "\n", "\t"})
-    @DisplayName("Debe lanzar IllegalArgumentException si el contenido del mensaje está en blanco o vacío")
-    void analyzeMessage_WhenContentIsBlank_ShouldThrowException(String blankContent) {
-        Message message = new Message(UUID.randomUUID(), 10L, blankContent, MessageSource.WHATSAPP, LocalDateTime.now());
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> useCase.analyzeMessage(message));
-
-        assertEquals("El mensaje a analizar no puede ser nulo", exception.getMessage());
-        verifyNoInteractions(messageRepositoryPort, analysisRepositoryPort, safeBrowsingApiPort, geminiApiPort);
-    }
-
-    @ParameterizedTest
-    @MethodSource("provideUrlAndSemanticScenarios")
-    @DisplayName("Debe orquestar el flujo y disparar alertas según el nivel de riesgo analizado")
-    void analyzeMessage_WithVariousScenarios_ShouldBehaveCorrectly(
-            String messageContent,
-            SafeBrowsingDto mockSafeBrowsingResponse,
-            GeminiDto mockGeminiResponse,
-            RiskLevel expectedRiskLevel,
-            int expectedAlertsCount
-    ) {
-        Message message = new Message(UUID.randomUUID(), 50L, messageContent, MessageSource.WHATSAPP, LocalDateTime.now());
-
-        when(safeBrowsingApiPort.checkUrls(any())).thenReturn(mockSafeBrowsingResponse);
-        when(geminiApiPort.analyzeMessage(anyString())).thenReturn(mockGeminiResponse);
-
-        if (expectedRiskLevel == RiskLevel.HIGH) {
-            UserCaregiver caregiver = new UserCaregiver(1L, 50L, 999L, RelationshipType.FAMILY_MEMBER, "112233", "caregiver@mail.com", LocalDateTime.now());
-            when(userCaregiverRepositoryPort.findByUserId(50L)).thenReturn(List.of(caregiver));
-        }
-
-        Analysis result = useCase.analyzeMessage(message);
+        Analysis result = analyzeMessageUseCase.analyzeMessage(mockUser, content, MessageSource.WHATSAPP);
 
         assertNotNull(result);
-        assertEquals(expectedRiskLevel, result.getRiskLevel());
-
-        verify(messageRepositoryPort, times(1)).save(message);
-        verify(analysisRepositoryPort, times(1)).save(result);
-
-        verify(riskAlertRepositoryPort, times(expectedAlertsCount)).save(any(RiskAlert.class));
+        assertEquals(RiskLevel.LOW, result.getRiskLevel());
+        verify(analysisRepository, times(1)).save(any(Analysis.class));
+        verify(userCaregiverRepository, never()).findByUserId(anyLong());
+        verify(riskAlertRepository, never()).save(any(RiskAlert.class));
     }
 
-    private static Stream<Arguments> provideUrlAndSemanticScenarios() {
-        return Stream.of(
-                Arguments.of(
-                        "Hola ma, avísame cuando llegues a casa.",
-                        SafeBrowsingDto.empty(),
-                        new GeminiDto("LOW", "Mensaje familiar totalmente cotidiano", "No requiere ninguna acción"),
-                        RiskLevel.LOW,
-                        0
-                ),
+    @Test
+    void shouldSaveAnalysisAndDispatchAlertsToCaregiverWhenRiskIsHigh() {
+        String content = "Urgente, dame tu clave bancaria";
+        DomainUser mockCaregiver = new DomainUser(2L, "Pedro Cuidador", "pedro@mail.com", Role.ROLE_ADMIN, LocalDateTime.now(), LocalDateTime.now(), true, true);
 
-                Arguments.of(
-                        "Te paso la receta de la torta que me pediste: https://recetas-de-cocina.com/torta",
-                        SafeBrowsingDto.empty(),
-                        new GeminiDto("LOW", "Enlace legítimo a un portal gastronómico común", "Podes navegar el sitio de recetas"),
-                        RiskLevel.LOW,
-                        0
-                ),
-
-                Arguments.of(
-                        "SU CUENTA HA SIDO SUSPENDIDA. Ingrese aquí para reactivar sus credenciales: http://banco-fraude-alerta.com",
-                        new SafeBrowsingDto(true, 1, List.of("SOCIAL_ENGINEERING"), List.of("http://banco-fraude-alerta.com")),
-                        new GeminiDto("HIGH", "Phishing directo detectado por base de datos de amenazas globales", "Elimina el mensaje inmediatamente"),
-                        RiskLevel.HIGH,
-                        1
-                ),
-
-                Arguments.of(
-                        "Hola abuela, soy tu nieto más grande. Cambié el número porque se me rompió el otro. Necesito que vayas al banco a sacar todos los dólares porque va a haber un corralito financiero y pasa un amigo mío contador a buscarlos por tu casa en media hora.",
-                        SafeBrowsingDto.empty(),
-                        new GeminiDto("HIGH", "Detección semántica de estafa por manipulación psicológica y urgencia de activos", "No entregues dinero ni valores a nadie. Cortá la comunicación y llamá a tu nieto directamente a su número de teléfono habitual."),
-                        RiskLevel.HIGH,
-                        1
-                )
+        UserCaregiver mockRelation = new UserCaregiver(
+                1L,
+                mockUser,
+                mockCaregiver,
+                RelationshipType.FAMILY_MEMBER,
+                "+541112345678",
+                "pedro@mail.com",
+                LocalDateTime.now()
         );
+
+        when(safeBrowsingApiPort.checkUrlsInContent(content)).thenReturn(cleanUrlValidation);
+        when(geminiApiPort.analyzeMessageContent(content, cleanUrlValidation)).thenReturn(highRiskAssessment);
+        when(userCaregiverRepository.findByUserId(mockUser.getId())).thenReturn(List.of(mockRelation));
+
+        Analysis result = analyzeMessageUseCase.analyzeMessage(mockUser, content, MessageSource.TELEGRAM);
+
+        assertNotNull(result);
+        assertEquals(RiskLevel.HIGH, result.getRiskLevel());
+        verify(analysisRepository, times(1)).save(any(Analysis.class));
+        verify(userCaregiverRepository, times(1)).findByUserId(mockUser.getId());
+        verify(riskAlertRepository, times(1)).save(any(RiskAlert.class));
+    }
+
+    @Test
+    void shouldPassDangerFlagToAnalyzerWhenUrlIsMalicious() {
+        String content = "Gané un premio acá: http://link-clonado.com";
+        when(safeBrowsingApiPort.checkUrlsInContent(content)).thenReturn(maliciousUrlValidation);
+        when(geminiApiPort.analyzeMessageContent(content, maliciousUrlValidation)).thenReturn(highRiskAssessment);
+        when(userCaregiverRepository.findByUserId(mockUser.getId())).thenReturn(List.of());
+
+        Analysis result = analyzeMessageUseCase.analyzeMessage(mockUser, content, MessageSource.WHATSAPP);
+
+        assertNotNull(result);
+        verify(safeBrowsingApiPort, times(1)).checkUrlsInContent(content);
+        verify(geminiApiPort, times(1)).analyzeMessageContent(content, maliciousUrlValidation);
+    }
+
+    @Test
+    void shouldPassCleanFlagToAnalyzerWhenUrlIsSafe() {
+        String content = "Mirá este video de gatitos: https://youtube.com";
+        when(safeBrowsingApiPort.checkUrlsInContent(content)).thenReturn(cleanUrlValidation);
+        when(geminiApiPort.analyzeMessageContent(content, cleanUrlValidation)).thenReturn(lowRiskAssessment);
+
+        Analysis result = analyzeMessageUseCase.analyzeMessage(mockUser, content, MessageSource.WHATSAPP);
+
+        assertNotNull(result);
+        assertEquals(RiskLevel.LOW, result.getRiskLevel());
+        verify(safeBrowsingApiPort, times(1)).checkUrlsInContent(content);
+        verify(geminiApiPort, times(1)).analyzeMessageContent(content, cleanUrlValidation);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenContentIsEmpty() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> analyzeMessageUseCase.analyzeMessage(mockUser, "", MessageSource.WHATSAPP));
+
+        assertEquals("El contenido no puede estar vacío", exception.getMessage());
     }
 }

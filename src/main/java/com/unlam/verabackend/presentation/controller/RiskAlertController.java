@@ -1,56 +1,63 @@
 package com.unlam.verabackend.presentation.controller;
 
+import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
 import com.unlam.verabackend.domain.model.RiskAlert;
-import com.unlam.verabackend.domain.ports.in.MarkAlertAsReceivedUseCase;
-import com.unlam.verabackend.presentation.dto.RiskAlertPresentation;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/alerts")
+@RequestMapping("/api/v1/risk-alerts")
 public class RiskAlertController {
 
-    private final MarkAlertAsReceivedUseCase markAlertAsReceivedUseCase;
+    private final ManageRiskAlertUseCase manageRiskAlertUseCase;
 
-    public RiskAlertController(MarkAlertAsReceivedUseCase markAlertAsReceivedUseCase) {
-        this.markAlertAsReceivedUseCase = markAlertAsReceivedUseCase;
+    public RiskAlertController(ManageRiskAlertUseCase manageRiskAlertUseCase) {
+        this.manageRiskAlertUseCase = manageRiskAlertUseCase;
     }
 
-    @PostMapping("/{alertId}/received")
-    public ResponseEntity<?> received(@PathVariable UUID alertId) {
-        try {
-            if (alertId == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("El ID de la alerta no puede ser nulo");
-            }
+    @GetMapping("/caregiver/{caregiverId}/active")
+    public ResponseEntity<List<RiskAlertResponse>> getActiveAlerts(@PathVariable Long caregiverId) {
+        List<RiskAlert> alerts = manageRiskAlertUseCase.getActiveAlertsByCaregiver(caregiverId);
 
-            RiskAlert alert = markAlertAsReceivedUseCase.markAsReceived(alertId);
+        List<RiskAlertResponse> response = alerts.stream()
+                .map(alert -> new RiskAlertResponse(
+                        alert.getId().toString(),
+                        alert.getAnalysis().getUser().getFullName(),
+                        alert.getAnalysis().getContent(),
+                        alert.getAnalysis().getMessageSource().getDisplayName(),
+                        alert.getAnalysis().getRiskLevel().name(),
+                        alert.getAnalysis().getSuspiciousPatterns(),
+                        alert.getCreatedAt()
+                ))
+                .toList();
 
-            return ResponseEntity.ok(toResponse(alert));
-
-        } catch (IllegalArgumentException | IllegalStateException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ex.getMessage());
-
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error interno al actualizar el estado de la alerta: " + ex.getMessage());
-        }
+        return ResponseEntity.ok(response);
     }
 
-    private RiskAlertPresentation toResponse(RiskAlert alert) {
-        return new RiskAlertPresentation(
-                alert.getId(),
-                alert.getAnalysisId(),
-                alert.getCaregiverId(),
-                alert.isReceived(),
-                alert.getCreatedAt()
-        );
+    @PatchMapping("/{alertId}/solve")
+    public ResponseEntity<Void> solveAlert(@PathVariable String alertId) {
+        manageRiskAlertUseCase.markAlertAsSolved(alertId);
+        return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{alertId}/contact-link")
+    public ResponseEntity<ContactLinkResponse> getContactLink(@PathVariable String alertId) {
+        String mailtoLink = manageRiskAlertUseCase.getContactLinkForUser(alertId);
+        return ResponseEntity.ok(new ContactLinkResponse(mailtoLink));
+    }
+
+    public record RiskAlertResponse(
+            String alertId,
+            String protectedUserName,
+            String messageContent,
+            String source,
+            String riskLevel,
+            String suspiciousPatterns,
+            LocalDateTime createdAt
+    ) {}
+
+    public record ContactLinkResponse(String link) {}
 }
