@@ -127,4 +127,39 @@ public class JwtServiceTest {
 
         assertTrue(jwtService.isTokenValid(token, user));
     }
+
+@Test
+void extractUsernameDeberiaFallarConTokenNulo() {
+    assertThrows(Exception.class, () ->
+            jwtService.extractUsername(null));
+}
+
+@Test
+void isTokenValidDeberiaRetornarFalseConTokenVacio() {
+    boolean valido = jwtService.isTokenValid("", user);
+
+    assertFalse(valido);
+}
+
+@Test
+void tokenGeneradoDeberiaComenzarConFormatoJwt() {
+    String token = jwtService.generateToken(user);
+
+    assertTrue(token.contains("."));
+}
+
+@Test
+void deberiaGenerarTokenParaUsuarioConRoleAdmin() {
+    User admin = new User();
+    admin.setEmail("admin@test.com");
+    admin.setPassword("Admin123");
+    admin.setFullName("Admin");
+    admin.setRole(Role.ROLE_ADMIN);
+
+    String token = jwtService.generateToken(admin);
+
+    assertNotNull(token);
+    assertEquals("admin@test.com", jwtService.extractUsername(token));
+}
+
 }
