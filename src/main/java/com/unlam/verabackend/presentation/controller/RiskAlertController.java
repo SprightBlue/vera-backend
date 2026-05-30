@@ -5,12 +5,10 @@ import com.unlam.verabackend.domain.ports.in.GetAlertDetailUseCase;
 import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
 import com.unlam.verabackend.domain.model.RiskAlert;
 import com.unlam.verabackend.presentation.mapper.AlertPresentationMapper;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -72,11 +70,7 @@ public class RiskAlertController {
 
 
     @GetMapping("/{alertId}")
-    public ResponseEntity<?> getDetail(@PathVariable UUID alertId, @AuthenticationPrincipal(expression = "id") Long requestingUserId) throws AccessDeniedException {
-        if (requestingUserId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
+    public ResponseEntity<?> getDetail(@PathVariable UUID alertId, @AuthenticationPrincipal(expression = "id") Long requestingUserId) {
         AlertDetail detail = getAlertDetailUseCase.getDetail(alertId, requestingUserId);
         return ResponseEntity.ok(AlertPresentationMapper.toDetailPresentation(detail));
     }
