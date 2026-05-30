@@ -5,11 +5,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -30,35 +31,38 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    // ✅ Solo UserRepository en el constructor — sin JwtAuthenticationFilter
     private final UserRepository userRepository;
 
-    // JwtAuthenticationFilter se inyecta como parámetro del método @Bean,
-    // no en el constructor. Así Spring rompe el ciclo: construye los beans
-    // independientes primero y los conecta al armar el FilterChain.
     @Bean
     public SecurityFilterChain securityFilterChain(
-        HttpSecurity http,
-        JwtAuthenticationFilter jwtAuthFilter  // ← inyección por parámetro
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthFilter
     ) throws Exception {
+
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/").permitAll()
-                    .requestMatchers("/index.html").permitAll()
-                    .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/api/v1/analysis/**").permitAll()
-                    .requestMatchers("/api/v1/risk-alerts/**").permitAll()
-                    .requestMatchers("/dashboard").permitAll()
-                    .requestMatchers("/alerts").permitAll()
-                    .requestMatchers("/error").permitAll()
-                    .anyRequest().authenticated()
+
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                .requestMatchers("/").permitAll()
+                .requestMatchers("/index.html").permitAll()
+
+                .requestMatchers("/api/v1/auth/**").permitAll()
+
+                .requestMatchers("/api/v1/analysis/**").authenticated()
+                .requestMatchers("/api/v1/risk-alerts/**").authenticated()
+
+                .anyRequest().authenticated()
             )
-            .sessionManagement(session -> session
-                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(
+                jwtAuthFilter,
+                UsernamePasswordAuthenticationFilter.class
+            );
 
         return http.build();
     }
@@ -66,9 +70,11 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> userRepository.findByEmail(username)
-            .orElseThrow(() -> new UsernameNotFoundException(
-                "Usuario no encontrado: " + username
-            ));
+            .orElseThrow(() ->
+                new UsernameNotFoundException(
+                    "Usuario no encontrado: " + username
+                )
+            );
     }
 
     @Bean
@@ -78,31 +84,47 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-        AuthenticationConfiguration config
+            AuthenticationConfiguration config
     ) throws Exception {
         return config.getAuthenticationManager();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration config = new CorsConfiguration();
+
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+
+        config.setAllowedMethods(List.of(
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS"
+        ));
+
+        config.setAllowedHeaders(List.of("*"));
+
         config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+            new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", config);
+
         return source;
     }
 
     @Bean
-        public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(
-    JwtAuthenticationFilter filter
-    ) {
-    FilterRegistrationBean<JwtAuthenticationFilter> registration =
-        new FilterRegistrationBean<>(filter);
-    registration.setEnabled(false);
-    return registration;
-}
+    public FilterRegistrationBean<JwtAuthenticationFilter>
+    jwtFilterRegistration(JwtAuthenticationFilter filter) {
+
+        FilterRegistrationBean<JwtAuthenticationFilter> registration =
+            new FilterRegistrationBean<>(filter);
+
+        registration.setEnabled(false);
+
+        return registration;
+    }
 }
