@@ -29,7 +29,8 @@ class AlertServiceTest {
 
     @Test
     void getAllAlerts_ShouldReturnListOfAlertResponseDTO() {
-        
+        Long caregiverId = 2L;
+
         RiskAlertEntity mockAlert = mock(RiskAlertEntity.class, Answers.RETURNS_DEEP_STUBS);
         
         UUID fakeId = UUID.randomUUID();
@@ -39,12 +40,10 @@ class AlertServiceTest {
         when(mockAlert.getAnalysis().getSuspiciousPatterns()).thenReturn("Enlace de phishing detectado");
         when(mockAlert.getCreatedAt()).thenReturn(LocalDateTime.now());
 
-        when(riskAlertJpaRepository.findAll()).thenReturn(List.of(mockAlert));
+        when(riskAlertJpaRepository.findAllByCaregiverId(caregiverId)).thenReturn(List.of(mockAlert));
 
-        
-        List<AlertResponseDTO> result = alertService.getAllAlerts();
+        List<AlertResponseDTO> result = alertService.getAlertsByCaregiver(caregiverId);
 
-        
         assertEquals(1, result.size());
         assertEquals("HIGH", result.get(0).riskLevel());
         assertEquals("WHATSAPP", result.get(0).source());

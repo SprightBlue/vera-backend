@@ -27,6 +27,8 @@ class AlertControllerTest {
 
     @Test
     void getAlerts_ShouldReturn200AndAlertList() {
+        Long caregiverId = 2L;
+
         AlertResponseDTO alert = new AlertResponseDTO(
                 "550e8400-e29b-41d4-a716-446655440000", 
                 "Alerta Detectada", 
@@ -35,9 +37,9 @@ class AlertControllerTest {
                 "WHATSAPP", 
                 LocalDateTime.now().toString()
         );
-        when(alertService.getAllAlerts()).thenReturn(List.of(alert));
+        when(alertService.getAlertsByCaregiver(caregiverId)).thenReturn(List.of(alert));
 
-        ResponseEntity<List<AlertResponseDTO>> response = alertController.getAlerts();
+        ResponseEntity<List<AlertResponseDTO>> response = alertController.getAlerts(caregiverId);
         assertEquals(200, response.getStatusCode().value());
         assertEquals("Alerta Detectada", response.getBody().get(0).title());
     }

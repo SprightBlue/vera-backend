@@ -16,8 +16,8 @@ public class AlertService {
         this.riskAlertJpaRepository = riskAlertJpaRepository;
     }
 
-    public List<AlertResponseDTO> getAllAlerts() {
-        List<RiskAlertEntity> riskAlerts = riskAlertJpaRepository.findAll();
+    public List<AlertResponseDTO> getAlertsByCaregiver(Long caregiverId) {
+        List<RiskAlertEntity> riskAlerts = riskAlertJpaRepository.findAllByCaregiverId(caregiverId);
 
         return riskAlerts.stream().map(alert -> {
            

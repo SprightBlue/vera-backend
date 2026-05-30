@@ -15,4 +15,11 @@ public interface RiskAlertJpaRepository extends JpaRepository<RiskAlertEntity, U
             "JOIN FETCH a.user u " +
             "WHERE c.id = :caregiverId AND r.solved = false")
     List<RiskAlertEntity> findActiveAlertsWithTree(@Param("caregiverId") Long caregiverId);
+
+    @Query("SELECT r FROM RiskAlertEntity r " +
+            "JOIN FETCH r.caregiver c " +
+            "JOIN FETCH r.analysis a " +
+            "WHERE c.id = :caregiverId " +
+            "ORDER BY r.createdAt DESC")
+    List<RiskAlertEntity> findAllByCaregiverId(@Param("caregiverId") Long caregiverId);
 }
