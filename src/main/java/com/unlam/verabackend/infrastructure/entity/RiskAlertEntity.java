@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -25,13 +24,13 @@ public class RiskAlertEntity {
     @JoinColumn(name = "analysis_id", nullable = false, foreignKey = @ForeignKey(name = "fk_alerts_analyses"))
     private AnalysisEntity analysis;
 
-    @Column(name = "caregiver_id", nullable = false)
-    private Long caregiverId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "caregiver_id", nullable = false, foreignKey = @ForeignKey(name = "fk_alerts_caregiver"))
+    private User caregiver;
 
-    @Column(name = "is_received", nullable = false)
-    private boolean received;
+    @Column(name = "solved", nullable = false)
+    private boolean solved;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
 }

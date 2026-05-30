@@ -1,9 +1,7 @@
 package com.unlam.verabackend.domain.ports.out;
 
-import com.unlam.verabackend.infrastructure.dto.SafeBrowsingDto;
-
-import java.util.List;
+import com.unlam.verabackend.domain.model.UrlValidation;
 
 public interface SafeBrowsingApiPort {
-    SafeBrowsingDto checkUrls(List<String> urls);
+    UrlValidation checkUrlsInContent(String content);
 }

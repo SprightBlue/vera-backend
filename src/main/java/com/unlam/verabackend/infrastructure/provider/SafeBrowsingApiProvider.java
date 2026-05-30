@@ -1,15 +1,16 @@
 package com.unlam.verabackend.infrastructure.provider;
 
+import com.unlam.verabackend.domain.model.UrlValidation;
 import com.unlam.verabackend.domain.ports.out.SafeBrowsingApiPort;
 import com.unlam.verabackend.infrastructure.dto.SafeBrowsingApiRequest;
 import com.unlam.verabackend.infrastructure.dto.SafeBrowsingApiResponse;
-import com.unlam.verabackend.infrastructure.dto.SafeBrowsingDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.List;
-import java.util.Objects;
+import java.net.URI;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class SafeBrowsingApiProvider implements SafeBrowsingApiPort {
@@ -23,22 +24,25 @@ public class SafeBrowsingApiProvider implements SafeBrowsingApiPort {
     }
 
     @Override
-    public SafeBrowsingDto checkUrls(List<String> urls) {
-        if (urls == null || urls.isEmpty() || apiKey == null || apiKey.isBlank()) {
-            return SafeBrowsingDto.empty();
+    public UrlValidation checkUrlsInContent(String content) {
+        if (content == null || content.isBlank() || apiKey == null || apiKey.isBlank()) {
+            return UrlValidation.empty();
+        }
+
+        List<String> extractedUrls = extractAllUrls(content);
+        if (extractedUrls.isEmpty()) {
+            return UrlValidation.empty();
         }
 
         try {
             String url = "https://safebrowsing.googleapis.com/v4/threatMatches:find?key=" + apiKey;
 
-            SafeBrowsingApiRequest request = SafeBrowsingApiRequest.forUrls(urls);
+            SafeBrowsingApiRequest request = SafeBrowsingApiRequest.forUrls(extractedUrls);
             SafeBrowsingApiResponse response = restTemplate.postForObject(url, request, SafeBrowsingApiResponse.class);
 
             if (response == null || response.matches() == null || response.matches().isEmpty()) {
-                return SafeBrowsingDto.empty();
+                return UrlValidation.empty();
             }
-
-            int matchCount = response.matches().size();
 
             List<String> threatTypes = response.matches().stream()
                     .map(SafeBrowsingApiResponse.ThreatMatch::threatType)
@@ -46,18 +50,32 @@ public class SafeBrowsingApiProvider implements SafeBrowsingApiPort {
                     .distinct()
                     .toList();
 
-            List<String> matchedUrls = response.matches().stream()
-                    .map(SafeBrowsingApiResponse.ThreatMatch::threat)
-                    .filter(Objects::nonNull)
-                    .map(SafeBrowsingApiResponse.ThreatEntry::url)
-                    .filter(Objects::nonNull)
-                    .distinct()
-                    .toList();
-
-            return new SafeBrowsingDto(true, matchCount, threatTypes, matchedUrls);
+            return new UrlValidation(true, threatTypes);
         } catch (Exception ex) {
-            System.err.println("Error en proveedor Safe Browsing. Continuando sin verificación de URL. Detalle: " + ex.getMessage());
-            return SafeBrowsingDto.empty();
+            System.err.println("Error en proveedor Safe Browsing: " + ex.getMessage());
+            return UrlValidation.empty();
         }
+    }
+
+    private List<String> extractAllUrls(String content) {
+        String regex = "(?i)\\b((?:https?://|www\\d{0,3}\\.|[a-z0-9.\\-]+==/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\".,<>?«» Rhodes“”指标‘’]))";
+        Pattern urlPattern = Pattern.compile(regex);
+        Matcher matcher = urlPattern.matcher(content);
+        Set<String> uniqueUrls = new HashSet<>();
+
+        while (matcher.find()) {
+            String rawUrl = matcher.group();
+            String candidate = rawUrl.toLowerCase().startsWith("www.") ? "http://" + rawUrl : rawUrl;
+            try {
+                URI uri = new URI(candidate);
+                String scheme = uri.getScheme();
+                if (scheme != null && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+                    uniqueUrls.add(uri.toASCIIString());
+                }
+            } catch (Exception e) {
+                uniqueUrls.add(rawUrl);
+            }
+        }
+        return uniqueUrls.stream().sorted().toList();
     }
 }
