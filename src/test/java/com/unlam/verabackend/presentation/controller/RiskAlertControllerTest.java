@@ -1,8 +1,12 @@
 package com.unlam.verabackend.presentation.controller;
 
+import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.*;
+import com.unlam.verabackend.domain.ports.in.GetAlertDetailUseCase;
 import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
+import com.unlam.verabackend.presentation.dto.AlertDetailPresentation;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,20 +23,27 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class RiskAlertControllerTest {
+class RiskAlertControllerTest {
 
     @Mock
     private ManageRiskAlertUseCase manageRiskAlertUseCase;
+
+    @Mock
+    private GetAlertDetailUseCase getAlertDetailUseCase;
 
     @InjectMocks
     private RiskAlertController riskAlertController;
 
     private RiskAlert mockAlert;
     private String mockAlertId;
+    private UUID alertUuid;
+    private Long caregiverId;
 
     @BeforeEach
     void setUp() {
-        mockAlertId = UUID.randomUUID().toString();
+        alertUuid = UUID.randomUUID();
+        mockAlertId = alertUuid.toString();
+        caregiverId = 2L;
         UUID mockAnalysisId = UUID.randomUUID();
 
         DomainUser mockElderly = new DomainUser(1L, "Abuelo Juan", "abuelo@mail.com", Role.ROLE_USER, LocalDateTime.now(), LocalDateTime.now(), true, true);
@@ -40,7 +51,7 @@ public class RiskAlertControllerTest {
 
         Analysis mockAnalysis = new Analysis(mockAnalysisId, mockElderly, "Contenido sospechoso", MessageSource.TELEGRAM, RiskLevel.HIGH, "patron", "recom", LocalDateTime.now());
 
-        mockAlert = new RiskAlert(UUID.fromString(mockAlertId), mockAnalysis, mockCaregiver, false, LocalDateTime.now());
+        mockAlert = new RiskAlert(alertUuid, mockAnalysis, mockCaregiver, false, LocalDateTime.now());
     }
 
     @Test
@@ -94,5 +105,73 @@ public class RiskAlertControllerTest {
         assertEquals(expectedMailto, body.link());
 
         verify(manageRiskAlertUseCase, times(1)).getContactLinkForUser(mockAlertId);
+    }
+
+    @Test
+    void shouldReturnAlertDetailPresentationWhenAuthorized() {
+        AlertDetail domainDetail = new AlertDetail(
+                alertUuid,
+                mockAlert.getAnalysis().getId(),
+                mockAlert.getAnalysis().getContent(),
+                mockAlert.getAnalysis().getMessageSource(),
+                mockAlert.getAnalysis().getRiskLevel(),
+                mockAlert.getAnalysis().getSuspiciousPatterns(),
+                mockAlert.getAnalysis().getRecommendation(),
+                false,
+                mockAlert.getCreatedAt()
+        );
+
+        when(getAlertDetailUseCase.getDetail(alertUuid, caregiverId)).thenReturn(domainDetail);
+
+        ResponseEntity<?> response = riskAlertController.getDetail(alertUuid, caregiverId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertInstanceOf(AlertDetailPresentation.class, response.getBody());
+
+        AlertDetailPresentation body = (AlertDetailPresentation) response.getBody();
+        assertEquals(alertUuid, body.alertId());
+        assertEquals(mockAlert.getAnalysis().getId(), body.analysisId());
+        assertEquals("Contenido sospechoso", body.messageContent());
+        assertEquals("TELEGRAM", body.messageSource());
+        assertEquals("HIGH", body.riskLevel());
+        assertEquals("Alto", body.riskLevelDisplayName());
+        assertEquals("patron", body.suspiciousPatterns());
+        assertEquals("recom", body.recommendation());
+        assertFalse(body.received());
+        assertEquals(mockAlert.getCreatedAt(), body.createdAt());
+
+        verify(getAlertDetailUseCase, times(1)).getDetail(alertUuid, caregiverId);
+    }
+
+    @Test
+    void shouldPropagateResourceNotFoundExceptionWhenAlertDoesNotExist() {
+        when(getAlertDetailUseCase.getDetail(alertUuid, caregiverId)).thenThrow(new ResourceNotFoundException("Alerta no encontrada: " + alertUuid));
+
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> riskAlertController.getDetail(alertUuid, caregiverId));
+
+        assertEquals("Alerta no encontrada: " + alertUuid, ex.getMessage());
+        verify(getAlertDetailUseCase, times(1)).getDetail(alertUuid, caregiverId);
+    }
+
+    @Test
+    void shouldPropagateResourceNotFoundExceptionWhenUserIsNotCaregiver() {
+        Long unauthorizedUserId = 99L;
+
+        when(getAlertDetailUseCase.getDetail(alertUuid, unauthorizedUserId)).thenThrow(new ResourceNotFoundException("Alerta no encontrada"));
+
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> riskAlertController.getDetail(alertUuid, unauthorizedUserId));
+
+        assertEquals("Alerta no encontrada", ex.getMessage());
+        verify(getAlertDetailUseCase, times(1)).getDetail(alertUuid, unauthorizedUserId);
+    }
+
+    @Test
+    void shouldPropagateResourceNotFoundExceptionWhenRequestingUserIdIsNull() {
+        when(getAlertDetailUseCase.getDetail(alertUuid, null)).thenThrow(new ResourceNotFoundException("Alerta no encontrada"));
+
+        assertThrows(ResourceNotFoundException.class, () -> riskAlertController.getDetail(alertUuid, null));
+
+        verify(getAlertDetailUseCase, times(1)).getDetail(alertUuid, null);
     }
 }
