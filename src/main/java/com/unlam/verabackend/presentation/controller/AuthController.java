@@ -1,6 +1,4 @@
 package com.unlam.verabackend.presentation.controller;
-
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,6 +9,7 @@ import com.unlam.verabackend.domain.ports.inbound.UserService;
 import com.unlam.verabackend.presentation.dto.request.LoginRequest;
 import com.unlam.verabackend.presentation.dto.request.RegisterRequest;
 import com.unlam.verabackend.presentation.dto.response.AuthResponse;
+
 
 @RestController
 @RequestMapping("/api/v1/auth")
