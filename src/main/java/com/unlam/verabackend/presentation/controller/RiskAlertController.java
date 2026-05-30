@@ -1,21 +1,28 @@
 package com.unlam.verabackend.presentation.controller;
 
+import com.unlam.verabackend.domain.model.AlertDetail;
+import com.unlam.verabackend.domain.ports.in.GetAlertDetailUseCase;
 import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
 import com.unlam.verabackend.domain.model.RiskAlert;
+import com.unlam.verabackend.presentation.mapper.AlertPresentationMapper;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/risk-alerts")
 public class RiskAlertController {
 
     private final ManageRiskAlertUseCase manageRiskAlertUseCase;
+    private final GetAlertDetailUseCase getAlertDetailUseCase;
 
-    public RiskAlertController(ManageRiskAlertUseCase manageRiskAlertUseCase) {
+    public RiskAlertController(ManageRiskAlertUseCase manageRiskAlertUseCase, GetAlertDetailUseCase getAlertDetailUseCase) {
         this.manageRiskAlertUseCase = manageRiskAlertUseCase;
+        this.getAlertDetailUseCase = getAlertDetailUseCase;
     }
 
     @GetMapping("/caregiver/{caregiverId}/active")
@@ -60,4 +67,11 @@ public class RiskAlertController {
     ) {}
 
     public record ContactLinkResponse(String link) {}
+
+
+    @GetMapping("/{alertId}")
+    public ResponseEntity<?> getDetail(@PathVariable UUID alertId, @AuthenticationPrincipal(expression = "id") Long requestingUserId) {
+        AlertDetail detail = getAlertDetailUseCase.getDetail(alertId, requestingUserId);
+        return ResponseEntity.ok(AlertPresentationMapper.toDetailPresentation(detail));
+    }
 }
