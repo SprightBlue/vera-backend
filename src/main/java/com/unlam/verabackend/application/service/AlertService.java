@@ -23,7 +23,7 @@ public class AlertService {
            
             String id = alert.getId().toString();
             String riskLevel = alert.getAnalysis().getRiskLevelId(); 
-            String source = alert.getAnalysis().getMessage().getSourceId();
+            String source = alert.getAnalysis().getContentSourceId();
             String description = alert.getAnalysis().getSuspiciousPatterns();
             String title = "Alerta Detectada"; // Título genérico o lógico
             String timestamp = alert.getCreatedAt().toString();

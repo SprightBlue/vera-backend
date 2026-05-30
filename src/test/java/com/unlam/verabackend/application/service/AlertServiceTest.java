@@ -35,7 +35,7 @@ class AlertServiceTest {
         UUID fakeId = UUID.randomUUID();
         when(mockAlert.getId()).thenReturn(fakeId);
         when(mockAlert.getAnalysis().getRiskLevelId()).thenReturn("HIGH");
-        when(mockAlert.getAnalysis().getMessage().getSourceId()).thenReturn("WHATSAPP");
+        when(mockAlert.getAnalysis().getContentSourceId()).thenReturn("WHATSAPP");
         when(mockAlert.getAnalysis().getSuspiciousPatterns()).thenReturn("Enlace de phishing detectado");
         when(mockAlert.getCreatedAt()).thenReturn(LocalDateTime.now());
 
