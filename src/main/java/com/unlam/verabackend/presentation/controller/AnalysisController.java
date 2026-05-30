@@ -1,6 +1,6 @@
 package com.unlam.verabackend.presentation.controller;
 
-import com.unlam.verabackend.domain.ports.in.AnalyzeMessageUseCase;
+import com.unlam.verabackend.domain.ports.inbound.AnalyzeMessageUseCase;
 import com.unlam.verabackend.domain.model.Analysis;
 import com.unlam.verabackend.domain.model.MessageSource;
 import com.unlam.verabackend.domain.model.DomainUser;

@@ -6,8 +6,9 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.unlam.verabackend.domain.model.UrlValidation;
 import com.unlam.verabackend.domain.model.MessageAssessment;
 import com.unlam.verabackend.domain.ports.out.GeminiApiPort;
-import com.unlam.verabackend.infrastructure.dto.GeminiApiRequest;
-import com.unlam.verabackend.infrastructure.dto.GeminiApiResponse;
+import com.unlam.verabackend.presentation.dto.request.GeminiApiRequest;
+import com.unlam.verabackend.presentation.dto.response.GeminiApiResponse;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;

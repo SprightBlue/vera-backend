@@ -2,8 +2,9 @@ package com.unlam.verabackend.infrastructure.provider;
 
 import com.unlam.verabackend.domain.model.UrlValidation;
 import com.unlam.verabackend.domain.ports.out.SafeBrowsingApiPort;
-import com.unlam.verabackend.infrastructure.dto.SafeBrowsingApiRequest;
-import com.unlam.verabackend.infrastructure.dto.SafeBrowsingApiResponse;
+import com.unlam.verabackend.presentation.dto.request.SafeBrowsingApiRequest;
+import com.unlam.verabackend.presentation.dto.response.SafeBrowsingApiResponse;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;

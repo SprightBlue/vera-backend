@@ -1,7 +1,8 @@
 package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.domain.model.*;
-import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
+import com.unlam.verabackend.domain.ports.inbound.ManageRiskAlertUseCase;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

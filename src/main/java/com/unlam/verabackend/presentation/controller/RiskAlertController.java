@@ -1,6 +1,6 @@
 package com.unlam.verabackend.presentation.controller;
 
-import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
+import com.unlam.verabackend.domain.ports.inbound.ManageRiskAlertUseCase;
 import com.unlam.verabackend.domain.model.RiskAlert;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

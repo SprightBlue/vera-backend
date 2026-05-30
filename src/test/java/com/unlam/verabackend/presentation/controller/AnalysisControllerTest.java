@@ -1,7 +1,8 @@
 package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.domain.model.*;
-import com.unlam.verabackend.domain.ports.in.AnalyzeMessageUseCase;
+import com.unlam.verabackend.domain.ports.inbound.AnalyzeMessageUseCase;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

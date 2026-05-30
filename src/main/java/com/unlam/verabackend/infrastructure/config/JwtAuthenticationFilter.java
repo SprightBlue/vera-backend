@@ -1,6 +1,5 @@
 package com.unlam.verabackend.infrastructure.config;
 
-import com.unlam.verabackend.infrastructure.provider.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +13,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.unlam.verabackend.domain.ports.inbound.JwtService;
 
 import java.io.IOException;
 

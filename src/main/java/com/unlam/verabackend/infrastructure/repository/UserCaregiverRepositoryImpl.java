@@ -4,7 +4,6 @@ import com.unlam.verabackend.domain.model.DomainUser;
 import com.unlam.verabackend.domain.model.RelationshipType;
 import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.domain.model.UserCaregiver;
-import com.unlam.verabackend.domain.ports.out.UserCaregiverRepository;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.entity.UserCaregiverEntity;
 import org.springframework.stereotype.Repository;

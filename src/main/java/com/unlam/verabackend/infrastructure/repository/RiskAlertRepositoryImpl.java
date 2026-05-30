@@ -1,7 +1,6 @@
 package com.unlam.verabackend.infrastructure.repository;
 
 import com.unlam.verabackend.domain.model.*;
-import com.unlam.verabackend.domain.ports.out.RiskAlertRepository;
 import com.unlam.verabackend.infrastructure.entity.AnalysisEntity;
 import com.unlam.verabackend.infrastructure.entity.RiskAlertEntity;
 import com.unlam.verabackend.infrastructure.entity.User;

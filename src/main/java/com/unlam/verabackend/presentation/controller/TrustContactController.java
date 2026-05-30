@@ -1,10 +1,10 @@
 package com.unlam.verabackend.presentation.controller;
 
-import com.unlam.verabackend.dto.GenerateInvitationRequest;
-import com.unlam.verabackend.dto.GenerateInvitationResponse;
-import com.unlam.verabackend.dto.InvitationDetailsResponse;
-import com.unlam.verabackend.dto.ProtectedPersonResponse;
-import com.unlam.verabackend.services.Interface.TrustContactService;
+import com.unlam.verabackend.presentation.dto.request.GenerateInvitationRequest;
+import com.unlam.verabackend.presentation.dto.response.GenerateInvitationResponse;
+import com.unlam.verabackend.presentation.dto.response.InvitationDetailsResponse;
+import com.unlam.verabackend.presentation.dto.response.ProtectedPersonResponse;
+import com.unlam.verabackend.domain.ports.inbound.TrustContactService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
