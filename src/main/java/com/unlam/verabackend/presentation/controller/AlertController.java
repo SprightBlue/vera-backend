@@ -1,8 +1,7 @@
 package com.unlam.verabackend.presentation.controller;
 
+import com.unlam.verabackend.presentation.dto.AlertResponseDTO;
 import com.unlam.verabackend.application.service.AlertService;
-import com.unlam.verabackend.infrastructure.entity.AlertEntity;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,8 +21,7 @@ public class AlertController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AlertEntity>> getAlerts() {
-        List<AlertEntity> alerts = alertService.getAllAlerts();
-        return ResponseEntity.ok(alerts);
+    public ResponseEntity<List<AlertResponseDTO>> getAlerts() {
+        return ResponseEntity.ok(alertService.getAllAlerts());
     }
 }

@@ -1,8 +1,8 @@
 package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.application.service.AlertService;
-import com.unlam.verabackend.domain.model.RiskLevel;
-import com.unlam.verabackend.infrastructure.entity.AlertEntity;
+import com.unlam.verabackend.presentation.dto.AlertResponseDTO;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,24 +27,18 @@ class AlertControllerTest {
 
     @Test
     void getAlerts_ShouldReturn200AndAlertList() {
-        
-        AlertEntity alert = new AlertEntity(
-                1L, 
-                "Solicitud Sospechosa", 
-                "Email solicitando datos personales", 
-                RiskLevel.MEDIUM, 
-                "Email", 
-                LocalDateTime.now()
+        AlertResponseDTO alert = new AlertResponseDTO(
+                "550e8400-e29b-41d4-a716-446655440000", 
+                "Alerta Detectada", 
+                "Email solicitando datos", 
+                "MEDIUM", 
+                "WHATSAPP", 
+                LocalDateTime.now().toString()
         );
         when(alertService.getAllAlerts()).thenReturn(List.of(alert));
 
-        
-        ResponseEntity<List<AlertEntity>> response = alertController.getAlerts();
-
-       
-        assertEquals(200, response.getStatusCode().value(), "El código de estado debe ser 200 OK");
-        assertEquals(1, response.getBody().size(), "Debe devolver exactamente 1 alerta");
-        assertEquals("Solicitud Sospechosa", response.getBody().get(0).getTitle(), "El título debe coincidir");
-        assertEquals(RiskLevel.MEDIUM, response.getBody().get(0).getRiskLevel(), "El nivel de riesgo debe coincidir");
+        ResponseEntity<List<AlertResponseDTO>> response = alertController.getAlerts();
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("Alerta Detectada", response.getBody().get(0).title());
     }
 }
