@@ -20,8 +20,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.http.HttpMethod;
+import com.unlam.verabackend.domain.repository.UserRepository;
 
-import com.unlam.verabackend.infrastructure.repository.UserRepository;
 
 import java.util.List;
 
@@ -30,12 +31,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    // ✅ Solo UserRepository en el constructor — sin JwtAuthenticationFilter
     private final UserRepository userRepository;
 
-    // JwtAuthenticationFilter se inyecta como parámetro del método @Bean,
-    // no en el constructor. Así Spring rompe el ciclo: construye los beans
-    // independientes primero y los conecta al armar el FilterChain.
     @Bean
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
@@ -49,6 +46,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/auth/**").permitAll()
                     .requestMatchers("/api/v1/analysis/**").permitAll()
                     .requestMatchers("/api/v1/risk-alerts/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/trust/invite/**").permitAll()
                     .requestMatchers("/dashboard").permitAll()
                     .requestMatchers("/alerts").permitAll()
                     .requestMatchers("/error").permitAll()
