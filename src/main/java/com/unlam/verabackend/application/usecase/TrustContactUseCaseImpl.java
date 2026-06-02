@@ -19,9 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,21 +45,21 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         String uniqueToken = UUID.randomUUID().toString();
 
         TrustInvitation invitation = TrustInvitation.builder()
-                .carer(carer)
-                .token(uniqueToken)
-                .fullName(request.getFullName())    
-                .contactInfo(request.getContactInfo())
-                .relationship(request.getRelationship())
-                .sensitivityLevel(request.getSensitivityLevel())
-                .monitorWhatsapp(request.isMonitorWhatsapp())
-                .monitorSms(request.isMonitorSms())
-                .monitorGmail(request.isMonitorGmail())
-                .monitorTelegram(request.isMonitorTelegram())
-                .notifyHighRisk(request.isNotifyHighRisk())
-                .receiveAlertSummaries(request.isReceiveAlertSummaries())
-                .allowBasicConfig(request.isAllowBasicConfig())
-                .build();
-
+            .carer(carer)
+            .token(uniqueToken)
+            .fullName(request.getFullName())    
+            .contactNumber(request.getContactNumber()) 
+            .email(request.getEmail())                
+            .relationship(request.getRelationship())
+            .sensitivityLevel(request.getSensitivityLevel())
+            .notifyHighRisk(request.isNotifyHighRisk())
+            .receiveAlertSummaries(request.isReceiveAlertSummaries())
+            .allowBasicConfig(false)
+            .monitorWhatsapp(false)
+            .monitorSms(false)
+            .monitorGmail(false)
+            .monitorTelegram(false)
+            .build();
         trustInvitationRepository.save(invitation);
 
         String fullLink = frontendUrl + "/invite/" + uniqueToken;
@@ -70,22 +70,38 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
 
 
     @Override
-    @Transactional(readOnly = true)
     public List<ProtectedPersonResponse> getMyProtectedPeople(String carerEmail) {
-       
-       
         User carer = userRepository.findByEmail(carerEmail)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Cuidador no encontrado"));
 
-        List<TrustContact> relations = trustContactRepository.findByCarerId(carer.getId());
+        List<ProtectedPersonResponse> responseList = new ArrayList<>();
 
-        return relations.stream()
-                .map(relation -> new ProtectedPersonResponse(
-                        relation.getProtectedUser().getId(),
-                        relation.getProtectedUser().getFullName(),
-                        relation.getProtectedUser().getEmail()
-                ))
-                .collect(Collectors.toList());
+        List<TrustContact> activeContacts = trustContactRepository.findByCarerId(carer.getId());
+        for (TrustContact contact : activeContacts) {
+            responseList.add(ProtectedPersonResponse.builder()
+                    .id(contact.getId())
+                    .fullName(contact.getProtectedUser().getFullName())
+                    .email(contact.getProtectedUser().getEmail())
+                    .relationship(contact.getRelationship())
+                    .status("ACTIVE") 
+                    .build());
+        }
+
+        List<TrustInvitation> pendingInvitations = trustInvitationRepository.findByCarerIdAndStatus(
+                carer.getId(), InvitationStatus.PENDING);
+        
+        for (TrustInvitation inv : pendingInvitations) {
+            responseList.add(ProtectedPersonResponse.builder()
+                    .id(inv.getId()) 
+                    .fullName(inv.getFullName())
+                    .email(inv.getEmail())
+                    .contactNumber(inv.getContactNumber())
+                    .relationship(inv.getRelationship())
+                    .status("PENDING") 
+                    .build());
+        }
+
+        return responseList;
     }
 
 
@@ -144,13 +160,8 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                 .protectedUser(protectedUser)
                 .relationship(invitation.getRelationship())
                 .sensitivityLevel(invitation.getSensitivityLevel())
-                .monitorWhatsapp(invitation.isMonitorWhatsapp())
-                .monitorSms(invitation.isMonitorSms())
-                .monitorGmail(invitation.isMonitorGmail())
-                .monitorTelegram(invitation.isMonitorTelegram())
                 .notifyHighRisk(invitation.isNotifyHighRisk())
                 .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
-                .allowBasicConfig(invitation.isAllowBasicConfig())
                 .build();
 
         trustContactRepository.save(newContact);

@@ -35,7 +35,6 @@ public class TrustContact {
     private String relationship;
 
 
-    /*Definir si vamos a hacer lo del nivel de seguridad */
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -47,19 +46,6 @@ public class TrustContact {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    /*--------------Ver si vamos a darle la opcion de seleccionar las apps a monitorear-------  */
-
-    @Column(nullable = false)
-    private boolean monitorWhatsapp;
-
-    @Column(nullable = false)
-    private boolean monitorSms;
-
-    @Column(nullable = false)
-    private boolean monitorGmail;
-
-    @Column(nullable = false)
-    private boolean monitorTelegram;
 
     // Notificaciones
 
@@ -68,9 +54,6 @@ public class TrustContact {
 
     @Column(nullable = false)
     private boolean receiveAlertSummaries;
-
-    @Column(nullable = false)
-    private boolean allowBasicConfig;
 
 
     @PrePersist

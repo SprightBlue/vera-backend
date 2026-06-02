@@ -22,7 +22,7 @@ public class TrustContactController {
 
     private final TrustContactUseCase trustContactUseCase;
 
-    @GetMapping("/protected")
+    @GetMapping("/protected-people")
     public ResponseEntity<List<ProtectedPersonResponse>> getMyProtectedPeople(
             Authentication authentication) {
         
@@ -34,9 +34,10 @@ public class TrustContactController {
     public ResponseEntity<GenerateInvitationResponse> generateInvitation(
             @Valid @RequestBody GenerateInvitationRequest request, 
             Authentication authentication) {
-        
-        GenerateInvitationResponse response = trustContactUseCase.generateInvitationLink(request, authentication.getName());
+
+              GenerateInvitationResponse response = trustContactUseCase.generateInvitationLink(request, authentication.getName());
         return ResponseEntity.ok(response);
+       
     }
 
     @GetMapping("/invite/{token}")
@@ -54,4 +55,7 @@ public class TrustContactController {
         
         return ResponseEntity.ok("¡Invitación aceptada exitosamente! Ahora estás protegido.");
     }
+
+
+
 }

@@ -11,7 +11,9 @@ public class GenerateInvitationRequest {
     @NotBlank(message = "El nombre completo es obligatorio")
     private String fullName; 
 
-    private String contactInfo; 
+    private String contactNumber;
+
+    private String email; 
 
     @NotBlank(message = "La relación es obligatoria")
     private String relationship;
@@ -19,11 +21,7 @@ public class GenerateInvitationRequest {
     @NotNull(message = "El nivel de sensibilidad es obligatorio")
     private SensitivityLevel sensitivityLevel;
 
-    private boolean monitorWhatsapp;
-    private boolean monitorSms;
-    private boolean monitorGmail;
-    private boolean monitorTelegram;
     private boolean notifyHighRisk;
+    
     private boolean receiveAlertSummaries;
-    private boolean allowBasicConfig;
 }

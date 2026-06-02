@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 
 import com.unlam.verabackend.infrastructure.entity.User;
 
-
 @Entity
 @Table(name = "trust_invitations")
 @Data
@@ -33,7 +32,10 @@ public class TrustInvitation {
     private String fullName; 
 
     @Column(nullable = true)
-    private String contactInfo; 
+    private String contactNumber; 
+
+    @Column(nullable = true)
+    private String email; 
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -46,13 +48,15 @@ public class TrustInvitation {
     @Column(nullable = false)
     private SensitivityLevel sensitivityLevel;
 
+    private boolean notifyHighRisk;
+    private boolean receiveAlertSummaries;
+
+    private boolean allowBasicConfig;
     private boolean monitorWhatsapp;
     private boolean monitorSms;
     private boolean monitorGmail;
     private boolean monitorTelegram;
-    private boolean notifyHighRisk;
-    private boolean receiveAlertSummaries;
-    private boolean allowBasicConfig;
+
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -63,9 +67,7 @@ public class TrustInvitation {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-
-        expiresAt = LocalDateTime.now().plusDays(1);
-
+        expiresAt = LocalDateTime.now().plusDays(1); 
         status = InvitationStatus.PENDING;
     }
 }
