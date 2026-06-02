@@ -4,6 +4,7 @@ import com.unlam.verabackend.infrastructure.entity.RiskAlertEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -22,4 +23,11 @@ public interface RiskAlertJpaRepository extends JpaRepository<RiskAlertEntity, U
             "WHERE c.id = :caregiverId " +
             "ORDER BY r.createdAt DESC")
     List<RiskAlertEntity> findAllByCaregiverId(@Param("caregiverId") Long caregiverId);
+
+    @Query("SELECT r FROM RiskAlertEntity r " +
+            "JOIN FETCH r.caregiver c " +
+            "JOIN FETCH r.analysis a " +
+            "JOIN FETCH a.user u " +
+            "WHERE c.email = :email AND r.solved = false")
+    List<RiskAlertEntity> findActiveAlertsWithTreeByEmail(@Param("email") String email);
 }
