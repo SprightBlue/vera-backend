@@ -1,16 +1,17 @@
 package com.unlam.verabackend.presentation.controller;
 
-import com.unlam.verabackend.dto.GenerateInvitationRequest;
-import com.unlam.verabackend.dto.GenerateInvitationResponse;
-import com.unlam.verabackend.dto.InvitationDetailsResponse;
-import com.unlam.verabackend.dto.ProtectedPersonResponse;
-import com.unlam.verabackend.services.Interface.TrustContactService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import com.unlam.verabackend.application.usecase.TrustContactUseCase;
+import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
+import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
+import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;
+import com.unlam.verabackend.presentation.dto.ProtectedPersonResponse;
 
 import java.util.List;
 
@@ -19,13 +20,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TrustContactController {
 
-    private final TrustContactService trustContactService;
+    private final TrustContactUseCase trustContactUseCase;
 
     @GetMapping("/protected")
     public ResponseEntity<List<ProtectedPersonResponse>> getMyProtectedPeople(
             Authentication authentication) {
         
-        List<ProtectedPersonResponse> protectedPeople = trustContactService.getMyProtectedPeople(authentication.getName());
+        List<ProtectedPersonResponse> protectedPeople = trustContactUseCase.getMyProtectedPeople(authentication.getName());
         return ResponseEntity.ok(protectedPeople);
     }
 
@@ -34,13 +35,13 @@ public class TrustContactController {
             @Valid @RequestBody GenerateInvitationRequest request, 
             Authentication authentication) {
         
-        GenerateInvitationResponse response = trustContactService.generateInvitationLink(request, authentication.getName());
+        GenerateInvitationResponse response = trustContactUseCase.generateInvitationLink(request, authentication.getName());
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/invite/{token}")
     public ResponseEntity<InvitationDetailsResponse> getInvitationDetails(@PathVariable String token) {
-        InvitationDetailsResponse response = trustContactService.getInvitationDetails(token);
+        InvitationDetailsResponse response = trustContactUseCase.getInvitationDetails(token);
         return ResponseEntity.ok(response);
     }
 
@@ -49,7 +50,7 @@ public class TrustContactController {
             @PathVariable String token, 
             Authentication authentication) {
         
-        trustContactService.acceptInvitation(token, authentication.getName());
+        trustContactUseCase.acceptInvitation(token, authentication.getName());
         
         return ResponseEntity.ok("¡Invitación aceptada exitosamente! Ahora estás protegido.");
     }

@@ -7,6 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
+import com.unlam.verabackend.infrastructure.entity.User;
+
+
 @Entity
 @Table(name = "trust_contacts")
 @Data

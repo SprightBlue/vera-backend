@@ -1,5 +1,4 @@
-package com.unlam.verabackend.repositories;
-
+package com.unlam.verabackend.infrastructure.repository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

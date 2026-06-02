@@ -1,10 +1,11 @@
 package com.unlam.verabackend;
-import com.unlam.verabackend.dto.GenerateInvitationRequest;
-import com.unlam.verabackend.dto.GenerateInvitationResponse;
-import com.unlam.verabackend.dto.InvitationDetailsResponse;
+import com.unlam.verabackend.application.usecase.TrustContactUseCase;
 import com.unlam.verabackend.entity.SensitivityLevel;
 import com.unlam.verabackend.presentation.controller.TrustContactController;
-import com.unlam.verabackend.services.Interface.TrustContactService;
+import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
+import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
+import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.when;
 class TrustContactControllerTest {
 
     @Mock
-    private TrustContactService trustContactService;
+    private TrustContactUseCase trustContactUseCase;
 
     @Mock
     private Authentication authentication;
@@ -32,7 +33,7 @@ class TrustContactControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new TrustContactController(trustContactService);
+        controller = new TrustContactController(trustContactUseCase);
     }
 
 
@@ -49,7 +50,7 @@ class TrustContactControllerTest {
         GenerateInvitationResponse respuestaFalsaDelServicio = new GenerateInvitationResponse(fakeToken, "http://link.com/" + fakeToken);
 
         when(authentication.getName()).thenReturn("tomas@email.com");
-        when(trustContactService.generateInvitationLink(any(GenerateInvitationRequest.class), eq("tomas@email.com")))
+        when(trustContactUseCase.generateInvitationLink(any(GenerateInvitationRequest.class), eq("tomas@email.com")))
                 .thenReturn(respuestaFalsaDelServicio);
 
         // valores esperados
@@ -76,7 +77,7 @@ class TrustContactControllerTest {
         String token = "token-123";
         InvitationDetailsResponse respuestaFalsaDelServicio = new InvitationDetailsResponse("María García", "Tomas Attino", "Abuela");
 
-        when(trustContactService.getInvitationDetails(token)).thenReturn(respuestaFalsaDelServicio);
+        when(trustContactUseCase.getInvitationDetails(token)).thenReturn(respuestaFalsaDelServicio);
 
         // valores esperados
         int statusEsperado = 200;
@@ -103,7 +104,7 @@ class TrustContactControllerTest {
         // preparacion
         String token = "token-123";
         when(authentication.getName()).thenReturn("abuela@email.com");
-        doNothing().when(trustContactService).acceptInvitation(token, "abuela@email.com");
+        doNothing().when(trustContactUseCase).acceptInvitation(token, "abuela@email.com");
 
         // valores esperados
         int statusEsperado = 200;

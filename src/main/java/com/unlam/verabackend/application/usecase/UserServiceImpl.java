@@ -6,8 +6,8 @@ import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
 import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.infrastructure.entity.User;
-import com.unlam.verabackend.infrastructure.repository.UserRepository;
-import com.unlam.verabackend.domain.ports.in.UserService;
+import com.unlam.verabackend.domain.repository.UserRepository;
+import com.unlam.verabackend.domain.ports.in.UserUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserUseCase {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;

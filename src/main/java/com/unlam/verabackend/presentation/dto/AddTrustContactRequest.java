@@ -1,4 +1,4 @@
-package com.unlam.verabackend.dto;
+package com.unlam.verabackend.presentation.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

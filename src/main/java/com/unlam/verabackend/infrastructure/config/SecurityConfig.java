@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,7 +22,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.unlam.verabackend.infrastructure.repository.UserRepository;
+import com.unlam.verabackend.domain.repository.UserRepository;
 
 import java.util.List;
 
@@ -30,16 +31,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    // ✅ Solo UserRepository en el constructor — sin JwtAuthenticationFilter
     private final UserRepository userRepository;
 
-    // JwtAuthenticationFilter se inyecta como parámetro del método @Bean,
-    // no en el constructor. Así Spring rompe el ciclo: construye los beans
-    // independientes primero y los conecta al armar el FilterChain.
+ 
     @Bean
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
-        JwtAuthenticationFilter jwtAuthFilter  // ← inyección por parámetro
+        JwtAuthenticationFilter jwtAuthFilter  
     ) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
@@ -50,6 +48,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/auth/**").permitAll()
                     .requestMatchers("/api/v1/analysis/**").permitAll()
                     .requestMatchers("/api/v1/risk-alerts/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/trust/invite/**").permitAll()
                     .requestMatchers("/dashboard").permitAll()
                     .requestMatchers("/alerts").permitAll()
                     .requestMatchers("/error").permitAll()
@@ -86,7 +85,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of("http://localhost:5173",
+            "https://vera-frontend-gamma.vercel.app"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(true);

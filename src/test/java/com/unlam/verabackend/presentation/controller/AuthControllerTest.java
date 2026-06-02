@@ -1,6 +1,6 @@
 package com.unlam.verabackend.presentation.controller;
 
-import com.unlam.verabackend.domain.ports.in.UserService;
+import com.unlam.verabackend.domain.ports.in.UserUseCase;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
@@ -25,7 +25,7 @@ import static org.mockito.Mockito.*;
 public class AuthControllerTest {
 
     @Mock
-    private UserService userService;
+    private UserUseCase userService;
 
     @InjectMocks
     private AuthController authController;

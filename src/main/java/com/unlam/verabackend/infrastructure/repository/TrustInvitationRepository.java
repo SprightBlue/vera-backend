@@ -1,5 +1,4 @@
-package com.unlam.verabackend.repositories;
-
+package com.unlam.verabackend.infrastructure.repository;
 import com.unlam.verabackend.entity.TrustInvitation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

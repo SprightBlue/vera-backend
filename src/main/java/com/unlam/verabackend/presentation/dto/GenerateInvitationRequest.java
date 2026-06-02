@@ -1,4 +1,4 @@
-package com.unlam.verabackend.dto;
+package com.unlam.verabackend.presentation.dto;
 
 import com.unlam.verabackend.entity.SensitivityLevel;
 import jakarta.validation.constraints.NotBlank;

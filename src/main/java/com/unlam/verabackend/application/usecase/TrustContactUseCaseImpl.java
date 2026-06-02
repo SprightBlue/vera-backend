@@ -1,18 +1,17 @@
-package com.unlam.verabackend.services;
+package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.dto.GenerateInvitationRequest;
-import com.unlam.verabackend.dto.GenerateInvitationResponse;
-import com.unlam.verabackend.dto.InvitationDetailsResponse;
-import com.unlam.verabackend.dto.ProtectedPersonResponse;
+
+import com.unlam.verabackend.domain.repository.UserRepository;
 import com.unlam.verabackend.entity.InvitationStatus;
 import com.unlam.verabackend.entity.TrustContact;
 import com.unlam.verabackend.entity.TrustInvitation;
-import com.unlam.verabackend.entity.User;
-
-import com.unlam.verabackend.repositories.TrustContactRepository;
-import com.unlam.verabackend.repositories.TrustInvitationRepository;
-import com.unlam.verabackend.repositories.UserRepository;
-import com.unlam.verabackend.services.Interface.TrustContactService;
+import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
+import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
+import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;
+import com.unlam.verabackend.presentation.dto.ProtectedPersonResponse;
+import com.unlam.verabackend.infrastructure.entity.User;
+import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
+import com.unlam.verabackend.infrastructure.repository.TrustInvitationRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class TrustContactServiceImpl implements TrustContactService {
+public class TrustContactUseCaseImpl implements TrustContactUseCase {
     
     private final TrustContactRepository trustContactRepository;
     private final UserRepository userRepository;
@@ -36,7 +35,6 @@ public class TrustContactServiceImpl implements TrustContactService {
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
     
-
     @Override
     @Transactional
     public GenerateInvitationResponse generateInvitationLink(GenerateInvitationRequest request, String carerEmail) {
@@ -160,5 +158,6 @@ public class TrustContactServiceImpl implements TrustContactService {
         invitation.setStatus(InvitationStatus.ACCEPTED);
         trustInvitationRepository.save(invitation);
     }
-    
+
+
 }
