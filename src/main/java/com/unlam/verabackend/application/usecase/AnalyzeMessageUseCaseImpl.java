@@ -16,26 +16,36 @@ public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
     private final SafeBrowsingApiPort safeBrowsingApiPort;
     private final GeminiApiPort geminiApiPort;
 
+    private final com.unlam.verabackend.domain.repository.UserRepository userRepository;
+
     public AnalyzeMessageUseCaseImpl(AnalysisRepository analysisRepository,
                                      RiskAlertRepository riskAlertRepository,
                                      UserCaregiverRepository userCaregiverRepository,
                                      SafeBrowsingApiPort safeBrowsingApiPort,
-                                     GeminiApiPort geminiApiPort) {
+                                     GeminiApiPort geminiApiPort,
+                                     com.unlam.verabackend.domain.repository.UserRepository userRepository) {
         this.analysisRepository = analysisRepository;
         this.riskAlertRepository = riskAlertRepository;
         this.userCaregiverRepository = userCaregiverRepository;
         this.safeBrowsingApiPort = safeBrowsingApiPort;
         this.geminiApiPort = geminiApiPort;
+        this.userRepository = userRepository;
     }
 
     @Override
     @Transactional
-    public Analysis analyzeMessage(DomainUser domainUser, String content, MessageSource source) {
+    public Analysis analyzeMessage(String userEmail, String content, MessageSource source) {
         if (content == null || content.isBlank()) throw new IllegalArgumentException("El contenido no puede estar vacío");
-        if (domainUser == null || domainUser.getId() == null) throw new IllegalArgumentException("Usuario de dominio requerido");
+        if (userEmail == null || userEmail.isBlank()) throw new IllegalArgumentException("Email de usuario requerido");
+
+        com.unlam.verabackend.infrastructure.entity.User dbUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con el email: " + userEmail));
+
+        DomainUser domainUser = new DomainUser();
+        domainUser.setId(dbUser.getId());
+        domainUser.setEmail(dbUser.getEmail());
 
         UrlValidation urlValidation = safeBrowsingApiPort.checkUrlsInContent(content);
-
         MessageAssessment messageAssessment = geminiApiPort.analyzeMessageContent(content, urlValidation);
 
         Analysis analysis = Analysis.create(
