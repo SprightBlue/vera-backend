@@ -1,7 +1,6 @@
 package com.unlam.verabackend.infrastructure.config;
 
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +22,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.http.HttpMethod;
 import com.unlam.verabackend.domain.repository.UserRepository;
 
-
 import java.util.List;
 
 @Configuration
@@ -35,27 +33,29 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-        HttpSecurity http,
-        JwtAuthenticationFilter jwtAuthFilter  // ← inyección por parámetro
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthFilter
     ) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
-                    .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/api/v1/analysis/**").permitAll()
-                    .requestMatchers("/api/v1/risk-alerts/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/trust/invite/**").permitAll()
-                    .requestMatchers("/dashboard").permitAll()
-                    .requestMatchers("/alerts").permitAll()
-                    .requestMatchers("/error").permitAll()
-                    .anyRequest().authenticated()
-            )
-            .sessionManagement(session -> session
-                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/analysis/**").permitAll()
+
+                        .requestMatchers("/api/v1/risk-alerts/**").authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/trust/invite/**").permitAll()
+                        .requestMatchers("/dashboard").permitAll()
+                        .requestMatchers("/alerts").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -63,9 +63,9 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> userRepository.findByEmail(username)
-            .orElseThrow(() -> new UsernameNotFoundException(
-                "Usuario no encontrado: " + username
-            ));
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "Usuario no encontrado: " + username
+                ));
     }
 
     @Bean
@@ -75,7 +75,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-        AuthenticationConfiguration config
+            AuthenticationConfiguration config
     ) throws Exception {
         return config.getAuthenticationManager();
     }
@@ -84,11 +84,14 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(
-                List.of("http://localhost:5173",
-                        "https://vera-frontend-gamma.vercel.app/")
+                List.of(
+                        "http://localhost:5173",
+                        "https://vera-frontend-gamma.vercel.app"
+                )
         );
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+
+        config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -97,12 +100,11 @@ public class SecurityConfig {
     }
 
     @Bean
-        public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(
-    JwtAuthenticationFilter filter
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(
+            JwtAuthenticationFilter filter
     ) {
-    FilterRegistrationBean<JwtAuthenticationFilter> registration =
-        new FilterRegistrationBean<>(filter);
-    registration.setEnabled(false);
-    return registration;
-}
+        FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
 }

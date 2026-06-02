@@ -3,6 +3,8 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.domain.model.*;
 import com.unlam.verabackend.domain.ports.in.AnalyzeMessageUseCase;
 import com.unlam.verabackend.domain.ports.out.*;
+import com.unlam.verabackend.infrastructure.entity.User;
+import com.unlam.verabackend.presentation.controller.RiskAlertController;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -15,7 +17,6 @@ public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
     private final UserCaregiverRepository userCaregiverRepository;
     private final SafeBrowsingApiPort safeBrowsingApiPort;
     private final GeminiApiPort geminiApiPort;
-
     private final com.unlam.verabackend.domain.repository.UserRepository userRepository;
 
     public AnalyzeMessageUseCaseImpl(AnalysisRepository analysisRepository,
@@ -35,10 +36,7 @@ public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
     @Override
     @Transactional
     public Analysis analyzeMessage(String userEmail, String content, MessageSource source) {
-        if (content == null || content.isBlank()) throw new IllegalArgumentException("El contenido no puede estar vacío");
-        if (userEmail == null || userEmail.isBlank()) throw new IllegalArgumentException("Email de usuario requerido");
-
-        com.unlam.verabackend.infrastructure.entity.User dbUser = userRepository.findByEmail(userEmail)
+        User dbUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con el email: " + userEmail));
 
         DomainUser domainUser = new DomainUser();
@@ -63,9 +61,14 @@ public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
 
     private void dispatchAlertsToCaregivers(Analysis analysis) {
         List<UserCaregiver> relations = userCaregiverRepository.findByUserId(analysis.getUser().getId());
+
         for (UserCaregiver relation : relations) {
             RiskAlert alert = RiskAlert.createActive(analysis, relation.getCaregiver());
-            riskAlertRepository.save(alert);
+            RiskAlert savedAlert = riskAlertRepository.save(alert);
+
+            Long caregiverId = relation.getCaregiver().getId();
+
+            RiskAlertController.sendNotificationToCaregiver(caregiverId, savedAlert);
         }
     }
 }
