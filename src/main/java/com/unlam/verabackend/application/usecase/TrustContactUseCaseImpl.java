@@ -3,6 +3,7 @@ package com.unlam.verabackend.application.usecase;
 
 import com.unlam.verabackend.domain.repository.UserRepository;
 import com.unlam.verabackend.entity.InvitationStatus;
+import com.unlam.verabackend.entity.SensitivityLevel;
 import com.unlam.verabackend.entity.TrustContact;
 import com.unlam.verabackend.entity.TrustInvitation;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
@@ -182,6 +183,33 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
             System.out.println("❌ No se encontró el ID " + id + " en ninguna tabla");
         }
 
+}
+
+
+    @Override
+    @Transactional
+    public void updateConfiguration(Long id, String sensitivityLevelStr, Boolean notifyHighRisk) {
+    
+    SensitivityLevel sensitivityEnum = null;
+    if (sensitivityLevelStr != null) {
+        sensitivityEnum = SensitivityLevel.valueOf(sensitivityLevelStr.toUpperCase());
+    }
+    
+    final SensitivityLevel finalSensitivity = sensitivityEnum;
+
+    trustContactRepository.findById(id).ifPresent(contact -> {
+        if (finalSensitivity != null) contact.setSensitivityLevel(finalSensitivity);
+        if (notifyHighRisk != null) contact.setNotifyHighRisk(notifyHighRisk);
+        trustContactRepository.save(contact);
+        System.out.println("✅ Configuración actualizada en trust_contacts para el ID: " + id);
+    });
+
+    trustInvitationRepository.findById(id).ifPresent(invitation -> {
+        if (finalSensitivity != null) invitation.setSensitivityLevel(finalSensitivity);
+        if (notifyHighRisk != null) invitation.setNotifyHighRisk(notifyHighRisk);
+        trustInvitationRepository.save(invitation);
+        System.out.println("✅ Configuración actualizada en trust_invitations para el ID: " + id);
+    });
 }
 
 

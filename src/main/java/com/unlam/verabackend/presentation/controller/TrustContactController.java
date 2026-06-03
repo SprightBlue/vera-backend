@@ -14,6 +14,7 @@ import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;
 import com.unlam.verabackend.presentation.dto.ProtectedPersonResponse;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/trust")
@@ -62,7 +63,20 @@ public class TrustContactController {
         trustContactUseCase.deleteProtectedPerson(id);
 
         return ResponseEntity.noContent().build(); 
-}
+    }
+
+    @PatchMapping("/protected-people/{id}")
+    public ResponseEntity<Void> updateSensitivity(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+
+        String sensitivityLevel = (String) payload.get("sensitivityLevel");
+        Boolean notifyHighRisk = (Boolean) payload.get("notifyHighRisk");
+
+            trustContactUseCase.updateConfiguration(id, sensitivityLevel, notifyHighRisk);
+    
+    return ResponseEntity.noContent().build();
+
+    }
+
 
 
 
