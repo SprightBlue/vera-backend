@@ -34,12 +34,19 @@ public class RiskAlertRepositoryImpl implements RiskAlertRepository {
     }
 
     @Override
+    public List<RiskAlert> findActiveByCaregiverEmail(String email) {
+        return jpaRepository.findActiveAlertsWithTreeByEmail(email).stream()
+                .map(this::mapToDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<RiskAlert> findById(String id) {
         return jpaRepository.findById(UUID.fromString(id)).map(this::mapToDomain);
     }
 
     @Override
-    public void save(RiskAlert riskAlert) {
+    public RiskAlert save(RiskAlert riskAlert) {
         AnalysisEntity analysisRef = entityManager.getReference(AnalysisEntity.class, riskAlert.getAnalysis().getId());
         User caregiverRef = entityManager.getReference(User.class, riskAlert.getCaregiver().getId());
 
@@ -52,6 +59,8 @@ public class RiskAlertRepositoryImpl implements RiskAlertRepository {
         entity.setCreatedAt(riskAlert.getCreatedAt() != null ? riskAlert.getCreatedAt() : java.time.LocalDateTime.now());
 
         jpaRepository.save(entity);
+
+        return mapToDomain(entity);
     }
 
     private RiskAlert mapToDomain(RiskAlertEntity entity) {

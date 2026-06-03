@@ -1,77 +1,111 @@
 package com.unlam.verabackend.presentation.controller;
 
-import com.unlam.verabackend.domain.model.AlertDetail;
-import com.unlam.verabackend.domain.ports.in.GetAlertDetailUseCase;
 import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
 import com.unlam.verabackend.domain.model.RiskAlert;
-import com.unlam.verabackend.presentation.mapper.AlertPresentationMapper;
+import com.unlam.verabackend.infrastructure.entity.User;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
+import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/v1/risk-alerts")
 public class RiskAlertController {
 
     private final ManageRiskAlertUseCase manageRiskAlertUseCase;
-    private final GetAlertDetailUseCase getAlertDetailUseCase;
 
-    public RiskAlertController(ManageRiskAlertUseCase manageRiskAlertUseCase, GetAlertDetailUseCase getAlertDetailUseCase) {
+    private static final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
+
+    public RiskAlertController(ManageRiskAlertUseCase manageRiskAlertUseCase) {
         this.manageRiskAlertUseCase = manageRiskAlertUseCase;
-        this.getAlertDetailUseCase = getAlertDetailUseCase;
     }
 
-    @GetMapping("/caregiver/{caregiverId}/active")
-    public ResponseEntity<List<RiskAlertResponse>> getActiveAlerts(@PathVariable Long caregiverId) {
-        List<RiskAlert> alerts = manageRiskAlertUseCase.getActiveAlertsByCaregiver(caregiverId);
-
-        List<RiskAlertResponse> response = alerts.stream()
-                .map(alert -> new RiskAlertResponse(
-                        alert.getId().toString(),
-                        alert.getAnalysis().getUser().getFullName(),
-                        alert.getAnalysis().getContent(),
-                        alert.getAnalysis().getMessageSource().getDisplayName(),
-                        alert.getAnalysis().getRiskLevel().name(),
-                        alert.getAnalysis().getSuspiciousPatterns(),
-                        alert.getCreatedAt()
-                ))
-                .toList();
-
+    @GetMapping("/active")
+    public ResponseEntity<List<RiskAlertResponse>> getActiveAlerts(@AuthenticationPrincipal User user) {
+        List<RiskAlert> alerts = manageRiskAlertUseCase.getActiveAlertsByCaregiverEmail(user.getEmail());
+        List<RiskAlertResponse> response = alerts.stream().map(this::mapToResponse).toList();
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{alertId}/solve")
+    @GetMapping("/{alertId}")
+    public ResponseEntity<RiskAlertResponse> getAlertById(@PathVariable String alertId) {
+        RiskAlert alert = manageRiskAlertUseCase.getAlertById(alertId);
+        return ResponseEntity.ok(mapToResponse(alert));
+    }
+
+    @PostMapping("/{alertId}/solve")
     public ResponseEntity<Void> solveAlert(@PathVariable String alertId) {
         manageRiskAlertUseCase.markAlertAsSolved(alertId);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{alertId}/contact-link")
-    public ResponseEntity<ContactLinkResponse> getContactLink(@PathVariable String alertId) {
-        String mailtoLink = manageRiskAlertUseCase.getContactLinkForUser(alertId);
-        return ResponseEntity.ok(new ContactLinkResponse(mailtoLink));
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamAlerts(@AuthenticationPrincipal User user) {
+        SseEmitter emitter = new SseEmitter(10 * 60 * 1000L);
+        Long caregiverId = user.getId();
+
+        emitters.put(caregiverId, emitter);
+
+        emitter.onCompletion(() -> emitters.remove(caregiverId));
+        emitter.onTimeout(() -> emitters.remove(caregiverId));
+        emitter.onError((e) -> emitters.remove(caregiverId));
+
+        try {
+            emitter.send(SseEmitter.event().name("INIT").data("Conectado"));
+        } catch (IOException ignored) {}
+
+        return emitter;
+    }
+
+    public static void sendNotificationToCaregiver(Long caregiverId, RiskAlert alert) {
+        SseEmitter emitter = emitters.get(caregiverId);
+        if (emitter != null) {
+            try {
+                RiskAlertResponse dto = new RiskAlertResponse(
+                        alert.getId().toString(),
+                        alert.getAnalysis().getUser().getFullName(),
+                        alert.getAnalysis().getUser().getEmail(),
+                        alert.getAnalysis().getContent(),
+                        alert.getAnalysis().getMessageSource().getDisplayName(),
+                        alert.getAnalysis().getRiskLevel().name(),
+                        alert.getAnalysis().getSuspiciousPatterns(),
+                        alert.getCreatedAt()
+                );
+                emitter.send(SseEmitter.event().name("RISK_ALERT").data(dto));
+            } catch (IOException e) {
+                emitters.remove(caregiverId);
+            }
+        }
+    }
+
+    private RiskAlertResponse mapToResponse(RiskAlert alert) {
+        return new RiskAlertResponse(
+                alert.getId().toString(),
+                alert.getAnalysis().getUser().getFullName(),
+                alert.getAnalysis().getUser().getEmail(),
+                alert.getAnalysis().getContent(),
+                alert.getAnalysis().getMessageSource().getDisplayName(),
+                alert.getAnalysis().getRiskLevel().name(),
+                alert.getAnalysis().getSuspiciousPatterns(),
+                alert.getCreatedAt()
+        );
     }
 
     public record RiskAlertResponse(
             String alertId,
             String protectedUserName,
+            String protectedUserEmail,
             String messageContent,
             String source,
             String riskLevel,
             String suspiciousPatterns,
             LocalDateTime createdAt
     ) {}
-
-    public record ContactLinkResponse(String link) {}
-
-
-    @GetMapping("/{alertId}")
-    public ResponseEntity<?> getDetail(@PathVariable UUID alertId, @AuthenticationPrincipal(expression = "id") Long requestingUserId) {
-        AlertDetail detail = getAlertDetailUseCase.getDetail(alertId, requestingUserId);
-        return ResponseEntity.ok(AlertPresentationMapper.toDetailPresentation(detail));
-    }
 }
