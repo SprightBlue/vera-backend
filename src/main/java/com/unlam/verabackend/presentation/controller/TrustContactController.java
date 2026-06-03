@@ -56,6 +56,14 @@ public class TrustContactController {
         return ResponseEntity.ok("¡Invitación aceptada exitosamente! Ahora estás protegido.");
     }
 
+    @DeleteMapping("/protected-people/{id}")
+    public ResponseEntity<Void> deleteProtectedPerson(@PathVariable Long id) {
+    
+        trustContactUseCase.deleteProtectedPerson(id);
+
+        return ResponseEntity.noContent().build(); 
+}
+
 
 
 }

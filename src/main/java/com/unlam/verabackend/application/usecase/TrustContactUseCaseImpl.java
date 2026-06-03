@@ -170,5 +170,19 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         trustInvitationRepository.save(invitation);
     }
 
+    public void deleteProtectedPerson(Long id) {
+
+        if (trustInvitationRepository.existsById(id)) {
+            trustInvitationRepository.deleteById(id);
+        }
+        
+        if (trustContactRepository.existsById(id)) {
+        trustContactRepository.deleteById(id);
+        } else {
+            System.out.println("❌ No se encontró el ID " + id + " en ninguna tabla");
+        }
+
+}
+
 
 }

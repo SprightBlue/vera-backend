@@ -16,4 +16,7 @@ public interface TrustContactUseCase {
     InvitationDetailsResponse getInvitationDetails(String token);
 
     void acceptInvitation(String token, String protectedUserEmail);
+
+    void deleteProtectedPerson(Long id);
+
 }
