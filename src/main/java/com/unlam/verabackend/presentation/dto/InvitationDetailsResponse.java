@@ -6,7 +6,8 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class InvitationDetailsResponse {
-    private String protectedFullName; 
-    private String carerFullName;     
-    private String relationship;      
+    Long id;
+    String protectedFullName;
+    String carerFullName;
+    String relationship;
 }

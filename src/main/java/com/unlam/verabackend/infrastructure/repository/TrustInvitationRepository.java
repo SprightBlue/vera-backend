@@ -13,4 +13,6 @@ public interface TrustInvitationRepository extends JpaRepository<TrustInvitation
     Optional<TrustInvitation> findByToken(String token);
 
     List<TrustInvitation> findByCarerIdAndStatus(Long carerId, InvitationStatus status);
+
+    List<TrustInvitation> findByEmailAndStatus(String email, InvitationStatus status);
 }

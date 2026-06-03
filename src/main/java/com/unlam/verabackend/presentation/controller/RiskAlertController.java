@@ -3,6 +3,7 @@ package com.unlam.verabackend.presentation.controller;
 import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
 import com.unlam.verabackend.domain.model.RiskAlert;
 import com.unlam.verabackend.infrastructure.entity.User;
+import com.unlam.verabackend.application.service.NotificationSseService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -10,27 +11,22 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
-import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/v1/risk-alerts")
 public class RiskAlertController {
 
     private final ManageRiskAlertUseCase manageRiskAlertUseCase;
+    private final NotificationSseService notificationSseService;
 
-    // 👈 Renombrado semánticamente para tus contactos de confianza (Carers)
-    private static final Map<Long, SseEmitter> trustContactsEmitters = new ConcurrentHashMap<>();
-
-    public RiskAlertController(ManageRiskAlertUseCase manageRiskAlertUseCase) {
+    public RiskAlertController(ManageRiskAlertUseCase manageRiskAlertUseCase, NotificationSseService notificationSseService) {
         this.manageRiskAlertUseCase = manageRiskAlertUseCase;
+        this.notificationSseService = notificationSseService;
     }
 
     @GetMapping("/active")
     public ResponseEntity<List<RiskAlertResponse>> getActiveAlerts(@AuthenticationPrincipal User user) {
-        // 👈 Cambiado para usar el nuevo método de búsqueda por email del Carer
         List<RiskAlert> alerts = manageRiskAlertUseCase.getActiveAlertsByCarerEmail(user.getEmail());
         List<RiskAlertResponse> response = alerts.stream().map(this::mapToResponse).toList();
         return ResponseEntity.ok(response);
@@ -48,44 +44,18 @@ public class RiskAlertController {
         return ResponseEntity.noContent().build();
     }
 
+    // Canal unificado de Streaming asincrónico por Spring Security
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamAlerts(@AuthenticationPrincipal User user) {
-        SseEmitter emitter = new SseEmitter(10 * 60 * 1000L);
-        Long carerId = user.getId(); // 👈 ID del contacto de confianza (Carer)
-
-        trustContactsEmitters.put(carerId, emitter);
-
-        emitter.onCompletion(() -> trustContactsEmitters.remove(carerId));
-        emitter.onTimeout(() -> trustContactsEmitters.remove(carerId));
-        emitter.onError((e) -> trustContactsEmitters.remove(carerId));
-
-        try {
-            emitter.send(SseEmitter.event().name("INIT").data("Conectado"));
-        } catch (IOException ignored) {}
-
-        return emitter;
+        return notificationSseService.createEmitter(user.getId());
     }
 
-    // 👈 Método estático renombrado para acoplarse al refactor de TrustContact
-    public static void sendNotificationToTrustContact(Long carerId, RiskAlert alert) {
-        SseEmitter emitter = trustContactsEmitters.get(carerId);
-        if (emitter != null) {
-            try {
-                // Reutilizamos el método de mapeo para evitar código duplicado
-                RiskAlertResponse dto = mapToResponseStatic(alert);
-                emitter.send(SseEmitter.event().name("RISK_ALERT").data(dto));
-            } catch (IOException e) {
-                trustContactsEmitters.remove(carerId);
-            }
-        }
+    public void sendNotificationToTrustContact(Long carerId, RiskAlert alert) {
+        RiskAlertResponse dto = mapToResponse(alert);
+        notificationSseService.sendNotification(carerId, "RISK_ALERT", dto);
     }
 
     private RiskAlertResponse mapToResponse(RiskAlert alert) {
-        return mapToResponseStatic(alert);
-    }
-
-    // Método estático auxiliar para permitir el mapeo tanto en contextos de instancia como estáticos
-    private static RiskAlertResponse mapToResponseStatic(RiskAlert alert) {
         return new RiskAlertResponse(
                 alert.getId().toString(),
                 alert.getAnalysis().getUser().getFullName(),

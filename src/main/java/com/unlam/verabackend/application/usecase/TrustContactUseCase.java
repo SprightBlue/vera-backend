@@ -20,4 +20,8 @@ public interface TrustContactUseCase {
     void deleteProtectedPerson(Long id);
 
     void updateConfiguration(Long id, String sensitivityLevelStr, Boolean notifyHighRisk);
+
+    List<InvitationDetailsResponse> getPendingInvitationsForMe(String myEmail);
+    void acceptInvitationById(Long invitationId, String protectedUserEmail);
+    void rejectInvitationById(Long invitationId, String protectedUserEmail);
 }

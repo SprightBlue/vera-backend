@@ -4,9 +4,10 @@ import com.unlam.verabackend.domain.model.*;
 import com.unlam.verabackend.domain.ports.in.AnalyzeMessageUseCase;
 import com.unlam.verabackend.domain.ports.out.*;
 import com.unlam.verabackend.infrastructure.entity.User;
-import com.unlam.verabackend.entity.TrustContact; // 👈 Cambiado a tu nueva entidad
-import com.unlam.verabackend.infrastructure.repository.TrustContactRepository; // 👈 Cambiado al nuevo repositorio
-import com.unlam.verabackend.presentation.controller.RiskAlertController;
+import com.unlam.verabackend.entity.TrustContact;
+import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
+import com.unlam.verabackend.application.service.NotificationSseService; // 👈 Importamos el servicio de tiempo real unificado
+import com.unlam.verabackend.presentation.controller.RiskAlertController.RiskAlertResponse; // 👈 Importamos el DTO de respuesta si es necesario, o lo mapeamos acá
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -16,30 +17,33 @@ public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
 
     private final AnalysisRepository analysisRepository;
     private final RiskAlertRepository riskAlertRepository;
-    private final TrustContactRepository trustContactRepository; // 👈 Cambiado
+    private final TrustContactRepository trustContactRepository;
     private final SafeBrowsingApiPort safeBrowsingApiPort;
     private final GeminiApiPort geminiApiPort;
     private final com.unlam.verabackend.domain.repository.UserRepository userRepository;
+    private final NotificationSseService notificationSseService; // 👈 Inyectamos el servicio unificado de SSE
 
     public AnalyzeMessageUseCaseImpl(AnalysisRepository analysisRepository,
                                      RiskAlertRepository riskAlertRepository,
-                                     TrustContactRepository trustContactRepository, // 👈 Cambiado
+                                     TrustContactRepository trustContactRepository,
                                      SafeBrowsingApiPort safeBrowsingApiPort,
                                      GeminiApiPort geminiApiPort,
-                                     com.unlam.verabackend.domain.repository.UserRepository userRepository) {
+                                     com.unlam.verabackend.domain.repository.UserRepository userRepository,
+                                     NotificationSseService notificationSseService) { // 👈 Agregado al constructor
         this.analysisRepository = analysisRepository;
         this.riskAlertRepository = riskAlertRepository;
-        this.trustContactRepository = trustContactRepository; // 👈 Cambiado
+        this.trustContactRepository = trustContactRepository;
         this.safeBrowsingApiPort = safeBrowsingApiPort;
         this.geminiApiPort = geminiApiPort;
         this.userRepository = userRepository;
+        this.notificationSseService = notificationSseService;
     }
 
     @Override
     @Transactional
     public Analysis analyzeMessage(String userEmail, String content, MessageSource source) {
         User dbUser = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con el email: " + userEmail));
+                .orElseThrow(() -> new RuntimeException("Usuario encontrado con el email: " + userEmail));
 
         DomainUser domainUser = new DomainUser();
         domainUser.setId(dbUser.getId());
@@ -54,9 +58,8 @@ public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
         );
         analysisRepository.save(analysis);
 
-        // 👈 VALIDACIÓN: Solo despacha alertas si es HIGH y evita explícitamente el estado UNDEFINED
         if (RiskLevel.HIGH.equals(analysis.getRiskLevel()) && !RiskLevel.UNDEFINED.equals(analysis.getRiskLevel())) {
-            dispatchAlertsToTrustContacts(analysis); // 👈 Nombre de método actualizado
+            dispatchAlertsToTrustContacts(analysis);
         }
 
         return analysis;
@@ -68,10 +71,8 @@ public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
         for (TrustContact contact : contacts) {
             if (contact.isNotifyHighRisk()) {
 
-                // 1. Extraemos la entidad JPA del Carer
                 User jpaCarer = contact.getCarer();
 
-                // 2. La mapeamos a tu objeto de dominio DomainUser
                 DomainUser domainCarer = new DomainUser(
                         jpaCarer.getId(),
                         jpaCarer.getFullName(),
@@ -83,12 +84,25 @@ public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
                         jpaCarer.isEnabled()
                 );
 
-                // 3. Ahora sí, pasamos el objeto de dominio correcto 🎉
                 RiskAlert alert = RiskAlert.createActive(analysis, domainCarer);
                 RiskAlert savedAlert = riskAlertRepository.save(alert);
 
                 Long carerId = jpaCarer.getId();
-                RiskAlertController.sendNotificationToTrustContact(carerId, savedAlert);
+
+                // 🌟 CORRECCIÓN TIEMPO REAL: Mapeamos la alerta al DTO que espera recibir el Front
+                RiskAlertResponse realtimeDto = new RiskAlertResponse(
+                        savedAlert.getId().toString(),
+                        savedAlert.getAnalysis().getUser().getFullName(),
+                        savedAlert.getAnalysis().getUser().getEmail(),
+                        savedAlert.getAnalysis().getContent(),
+                        savedAlert.getAnalysis().getMessageSource().getDisplayName(),
+                        savedAlert.getAnalysis().getRiskLevel().name(),
+                        savedAlert.getAnalysis().getSuspiciousPatterns(),
+                        savedAlert.getCreatedAt()
+                );
+
+                // 🔥 Despachamos usando el canal SSE unificado con el nombre de evento correcto "RISK_ALERT"
+                notificationSseService.sendNotification(carerId, "RISK_ALERT", realtimeDto);
             }
         }
     }
