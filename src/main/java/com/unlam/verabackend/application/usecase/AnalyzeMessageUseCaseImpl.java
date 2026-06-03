@@ -3,6 +3,8 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.domain.model.*;
 import com.unlam.verabackend.domain.ports.in.AnalyzeMessageUseCase;
 import com.unlam.verabackend.domain.ports.out.*;
+import com.unlam.verabackend.infrastructure.entity.User;
+import com.unlam.verabackend.presentation.controller.RiskAlertController;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -15,27 +17,33 @@ public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
     private final UserCaregiverRepository userCaregiverRepository;
     private final SafeBrowsingApiPort safeBrowsingApiPort;
     private final GeminiApiPort geminiApiPort;
+    private final com.unlam.verabackend.domain.repository.UserRepository userRepository;
 
     public AnalyzeMessageUseCaseImpl(AnalysisRepository analysisRepository,
                                      RiskAlertRepository riskAlertRepository,
                                      UserCaregiverRepository userCaregiverRepository,
                                      SafeBrowsingApiPort safeBrowsingApiPort,
-                                     GeminiApiPort geminiApiPort) {
+                                     GeminiApiPort geminiApiPort,
+                                     com.unlam.verabackend.domain.repository.UserRepository userRepository) {
         this.analysisRepository = analysisRepository;
         this.riskAlertRepository = riskAlertRepository;
         this.userCaregiverRepository = userCaregiverRepository;
         this.safeBrowsingApiPort = safeBrowsingApiPort;
         this.geminiApiPort = geminiApiPort;
+        this.userRepository = userRepository;
     }
 
     @Override
     @Transactional
-    public Analysis analyzeMessage(DomainUser domainUser, String content, MessageSource source) {
-        if (content == null || content.isBlank()) throw new IllegalArgumentException("El contenido no puede estar vacío");
-        if (domainUser == null || domainUser.getId() == null) throw new IllegalArgumentException("Usuario de dominio requerido");
+    public Analysis analyzeMessage(String userEmail, String content, MessageSource source) {
+        User dbUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con el email: " + userEmail));
+
+        DomainUser domainUser = new DomainUser();
+        domainUser.setId(dbUser.getId());
+        domainUser.setEmail(dbUser.getEmail());
 
         UrlValidation urlValidation = safeBrowsingApiPort.checkUrlsInContent(content);
-
         MessageAssessment messageAssessment = geminiApiPort.analyzeMessageContent(content, urlValidation);
 
         Analysis analysis = Analysis.create(
@@ -53,9 +61,14 @@ public class AnalyzeMessageUseCaseImpl implements AnalyzeMessageUseCase {
 
     private void dispatchAlertsToCaregivers(Analysis analysis) {
         List<UserCaregiver> relations = userCaregiverRepository.findByUserId(analysis.getUser().getId());
+
         for (UserCaregiver relation : relations) {
             RiskAlert alert = RiskAlert.createActive(analysis, relation.getCaregiver());
-            riskAlertRepository.save(alert);
+            RiskAlert savedAlert = riskAlertRepository.save(alert);
+
+            Long caregiverId = relation.getCaregiver().getId();
+
+            RiskAlertController.sendNotificationToCaregiver(caregiverId, savedAlert);
         }
     }
 }

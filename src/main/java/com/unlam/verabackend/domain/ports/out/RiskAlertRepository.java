@@ -6,6 +6,7 @@ import java.util.Optional;
 
 public interface RiskAlertRepository {
     List<RiskAlert> findActiveByCaregiver(Long caregiverId);
+    List<RiskAlert> findActiveByCaregiverEmail(String email);
     Optional<RiskAlert> findById(String id);
-    void save(RiskAlert riskAlert);
+    RiskAlert save(RiskAlert riskAlert);
 }
