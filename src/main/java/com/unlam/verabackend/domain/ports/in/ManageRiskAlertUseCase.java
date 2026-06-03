@@ -5,7 +5,7 @@ import com.unlam.verabackend.domain.model.RiskAlert;
 import java.util.List;
 
 public interface ManageRiskAlertUseCase {
-    List<RiskAlert> getActiveAlertsByCaregiverEmail(String email);
+    List<RiskAlert> getActiveAlertsByCarerEmail(String email);
     RiskAlert getAlertById(String alertId);
     void markAlertAsSolved(String alertId);
 }

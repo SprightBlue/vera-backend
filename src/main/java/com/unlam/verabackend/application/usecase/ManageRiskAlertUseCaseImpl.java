@@ -19,8 +19,8 @@ public class ManageRiskAlertUseCaseImpl implements ManageRiskAlertUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public List<RiskAlert> getActiveAlertsByCaregiverEmail(String email) {
-        return riskAlertRepository.findActiveByCaregiverEmail(email);
+    public List<RiskAlert> getActiveAlertsByCarerEmail(String email) { // 👈 Cambiado a CarerEmail
+        return riskAlertRepository.findActiveByCarerEmail(email);      // 👈 Cambiado a CarerEmail
     }
 
     @Override

@@ -79,8 +79,6 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
                 .sensitivityLevel(com.unlam.verabackend.entity.SensitivityLevel.MEDIO)
                 .notifyHighRisk(true)
                 .receiveAlertSummaries(false)
-                .allowBasicConfig(false)
-                .monitorWhatsapp(false).monitorSms(false).monitorGmail(false).monitorTelegram(false)
                 .build();
         trustInvitationRepository.save(invitation);
         return frontendUrl + "/invite/" + token;
