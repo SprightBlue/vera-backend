@@ -19,4 +19,5 @@ public interface TrustContactUseCase {
 
     void deleteProtectedPerson(Long id);
 
+    void updateConfiguration(Long id, String sensitivityLevelStr, Boolean notifyHighRisk);
 }
