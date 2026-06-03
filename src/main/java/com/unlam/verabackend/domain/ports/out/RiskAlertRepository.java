@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RiskAlertRepository {
-    List<RiskAlert> findActiveByCaregiver(Long caregiverId);
-    List<RiskAlert> findActiveByCaregiverEmail(String email);
+    List<RiskAlert> findActiveByCarer(Long caregiverId);
+    List<RiskAlert> findActiveByCarerEmail(String email);
     Optional<RiskAlert> findById(String id);
     RiskAlert save(RiskAlert riskAlert);
 }

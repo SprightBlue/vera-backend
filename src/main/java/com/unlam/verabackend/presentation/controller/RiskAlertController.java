@@ -21,7 +21,8 @@ public class RiskAlertController {
 
     private final ManageRiskAlertUseCase manageRiskAlertUseCase;
 
-    private static final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
+    // 👈 Renombrado semánticamente para tus contactos de confianza (Carers)
+    private static final Map<Long, SseEmitter> trustContactsEmitters = new ConcurrentHashMap<>();
 
     public RiskAlertController(ManageRiskAlertUseCase manageRiskAlertUseCase) {
         this.manageRiskAlertUseCase = manageRiskAlertUseCase;
@@ -29,7 +30,8 @@ public class RiskAlertController {
 
     @GetMapping("/active")
     public ResponseEntity<List<RiskAlertResponse>> getActiveAlerts(@AuthenticationPrincipal User user) {
-        List<RiskAlert> alerts = manageRiskAlertUseCase.getActiveAlertsByCaregiverEmail(user.getEmail());
+        // 👈 Cambiado para usar el nuevo método de búsqueda por email del Carer
+        List<RiskAlert> alerts = manageRiskAlertUseCase.getActiveAlertsByCarerEmail(user.getEmail());
         List<RiskAlertResponse> response = alerts.stream().map(this::mapToResponse).toList();
         return ResponseEntity.ok(response);
     }
@@ -49,13 +51,13 @@ public class RiskAlertController {
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamAlerts(@AuthenticationPrincipal User user) {
         SseEmitter emitter = new SseEmitter(10 * 60 * 1000L);
-        Long caregiverId = user.getId();
+        Long carerId = user.getId(); // 👈 ID del contacto de confianza (Carer)
 
-        emitters.put(caregiverId, emitter);
+        trustContactsEmitters.put(carerId, emitter);
 
-        emitter.onCompletion(() -> emitters.remove(caregiverId));
-        emitter.onTimeout(() -> emitters.remove(caregiverId));
-        emitter.onError((e) -> emitters.remove(caregiverId));
+        emitter.onCompletion(() -> trustContactsEmitters.remove(carerId));
+        emitter.onTimeout(() -> trustContactsEmitters.remove(carerId));
+        emitter.onError((e) -> trustContactsEmitters.remove(carerId));
 
         try {
             emitter.send(SseEmitter.event().name("INIT").data("Conectado"));
@@ -64,28 +66,26 @@ public class RiskAlertController {
         return emitter;
     }
 
-    public static void sendNotificationToCaregiver(Long caregiverId, RiskAlert alert) {
-        SseEmitter emitter = emitters.get(caregiverId);
+    // 👈 Método estático renombrado para acoplarse al refactor de TrustContact
+    public static void sendNotificationToTrustContact(Long carerId, RiskAlert alert) {
+        SseEmitter emitter = trustContactsEmitters.get(carerId);
         if (emitter != null) {
             try {
-                RiskAlertResponse dto = new RiskAlertResponse(
-                        alert.getId().toString(),
-                        alert.getAnalysis().getUser().getFullName(),
-                        alert.getAnalysis().getUser().getEmail(),
-                        alert.getAnalysis().getContent(),
-                        alert.getAnalysis().getMessageSource().getDisplayName(),
-                        alert.getAnalysis().getRiskLevel().name(),
-                        alert.getAnalysis().getSuspiciousPatterns(),
-                        alert.getCreatedAt()
-                );
+                // Reutilizamos el método de mapeo para evitar código duplicado
+                RiskAlertResponse dto = mapToResponseStatic(alert);
                 emitter.send(SseEmitter.event().name("RISK_ALERT").data(dto));
             } catch (IOException e) {
-                emitters.remove(caregiverId);
+                trustContactsEmitters.remove(carerId);
             }
         }
     }
 
     private RiskAlertResponse mapToResponse(RiskAlert alert) {
+        return mapToResponseStatic(alert);
+    }
+
+    // Método estático auxiliar para permitir el mapeo tanto en contextos de instancia como estáticos
+    private static RiskAlertResponse mapToResponseStatic(RiskAlert alert) {
         return new RiskAlertResponse(
                 alert.getId().toString(),
                 alert.getAnalysis().getUser().getFullName(),
