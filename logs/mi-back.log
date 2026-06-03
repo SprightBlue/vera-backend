@@ -1,0 +1,221 @@
+2026-06-02T18:02:51.847-03:00  INFO 41820 --- [main] c.u.verabackend.VeraBackendApplication   : Starting VeraBackendApplication using Java 25.0.3 with PID 41820 (C:\Dev\Desarrollo\Vera\vera-backend\target\classes started by panch in C:\Dev\Desarrollo\Vera\vera-backend)
+2026-06-02T18:02:51.849-03:00 DEBUG 41820 --- [main] c.u.verabackend.VeraBackendApplication   : Running with Spring Boot v4.0.6, Spring v7.0.7
+2026-06-02T18:02:51.850-03:00  INFO 41820 --- [main] c.u.verabackend.VeraBackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T18:02:53.364-03:00  INFO 41820 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-02T18:02:53.610-03:00  INFO 41820 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 204 ms. Found 6 JPA repository interfaces.
+2026-06-02T18:02:54.973-03:00  INFO 41820 --- [main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2026-06-02T18:02:55.000-03:00  INFO 41820 --- [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-02T18:02:55.001-03:00  INFO 41820 --- [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.21]
+2026-06-02T18:02:55.116-03:00  INFO 41820 --- [main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 3202 ms
+2026-06-02T18:02:55.501-03:00  INFO 41820 --- [main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-06-02T18:02:55.681-03:00  INFO 41820 --- [main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.2.12.Final
+2026-06-02T18:02:56.893-03:00  INFO 41820 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-02T18:02:56.964-03:00  INFO 41820 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-02T18:02:59.904-03:00  INFO 41820 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@7fd2a67a
+2026-06-02T18:02:59.908-03:00  INFO 41820 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-02T18:03:00.196-03:00  WARN 41820 --- [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-02T18:03:01.152-03:00  INFO 41820 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://ep-holy-wind-aklqwzsa-pooler.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.10
+	Default catalog/schema: neondb/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-02T18:03:02.545-03:00  INFO 41820 --- [main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-02T18:03:05.203-03:00  INFO 41820 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-02T18:03:05.292-03:00  INFO 41820 --- [main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-02T18:03:05.483-03:00  INFO 41820 --- [main] o.s.boot.web.servlet.RegistrationBean    : Filter jwtFilterRegistration was not registered (disabled)
+2026-06-02T18:03:06.127-03:00  INFO 41820 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-06-02T18:03:06.243-03:00  WARN 41820 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T18:03:06.761-03:00  INFO 41820 --- [main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+2026-06-02T18:03:06.766-03:00  INFO 41820 --- [main] c.u.verabackend.VeraBackendApplication   : Started VeraBackendApplication in 15.35 seconds (process running for 15.806)
+2026-06-02T18:04:27.488-03:00  INFO 41820 --- [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-02T18:04:27.489-03:00  INFO 41820 --- [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-02T18:04:27.492-03:00  INFO 41820 --- [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-06-02T19:50:00.443-03:00  INFO 41820 --- [SpringApplicationShutdownHook] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-02T19:50:00.560-03:00  INFO 41820 --- [tomcat-shutdown] o.s.boot.tomcat.GracefulShutdown         : Graceful shutdown complete
+2026-06-02T19:50:00.652-03:00  INFO 41820 --- [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-02T19:50:00.781-03:00  INFO 41820 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-02T19:50:01.915-03:00  INFO 41820 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-06-02T19:50:33.239-03:00  INFO 23588 --- [main] c.u.verabackend.VeraBackendApplication   : Starting VeraBackendApplication using Java 25.0.3 with PID 23588 (C:\Dev\Desarrollo\Vera\vera-backend\target\classes started by panch in C:\Dev\Desarrollo\Vera\vera-backend)
+2026-06-02T19:50:33.246-03:00 DEBUG 23588 --- [main] c.u.verabackend.VeraBackendApplication   : Running with Spring Boot v4.0.6, Spring v7.0.7
+2026-06-02T19:50:33.247-03:00  INFO 23588 --- [main] c.u.verabackend.VeraBackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T19:50:35.791-03:00  INFO 23588 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-02T19:50:35.993-03:00  INFO 23588 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 165 ms. Found 6 JPA repository interfaces.
+2026-06-02T19:50:36.906-03:00  INFO 23588 --- [main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2026-06-02T19:50:36.934-03:00  INFO 23588 --- [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-02T19:50:36.936-03:00  INFO 23588 --- [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.21]
+2026-06-02T19:50:37.040-03:00  INFO 23588 --- [main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 3642 ms
+2026-06-02T19:50:37.271-03:00  INFO 23588 --- [main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-06-02T19:50:37.392-03:00  INFO 23588 --- [main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.2.12.Final
+2026-06-02T19:50:38.138-03:00  INFO 23588 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-02T19:50:38.188-03:00  INFO 23588 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-02T19:50:40.643-03:00  INFO 23588 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@5dd3727c
+2026-06-02T19:50:40.645-03:00  INFO 23588 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-02T19:50:40.891-03:00  WARN 23588 --- [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-02T19:50:41.768-03:00  INFO 23588 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://ep-holy-wind-aklqwzsa-pooler.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.10
+	Default catalog/schema: neondb/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-02T19:50:42.915-03:00  INFO 23588 --- [main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-02T19:50:45.360-03:00  INFO 23588 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-02T19:50:45.438-03:00  INFO 23588 --- [main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-02T19:50:45.685-03:00  INFO 23588 --- [main] o.s.boot.web.servlet.RegistrationBean    : Filter jwtFilterRegistration was not registered (disabled)
+2026-06-02T19:50:46.643-03:00  INFO 23588 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-06-02T19:50:46.808-03:00  WARN 23588 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T19:50:47.540-03:00  INFO 23588 --- [main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+2026-06-02T19:50:47.547-03:00  INFO 23588 --- [main] c.u.verabackend.VeraBackendApplication   : Started VeraBackendApplication in 15.663 seconds (process running for 17.729)
+2026-06-02T19:51:10.799-03:00  INFO 23588 --- [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-02T19:51:10.800-03:00  INFO 23588 --- [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-02T19:51:10.803-03:00  INFO 23588 --- [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-06-02T20:05:21.654-03:00  INFO 23588 --- [SpringApplicationShutdownHook] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-02T20:05:22.034-03:00  INFO 23588 --- [tomcat-shutdown] o.s.boot.tomcat.GracefulShutdown         : Graceful shutdown complete
+2026-06-02T20:05:22.265-03:00  INFO 23588 --- [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-02T20:05:22.540-03:00  INFO 23588 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-02T20:05:23.740-03:00  INFO 23588 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-06-02T20:06:01.059-03:00  INFO 18088 --- [main] c.u.verabackend.VeraBackendApplication   : Starting VeraBackendApplication using Java 25.0.3 with PID 18088 (C:\Dev\Desarrollo\Vera\vera-backend\target\classes started by panch in C:\Dev\Desarrollo\Vera\vera-backend)
+2026-06-02T20:06:01.065-03:00 DEBUG 18088 --- [main] c.u.verabackend.VeraBackendApplication   : Running with Spring Boot v4.0.6, Spring v7.0.7
+2026-06-02T20:06:01.068-03:00  INFO 18088 --- [main] c.u.verabackend.VeraBackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T20:06:03.010-03:00  INFO 18088 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-02T20:06:03.220-03:00  INFO 18088 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 166 ms. Found 6 JPA repository interfaces.
+2026-06-02T20:06:04.534-03:00  INFO 18088 --- [main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2026-06-02T20:06:04.571-03:00  INFO 18088 --- [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-02T20:06:04.573-03:00  INFO 18088 --- [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.21]
+2026-06-02T20:06:04.709-03:00  INFO 18088 --- [main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 3468 ms
+2026-06-02T20:06:04.982-03:00  INFO 18088 --- [main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-06-02T20:06:05.089-03:00  INFO 18088 --- [main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.2.12.Final
+2026-06-02T20:06:05.937-03:00  INFO 18088 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-02T20:06:06.005-03:00  INFO 18088 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-02T20:06:08.831-03:00  INFO 18088 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@5dd3727c
+2026-06-02T20:06:08.835-03:00  INFO 18088 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-02T20:06:09.103-03:00  WARN 18088 --- [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-02T20:06:10.027-03:00  INFO 18088 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://ep-holy-wind-aklqwzsa-pooler.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.10
+	Default catalog/schema: neondb/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-02T20:06:12.009-03:00  INFO 18088 --- [main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-02T20:06:14.522-03:00  INFO 18088 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-02T20:06:14.615-03:00  INFO 18088 --- [main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-02T20:06:14.885-03:00  INFO 18088 --- [main] o.s.boot.web.servlet.RegistrationBean    : Filter jwtFilterRegistration was not registered (disabled)
+2026-06-02T20:06:15.999-03:00  INFO 18088 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-06-02T20:06:16.188-03:00  WARN 18088 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T20:06:17.081-03:00  INFO 18088 --- [main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+2026-06-02T20:06:17.090-03:00  INFO 18088 --- [main] c.u.verabackend.VeraBackendApplication   : Started VeraBackendApplication in 17.177 seconds (process running for 18.394)
+2026-06-02T20:06:42.837-03:00  INFO 18088 --- [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-02T20:06:42.845-03:00  INFO 18088 --- [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-02T20:06:42.853-03:00  INFO 18088 --- [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 7 ms
+2026-06-02T20:18:35.523-03:00  INFO 18088 --- [SpringApplicationShutdownHook] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-02T20:18:35.601-03:00  INFO 18088 --- [tomcat-shutdown] o.s.boot.tomcat.GracefulShutdown         : Graceful shutdown complete
+2026-06-02T20:18:35.653-03:00  INFO 18088 --- [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-02T20:18:35.738-03:00  INFO 18088 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-02T20:18:36.856-03:00  INFO 18088 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-06-02T20:19:45.583-03:00  INFO 7576 --- [main] c.u.verabackend.VeraBackendApplication   : Starting VeraBackendApplication using Java 25.0.3 with PID 7576 (C:\Dev\Desarrollo\Vera\vera-backend\target\classes started by panch in C:\Dev\Desarrollo\Vera\vera-backend)
+2026-06-02T20:19:45.598-03:00 DEBUG 7576 --- [main] c.u.verabackend.VeraBackendApplication   : Running with Spring Boot v4.0.6, Spring v7.0.7
+2026-06-02T20:19:45.599-03:00  INFO 7576 --- [main] c.u.verabackend.VeraBackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T20:19:49.799-03:00  INFO 7576 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-02T20:19:50.010-03:00  INFO 7576 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 195 ms. Found 6 JPA repository interfaces.
+2026-06-02T20:19:51.155-03:00  INFO 7576 --- [main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2026-06-02T20:19:51.192-03:00  INFO 7576 --- [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-02T20:19:51.196-03:00  INFO 7576 --- [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.21]
+2026-06-02T20:19:51.372-03:00  INFO 7576 --- [main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 5583 ms
+2026-06-02T20:19:51.663-03:00  INFO 7576 --- [main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-06-02T20:19:51.782-03:00  INFO 7576 --- [main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.2.12.Final
+2026-06-02T20:19:52.624-03:00  INFO 7576 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-02T20:19:52.685-03:00  INFO 7576 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-02T20:19:56.113-03:00  INFO 7576 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@5dd3727c
+2026-06-02T20:19:56.117-03:00  INFO 7576 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-02T20:19:56.396-03:00  WARN 7576 --- [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-02T20:19:57.310-03:00  INFO 7576 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://ep-holy-wind-aklqwzsa-pooler.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.10
+	Default catalog/schema: neondb/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-02T20:20:07.107-03:00  INFO 7576 --- [main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-02T20:20:09.652-03:00  INFO 7576 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-02T20:20:09.747-03:00  INFO 7576 --- [main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-02T20:20:10.032-03:00  INFO 7576 --- [main] o.s.boot.web.servlet.RegistrationBean    : Filter jwtFilterRegistration was not registered (disabled)
+2026-06-02T20:20:12.002-03:00  INFO 7576 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-06-02T20:20:12.449-03:00  WARN 7576 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T20:20:14.917-03:00  INFO 7576 --- [main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+2026-06-02T20:20:14.941-03:00  INFO 7576 --- [main] c.u.verabackend.VeraBackendApplication   : Started VeraBackendApplication in 33.569 seconds (process running for 39.034)
+2026-06-02T20:20:17.718-03:00  INFO 7576 --- [http-nio-8080-exec-3] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-02T20:20:17.724-03:00  INFO 7576 --- [http-nio-8080-exec-3] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-02T20:20:17.730-03:00  INFO 7576 --- [http-nio-8080-exec-3] o.s.web.servlet.DispatcherServlet        : Completed initialization in 6 ms
+2026-06-02T21:00:11.340-03:00  WARN 7576 --- [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@26244a8d (This connection has been closed.). Possibly consider using a shorter maxLifetime value.
+2026-06-02T21:00:12.054-03:00  WARN 7576 --- [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@5dd3727c (This connection has been closed.). Possibly consider using a shorter maxLifetime value.
+2026-06-02T21:00:12.345-03:00  WARN 7576 --- [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@3ad1d09d (This connection has been closed.). Possibly consider using a shorter maxLifetime value.
+2026-06-02T21:00:12.395-03:00  WARN 7576 --- [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=30m16s103ms501µs).
+2026-06-02T21:00:12.679-03:00  WARN 7576 --- [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@2ac06051 (This connection has been closed.). Possibly consider using a shorter maxLifetime value.
+2026-06-02T21:00:12.900-03:00  WARN 7576 --- [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@62c8716 (This connection has been closed.). Possibly consider using a shorter maxLifetime value.
+2026-06-02T21:03:15.954-03:00  INFO 7576 --- [SpringApplicationShutdownHook] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-02T21:03:16.068-03:00  INFO 7576 --- [tomcat-shutdown] o.s.boot.tomcat.GracefulShutdown         : Graceful shutdown complete
+2026-06-02T21:03:16.174-03:00  INFO 7576 --- [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-02T21:03:16.301-03:00  INFO 7576 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-02T21:03:17.423-03:00  INFO 7576 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-06-02T21:03:57.774-03:00  INFO 27248 --- [main] c.u.verabackend.VeraBackendApplication   : Starting VeraBackendApplication using Java 25.0.3 with PID 27248 (C:\Dev\Desarrollo\Vera\vera-backend\target\classes started by panch in C:\Dev\Desarrollo\Vera\vera-backend)
+2026-06-02T21:03:57.782-03:00 DEBUG 27248 --- [main] c.u.verabackend.VeraBackendApplication   : Running with Spring Boot v4.0.6, Spring v7.0.7
+2026-06-02T21:03:57.783-03:00  INFO 27248 --- [main] c.u.verabackend.VeraBackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-06-02T21:03:59.255-03:00  INFO 27248 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-02T21:03:59.418-03:00  INFO 27248 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 148 ms. Found 6 JPA repository interfaces.
+2026-06-02T21:04:00.250-03:00  INFO 27248 --- [main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2026-06-02T21:04:00.274-03:00  INFO 27248 --- [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-02T21:04:00.277-03:00  INFO 27248 --- [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.21]
+2026-06-02T21:04:00.345-03:00  INFO 27248 --- [main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 2454 ms
+2026-06-02T21:04:00.502-03:00  INFO 27248 --- [main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-06-02T21:04:00.580-03:00  INFO 27248 --- [main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.2.12.Final
+2026-06-02T21:04:01.098-03:00  INFO 27248 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-02T21:04:01.134-03:00  INFO 27248 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-02T21:04:03.669-03:00  INFO 27248 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@5dd3727c
+2026-06-02T21:04:03.671-03:00  INFO 27248 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-02T21:04:03.942-03:00  WARN 27248 --- [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-02T21:04:04.849-03:00  INFO 27248 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://ep-holy-wind-aklqwzsa-pooler.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.10
+	Default catalog/schema: neondb/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-02T21:04:05.892-03:00  INFO 27248 --- [main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-02T21:04:08.415-03:00  INFO 27248 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-02T21:04:08.492-03:00  INFO 27248 --- [main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-02T21:04:08.698-03:00  INFO 27248 --- [main] o.s.boot.web.servlet.RegistrationBean    : Filter jwtFilterRegistration was not registered (disabled)
+2026-06-02T21:04:09.467-03:00  INFO 27248 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2026-06-02T21:04:09.586-03:00  WARN 27248 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-02T21:04:10.126-03:00  INFO 27248 --- [main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+2026-06-02T21:04:10.132-03:00  INFO 27248 --- [main] c.u.verabackend.VeraBackendApplication   : Started VeraBackendApplication in 12.999 seconds (process running for 13.467)
+2026-06-02T21:04:25.080-03:00  INFO 27248 --- [http-nio-8080-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-02T21:04:25.081-03:00  INFO 27248 --- [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-02T21:04:25.084-03:00  INFO 27248 --- [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
