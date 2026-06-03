@@ -1,77 +1,81 @@
 package com.unlam.verabackend.presentation.controller;
 
-import com.unlam.verabackend.domain.model.AlertDetail;
-import com.unlam.verabackend.domain.ports.in.GetAlertDetailUseCase;
 import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
 import com.unlam.verabackend.domain.model.RiskAlert;
-import com.unlam.verabackend.presentation.mapper.AlertPresentationMapper;
+import com.unlam.verabackend.infrastructure.entity.User;
+import com.unlam.verabackend.application.service.NotificationSseService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/risk-alerts")
 public class RiskAlertController {
 
     private final ManageRiskAlertUseCase manageRiskAlertUseCase;
-    private final GetAlertDetailUseCase getAlertDetailUseCase;
+    private final NotificationSseService notificationSseService;
 
-    public RiskAlertController(ManageRiskAlertUseCase manageRiskAlertUseCase, GetAlertDetailUseCase getAlertDetailUseCase) {
+    public RiskAlertController(ManageRiskAlertUseCase manageRiskAlertUseCase, NotificationSseService notificationSseService) {
         this.manageRiskAlertUseCase = manageRiskAlertUseCase;
-        this.getAlertDetailUseCase = getAlertDetailUseCase;
+        this.notificationSseService = notificationSseService;
     }
 
-    @GetMapping("/caregiver/{caregiverId}/active")
-    public ResponseEntity<List<RiskAlertResponse>> getActiveAlerts(@PathVariable Long caregiverId) {
-        List<RiskAlert> alerts = manageRiskAlertUseCase.getActiveAlertsByCaregiver(caregiverId);
-
-        List<RiskAlertResponse> response = alerts.stream()
-                .map(alert -> new RiskAlertResponse(
-                        alert.getId().toString(),
-                        alert.getAnalysis().getUser().getFullName(),
-                        alert.getAnalysis().getContent(),
-                        alert.getAnalysis().getMessageSource().getDisplayName(),
-                        alert.getAnalysis().getRiskLevel().name(),
-                        alert.getAnalysis().getSuspiciousPatterns(),
-                        alert.getCreatedAt()
-                ))
-                .toList();
-
+    @GetMapping("/active")
+    public ResponseEntity<List<RiskAlertResponse>> getActiveAlerts(@AuthenticationPrincipal User user) {
+        List<RiskAlert> alerts = manageRiskAlertUseCase.getActiveAlertsByCarerEmail(user.getEmail());
+        List<RiskAlertResponse> response = alerts.stream().map(this::mapToResponse).toList();
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{alertId}/solve")
+    @GetMapping("/{alertId}")
+    public ResponseEntity<RiskAlertResponse> getAlertById(@PathVariable String alertId) {
+        RiskAlert alert = manageRiskAlertUseCase.getAlertById(alertId);
+        return ResponseEntity.ok(mapToResponse(alert));
+    }
+
+    @PostMapping("/{alertId}/solve")
     public ResponseEntity<Void> solveAlert(@PathVariable String alertId) {
         manageRiskAlertUseCase.markAlertAsSolved(alertId);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{alertId}/contact-link")
-    public ResponseEntity<ContactLinkResponse> getContactLink(@PathVariable String alertId) {
-        String mailtoLink = manageRiskAlertUseCase.getContactLinkForUser(alertId);
-        return ResponseEntity.ok(new ContactLinkResponse(mailtoLink));
+    // Canal unificado de Streaming asincrónico por Spring Security
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamAlerts(@AuthenticationPrincipal User user) {
+        return notificationSseService.createEmitter(user.getId());
+    }
+
+    public void sendNotificationToTrustContact(Long carerId, RiskAlert alert) {
+        RiskAlertResponse dto = mapToResponse(alert);
+        notificationSseService.sendNotification(carerId, "RISK_ALERT", dto);
+    }
+
+    private RiskAlertResponse mapToResponse(RiskAlert alert) {
+        return new RiskAlertResponse(
+                alert.getId().toString(),
+                alert.getAnalysis().getUser().getFullName(),
+                alert.getAnalysis().getUser().getEmail(),
+                alert.getAnalysis().getContent(),
+                alert.getAnalysis().getMessageSource().getDisplayName(),
+                alert.getAnalysis().getRiskLevel().name(),
+                alert.getAnalysis().getSuspiciousPatterns(),
+                alert.getCreatedAt()
+        );
     }
 
     public record RiskAlertResponse(
             String alertId,
             String protectedUserName,
+            String protectedUserEmail,
             String messageContent,
             String source,
             String riskLevel,
             String suspiciousPatterns,
             LocalDateTime createdAt
     ) {}
-
-    public record ContactLinkResponse(String link) {}
-
-
-    @GetMapping("/{alertId}")
-    public ResponseEntity<?> getDetail(@PathVariable UUID alertId, @AuthenticationPrincipal(expression = "id") Long requestingUserId) {
-        AlertDetail detail = getAlertDetailUseCase.getDetail(alertId, requestingUserId);
-        return ResponseEntity.ok(AlertPresentationMapper.toDetailPresentation(detail));
-    }
 }

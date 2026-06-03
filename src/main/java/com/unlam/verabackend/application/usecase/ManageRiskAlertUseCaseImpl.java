@@ -3,7 +3,6 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.domain.model.RiskAlert;
 import com.unlam.verabackend.domain.ports.in.ManageRiskAlertUseCase;
 import com.unlam.verabackend.domain.ports.out.RiskAlertRepository;
-import com.unlam.verabackend.domain.ports.out.LinkGeneratorService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,17 +12,22 @@ import java.util.List;
 public class ManageRiskAlertUseCaseImpl implements ManageRiskAlertUseCase {
 
     private final RiskAlertRepository riskAlertRepository;
-    private final LinkGeneratorService linkGeneratorService;
 
-    public ManageRiskAlertUseCaseImpl(RiskAlertRepository riskAlertRepository, LinkGeneratorService linkGeneratorService) {
+    public ManageRiskAlertUseCaseImpl(RiskAlertRepository riskAlertRepository) {
         this.riskAlertRepository = riskAlertRepository;
-        this.linkGeneratorService = linkGeneratorService;
     }
 
     @Override
-    @Transactional
-    public List<RiskAlert> getActiveAlertsByCaregiver(Long caregiverId) {
-        return riskAlertRepository.findActiveByCaregiver(caregiverId);
+    @Transactional(readOnly = true)
+    public List<RiskAlert> getActiveAlertsByCarerEmail(String email) { // 👈 Cambiado a CarerEmail
+        return riskAlertRepository.findActiveByCarerEmail(email);      // 👈 Cambiado a CarerEmail
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RiskAlert getAlertById(String alertId) {
+        return riskAlertRepository.findById(alertId)
+                .orElseThrow(() -> new RuntimeException("No se encontró la alerta de riesgo con ID: " + alertId));
     }
 
     @Override
@@ -34,17 +38,5 @@ public class ManageRiskAlertUseCaseImpl implements ManageRiskAlertUseCase {
 
         alert.markAsSolved();
         riskAlertRepository.save(alert);
-    }
-
-    @Override
-    @Transactional
-    public String getContactLinkForUser(String alertId) {
-        RiskAlert alert = riskAlertRepository.findById(alertId)
-                .orElseThrow(() -> new RuntimeException("No se encontró la alerta de riesgo con ID: " + alertId));
-
-        String targetEmail = alert.getAnalysis().getUser().getEmail();
-        String subject = "Seguimiento - Alerta de Seguridad Sistema VERA";
-
-        return linkGeneratorService.generateEmailLink(targetEmail, subject);
     }
 }

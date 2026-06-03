@@ -1,10 +1,8 @@
 package com.unlam.verabackend.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 import com.unlam.verabackend.infrastructure.entity.User;
@@ -51,11 +49,11 @@ public class TrustInvitation {
     private boolean notifyHighRisk;
     private boolean receiveAlertSummaries;
 
-    private boolean allowBasicConfig;
-    private boolean monitorWhatsapp;
-    private boolean monitorSms;
-    private boolean monitorGmail;
-    private boolean monitorTelegram;
+//    private boolean allowBasicConfig;
+//    private boolean monitorWhatsapp;
+//    private boolean monitorSms;
+//    private boolean monitorGmail;
+//    private boolean monitorTelegram;
 
 
     @Column(nullable = false, updatable = false)

@@ -37,7 +37,7 @@ public class AnalysisRepositoryImpl implements AnalysisRepository {
         entity.setRecommendation(analysis.getRecommendation());
         entity.setCreatedAt(analysis.getCreatedAt() != null ? analysis.getCreatedAt() : java.time.LocalDateTime.now());
 
-        jpaRepository.save(entity);
+        jpaRepository.saveAndFlush(entity);
     }
 
     @Override
