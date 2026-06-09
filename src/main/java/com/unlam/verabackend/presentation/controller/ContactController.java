@@ -1,6 +1,6 @@
 package com.unlam.verabackend.presentation.controller;
 
-import com.unlam.verabackend.domain.ports.in.ManageContactsUseCase;
+import com.unlam.verabackend.domain.port.in.ManageContactsUseCase;
 import com.unlam.verabackend.presentation.dto.AddContactRequest;
 import com.unlam.verabackend.presentation.dto.InviteLinkResponse;
 import com.unlam.verabackend.presentation.dto.ContactResponse;

@@ -1,6 +1,6 @@
 package com.unlam.verabackend.presentation.dto;
 
-import com.unlam.verabackend.entity.SensitivityLevel;
+import com.unlam.verabackend.domain.model.SensitivityLevel;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

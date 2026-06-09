@@ -2,7 +2,7 @@ package com.unlam.verabackend.application.usecase;
 
 import org.springframework.stereotype.Service;
 import com.unlam.verabackend.infrastructure.entity.User;
-import com.unlam.verabackend.domain.repository.UserRepository;
+import com.unlam.verabackend.infrastructure.repository.UserRepository;
 
 @Service
 public class RegisterUserUseCase {

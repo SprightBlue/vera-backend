@@ -4,7 +4,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import com.unlam.verabackend.entity.TrustContact;
+import com.unlam.verabackend.infrastructure.entity.TrustContact;
 
 @Repository
 public interface TrustContactRepository extends JpaRepository<TrustContact, Long> {
@@ -13,7 +13,7 @@ public interface TrustContactRepository extends JpaRepository<TrustContact, Long
 
     List<TrustContact> findByProtectedUserId(Long protectedUserId);
 
-    boolean existsByCarerIdAndProtectedUserId(Long carerId, Long protectedUserId);
+    boolean existsByCarerIdAndProtectedUser_Id(Long carerId, Long protectedUserId);
 
     
 }

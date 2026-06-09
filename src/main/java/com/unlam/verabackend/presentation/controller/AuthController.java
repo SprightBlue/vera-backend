@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.unlam.verabackend.domain.ports.in.UserUseCase;
+import com.unlam.verabackend.domain.port.in.UserUseCase;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;

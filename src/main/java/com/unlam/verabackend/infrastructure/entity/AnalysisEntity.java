@@ -2,43 +2,61 @@ package com.unlam.verabackend.infrastructure.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Getter
-@Setter
+@Entity
+@Table(name = "analysis", schema = "public")
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "analyses")
+@Builder
 public class AnalysisEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_analyses_user"))
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
-
-    @Column(name = "content", columnDefinition = "text", nullable = false)
-    private String content;
-
-    @Column(name = "source_id", length = 50, nullable = false)
-    private String contentSourceId;
-
-    @Column(name = "risk_level_id", length = 50, nullable = false)
-    private String riskLevelId;
-
-    @Column(name = "suspicious_patterns", columnDefinition = "text", nullable = false)
-    private String suspiciousPatterns;
-
-    @Column(name = "recommendation", columnDefinition = "text", nullable = false)
-    private String recommendation;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "title")
+    private String title;
+
+    @Column(name = "source")
+    private String source;
+
+    @Column(name = "content_summary", columnDefinition = "TEXT")
+    private String contentSummary;
+
+    @Column(name = "risk_level", length = 50)
+    private String riskLevel;
+
+    @Column(name = "risk_type", length = 50)
+    private String riskType;
+
+    @Column(name = "risk_percentage")
+    private Integer riskPercentage;
+
+    @Column(name = "suspicious_patterns", columnDefinition = "TEXT")
+    private String suspiciousPatterns;
+
+    @Column(name = "recommendation", columnDefinition = "TEXT")
+    private String recommendation;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+    }
 }
