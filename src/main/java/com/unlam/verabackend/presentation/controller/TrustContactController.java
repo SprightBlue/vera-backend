@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import com.unlam.verabackend.application.usecase.TrustContactUseCase;
+import com.unlam.verabackend.domain.port.in.TrustContactUseCase;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
 import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;

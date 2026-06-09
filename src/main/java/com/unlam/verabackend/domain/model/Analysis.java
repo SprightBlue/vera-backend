@@ -1,36 +1,28 @@
 package com.unlam.verabackend.domain.model;
 
+import com.unlam.verabackend.infrastructure.entity.User;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Analysis {
     private UUID id;
-    private DomainUser user;
-    private String content;
-    private MessageSource messageSource;
+    private User user;
+    private LocalDateTime createdAt;
+    private String title;
+    private Source source;
+    private String contentSummary;
+    private RiskType riskType;
     private RiskLevel riskLevel;
+    private Integer riskPercentage;
     private String suspiciousPatterns;
     private String recommendation;
-    private LocalDateTime createdAt;
-
-    public static Analysis create(DomainUser user, String content, MessageSource source, String riskLevel, String patterns, String recommendation) {
-        return new Analysis(
-                UUID.randomUUID(),
-                user,
-                content,
-                source,
-                RiskLevel.fromString(riskLevel),
-                patterns,
-                recommendation,
-                LocalDateTime.now()
-        );
-    }
 }

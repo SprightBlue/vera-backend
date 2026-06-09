@@ -1,10 +1,10 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.domain.model.*;
-import com.unlam.verabackend.domain.ports.in.ManageContactsUseCase;
-import com.unlam.verabackend.domain.repository.UserRepository;
-import com.unlam.verabackend.entity.SensitivityLevel;
-import com.unlam.verabackend.entity.TrustContact;
+import com.unlam.verabackend.domain.model.SensitivityLevel;
+import com.unlam.verabackend.domain.port.in.ManageContactsUseCase;
+import com.unlam.verabackend.infrastructure.repository.UserRepository;
+import com.unlam.verabackend.infrastructure.entity.TrustContact;
+import com.unlam.verabackend.infrastructure.entity.TrustInvitation;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.TrustInvitationRepository;
@@ -49,7 +49,7 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
         User contactUser = userRepository.findByEmail(request.contactEmail()).orElseThrow(() -> new IllegalArgumentException("No existe ningún usuario con email: " + request.contactEmail()));
         User protectedUser = userRepository.findById(protectedPersonId).orElseThrow(() -> new IllegalArgumentException("Persona protegida no encontrada"));
 
-        if (trustContactRepository.existsByCarerIdAndProtectedUserId(contactUser.getId(), protectedPersonId)) {
+        if (trustContactRepository.existsByCarerIdAndProtectedUser_Id(contactUser.getId(), protectedPersonId)) {
             throw new IllegalArgumentException("Este usuario ya es contacto de emergencia del protegido");
         }
 
@@ -70,13 +70,13 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
         User caregiver = userRepository.findByEmail(caregiverEmail).orElseThrow(() -> new IllegalArgumentException("Cuidador no encontrado"));
 
         String token = UUID.randomUUID().toString();
-        var invitation = com.unlam.verabackend.entity.TrustInvitation.builder()
+        var invitation = TrustInvitation.builder()
                 .carer(caregiver)
                 .token(token)
                 .fullName(contactEmail)
                 .email(contactEmail)
                 .relationship(relationship)
-                .sensitivityLevel(com.unlam.verabackend.entity.SensitivityLevel.MEDIO)
+                .sensitivityLevel(SensitivityLevel.MEDIO)
                 .notifyHighRisk(true)
                 .receiveAlertSummaries(false)
                 .build();
@@ -86,7 +86,7 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
 
     private void verifyCaregiverAccess(Long protectedPersonId, String caregiverEmail) {
         User caregiver = userRepository.findByEmail(caregiverEmail).orElseThrow(() -> new IllegalArgumentException("Cuidador no encontrado"));
-        if (!trustContactRepository.existsByCarerIdAndProtectedUserId(caregiver.getId(), protectedPersonId)) {
+        if (!trustContactRepository.existsByCarerIdAndProtectedUser_Id(caregiver.getId(), protectedPersonId)) {
             throw new AccessDeniedException("No tenés acceso a los contactos de esta persona protegida");
         }
     }

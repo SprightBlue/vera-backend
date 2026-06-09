@@ -20,7 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.http.HttpMethod;
-import com.unlam.verabackend.domain.repository.UserRepository;
+import com.unlam.verabackend.infrastructure.repository.UserRepository;
 
 import java.util.List;
 
@@ -42,7 +42,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/analysis/**").permitAll()
+                        .requestMatchers("/api/v1/analysis").permitAll()
 
                         .requestMatchers("/api/v1/risk-alerts/**").authenticated()
 

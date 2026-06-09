@@ -1,10 +1,11 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.domain.repository.UserRepository;
-import com.unlam.verabackend.entity.InvitationStatus;
-import com.unlam.verabackend.entity.SensitivityLevel;
-import com.unlam.verabackend.entity.TrustContact;
-import com.unlam.verabackend.entity.TrustInvitation;
+import com.unlam.verabackend.domain.port.in.TrustContactUseCase;
+import com.unlam.verabackend.infrastructure.repository.UserRepository;
+import com.unlam.verabackend.domain.model.InvitationStatus;
+import com.unlam.verabackend.domain.model.SensitivityLevel;
+import com.unlam.verabackend.infrastructure.entity.TrustContact;
+import com.unlam.verabackend.infrastructure.entity.TrustInvitation;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
 import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;
@@ -161,7 +162,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
             throw new RuntimeException("No podés aceptar tu propia invitación de seguridad");
         }
 
-        if (trustContactRepository.existsByCarerIdAndProtectedUserId(invitation.getCarer().getId(), protectedUser.getId())) {
+        if (trustContactRepository.existsByCarerIdAndProtectedUser_Id(invitation.getCarer().getId(), protectedUser.getId())) {
             throw new RuntimeException("Ya estás siendo protegido por este usuario");
         }
 
@@ -215,7 +216,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         User protectedUser = userRepository.findByEmail(protectedUserEmail)
                 .orElseThrow(() -> new RuntimeException("Usuario protegido no encontrado"));
 
-        if (trustContactRepository.existsByCarerIdAndProtectedUserId(invitation.getCarer().getId(), protectedUser.getId())) {
+        if (trustContactRepository.existsByCarerIdAndProtectedUser_Id(invitation.getCarer().getId(), protectedUser.getId())) {
             invitation.setStatus(InvitationStatus.ACCEPTED);
             trustInvitationRepository.save(invitation);
             throw new RuntimeException("Ya existe una relación activa con este usuario");

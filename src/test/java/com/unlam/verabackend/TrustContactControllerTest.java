@@ -1,6 +1,6 @@
 //package com.unlam.verabackend;
-//import com.unlam.verabackend.application.usecase.TrustContactUseCase;
-//import com.unlam.verabackend.entity.SensitivityLevel;
+//import com.unlam.verabackend.domain.port.in.TrustContactUseCase;
+//import com.unlam.verabackend.domain.model.SensitivityLevel;
 //import com.unlam.verabackend.presentation.controller.TrustContactController;
 //import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
 //import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;

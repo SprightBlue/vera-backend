@@ -1,23 +1,7 @@
 package com.unlam.verabackend.domain.model;
 
-import lombok.Getter;
-
-@Getter
 public enum RiskLevel {
-    UNDEFINED("Sin Definir"),
-    LOW("Bajo"),
-    MEDIUM("Medio"),
-    HIGH("Alto");
-
-    private final String displayName;
-
-    RiskLevel(String displayName) { this.displayName = displayName; }
-
-    public static RiskLevel fromString(String value) {
-        if (value == null) return UNDEFINED;
-        for (RiskLevel level : RiskLevel.values()) {
-            if (level.name().equalsIgnoreCase(value.trim())) return level;
-        }
-        return UNDEFINED;
-    }
+    LOW, // Riesgo bajo: No se detectaron patrones sospechosos ni enlaces maliciosos. El contenido parece seguro.
+    MEDIUM, // Riesgo medio: Se detectaron algunos patrones sospechosos o el contenido es dudoso, pero no hay evidencia clara de estafa o malware. Se recomienda precaución.
+    HIGH // Riesgo alto: Se detectaron patrones claros de estafa, enlaces maliciosos activos o contenido peligroso. Se recomienda no interactuar y eliminar el mensaje.
 }

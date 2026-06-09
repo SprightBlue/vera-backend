@@ -1,7 +1,7 @@
 package com.unlam.verabackend.application.usecase;
 
 import com.unlam.verabackend.domain.model.Role;
-import com.unlam.verabackend.domain.repository.UserRepository;
+import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.provider.JwtService;
 import com.unlam.verabackend.presentation.dto.AuthResponse;

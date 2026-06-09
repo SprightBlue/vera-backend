@@ -1,6 +1,6 @@
 package com.unlam.verabackend.infrastructure.repository;
-import com.unlam.verabackend.entity.InvitationStatus;
-import com.unlam.verabackend.entity.TrustInvitation;
+import com.unlam.verabackend.domain.model.InvitationStatus;
+import com.unlam.verabackend.infrastructure.entity.TrustInvitation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

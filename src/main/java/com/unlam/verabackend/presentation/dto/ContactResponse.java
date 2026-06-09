@@ -1,6 +1,6 @@
 package com.unlam.verabackend.presentation.dto;
 
-import com.unlam.verabackend.entity.TrustContact;
+import com.unlam.verabackend.infrastructure.entity.TrustContact;
 
 public record ContactResponse(
         Long id,
