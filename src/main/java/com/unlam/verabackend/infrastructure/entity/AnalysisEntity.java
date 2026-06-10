@@ -1,16 +1,16 @@
 package com.unlam.verabackend.infrastructure.entity;
 
+import com.unlam.verabackend.domain.model.RiskLevel;
+import com.unlam.verabackend.domain.model.RiskType;
+import com.unlam.verabackend.domain.model.Source;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "analysis", schema = "public")
+@Table(name = "analysis")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -29,20 +29,23 @@ public class AnalysisEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "title")
+    @Column(name = "title", length = 255)
     private String title;
 
-    @Column(name = "source")
-    private String source;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", length = 255)
+    private Source source;
 
     @Column(name = "content_summary", columnDefinition = "TEXT")
     private String contentSummary;
 
-    @Column(name = "risk_level", length = 50)
-    private String riskLevel;
-
+    @Enumerated(EnumType.STRING)
     @Column(name = "risk_type", length = 50)
-    private String riskType;
+    private RiskType riskType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risk_level", length = 50)
+    private RiskLevel riskLevel;
 
     @Column(name = "risk_percentage")
     private Integer riskPercentage;
@@ -55,8 +58,6 @@ public class AnalysisEntity {
 
     @PrePersist
     protected void onCreate() {
-        if (this.createdAt == null) {
-            this.createdAt = LocalDateTime.now();
-        }
+        this.createdAt = LocalDateTime.now();
     }
 }

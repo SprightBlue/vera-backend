@@ -1,12 +1,15 @@
 package com.unlam.verabackend.application.usecase;
 
+import com.unlam.verabackend.application.service.NotificationService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Alerts;
+import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.domain.port.in.ManageAlertsUseCase;
 import com.unlam.verabackend.domain.port.out.AlertsRepository;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -14,22 +17,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
 
     private final AlertsRepository alertsRepository;
     private final TrustContactRepository trustContactRepository;
     private final UserRepository userRepository;
-
-    public ManageAlertsUseCaseImpl(AlertsRepository alertsRepository,
-                                   TrustContactRepository trustContactRepository,
-                                   UserRepository userRepository) {
-        this.alertsRepository = alertsRepository;
-        this.trustContactRepository = trustContactRepository;
-        this.userRepository = userRepository;
-    }
+    private final NotificationService notificationService;
 
     private List<Long> getTrustContactIdsByEmail(String carerEmail) {
         var user = userRepository.findByEmail(carerEmail)
@@ -45,7 +43,7 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
         List<Long> contactIds = getTrustContactIdsByEmail(email);
         if (contactIds.isEmpty()) return Page.empty(pageable);
 
-        return alertsRepository.findByTrustContactIds(contactIds, pageable);
+        return alertsRepository.findByTrustContactIdsCreatedAtDesc(contactIds, pageable);
     }
 
     @Override
@@ -54,7 +52,7 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
         List<Long> contactIds = getTrustContactIdsByEmail(email);
         if (contactIds.isEmpty()) return Page.empty(pageable);
 
-        return alertsRepository.findByTrustContactIdsAndIsResolved(contactIds, isResolved, pageable);
+        return alertsRepository.findByTrustContactIdsAndIsResolvedCreatedAtDesc(contactIds, isResolved, pageable);
     }
 
     @Override
@@ -74,5 +72,22 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
     public void deleteAlert(UUID id, String carerEmail) {
         Alerts alert = getAlertDetail(id, carerEmail);
         alertsRepository.deleteById(alert.getId());
+    }
+
+    @Override
+    @Transactional
+    public void resolveAlert(UUID id, String carerEmail) {
+        Alerts alert = getAlertDetail(id, carerEmail);
+        alert.resolve();
+        alertsRepository.save(alert, alert.getTrustContact().getId());
+
+        Map<String, Object> payload = Map.of("alertId", alert.getId().toString());
+
+        notificationService.createAndSendNotification(
+                alert.getTrustContact().getProtectedUser(),
+                NotificationsType.ALERT_SOLVED,
+                alert.getTrustContact().getCarer().getFullName(),
+                payload
+        );
     }
 }

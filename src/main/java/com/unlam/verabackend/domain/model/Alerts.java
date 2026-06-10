@@ -17,7 +17,7 @@ public class Alerts {
     private UUID id;
     private TrustContact trustContact;
     private String title;
-    private String source;
+    private Source source;
     private String contentSummary;
     private RiskLevel riskLevel;
     private RiskType riskType;

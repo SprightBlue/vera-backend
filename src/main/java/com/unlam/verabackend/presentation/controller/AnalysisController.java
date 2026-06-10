@@ -1,10 +1,12 @@
 package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.domain.model.Analysis;
+import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.in.AnalyzeContentUseCase;
 import com.unlam.verabackend.domain.port.in.ManageAnalysisUseCase;
 import com.unlam.verabackend.presentation.dto.AnalysisDetailResponse;
 import com.unlam.verabackend.presentation.dto.AnalysisResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -18,22 +20,16 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/analysis")
+@RequiredArgsConstructor
 public class AnalysisController {
 
     private final AnalyzeContentUseCase analyzeContentUseCase;
     private final ManageAnalysisUseCase manageAnalysisUseCase;
 
-    public AnalysisController(AnalyzeContentUseCase analyzeContentUseCase,
-                              ManageAnalysisUseCase manageAnalysisUseCase) {
-        this.analyzeContentUseCase = analyzeContentUseCase;
-        this.manageAnalysisUseCase = manageAnalysisUseCase;
-    }
-
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<AnalysisDetailResponse> analyze(
-            // 🚀 PROD: Descomentar esta línea para usar Spring Security
-            // @AuthenticationPrincipal User user,
-            // 🛠️ DEV: Comentar esta línea cuando pases a producción
+            // 🚀 PROD: @AuthenticationPrincipal User user,
+
             @RequestHeader("user-email") String email,
             @RequestParam(value = "text", required = false) String text,
             @RequestParam(value = "file", required = false) MultipartFile file,
@@ -47,9 +43,8 @@ public class AnalysisController {
 
     @GetMapping
     public ResponseEntity<Page<AnalysisResponse>> getHistoryByUserEmail(
-            // 🚀 PROD: Descomentar esta línea para usar Spring Security
-            // @AuthenticationPrincipal User user,
-            // 🛠️ DEV: Comentar esta línea cuando pases a producción
+            // 🚀 PROD: @AuthenticationPrincipal User user,
+
             @RequestHeader("user-email") String email,
             @RequestParam(value = "riskLevel", required = false) String riskLevel,
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -58,7 +53,7 @@ public class AnalysisController {
 
         Page<Analysis> historyPage;
         if (riskLevel != null && !riskLevel.isBlank()) {
-            historyPage = manageAnalysisUseCase.getHistoryByUserEmailAndRiskLevel(email, riskLevel, pageable);
+            historyPage = manageAnalysisUseCase.getHistoryByUserEmailAndRiskLevel(email, RiskLevel.valueOf(riskLevel.toUpperCase().strip()), pageable);
         } else {
             historyPage = manageAnalysisUseCase.getHistoryByUserEmail(email, pageable);
         }
@@ -69,9 +64,8 @@ public class AnalysisController {
 
     @GetMapping("/{id}")
     public ResponseEntity<AnalysisDetailResponse> getAnalysisDetail(
-            // 🚀 PROD: Descomentar esta línea para usar Spring Security
-            // @AuthenticationPrincipal User user,
-            // 🛠️ DEV: Comentar esta línea cuando pases a producción
+            // 🚀 PROD: @AuthenticationPrincipal User user,
+
             @RequestHeader("user-email") String email,
             @PathVariable UUID id
     ) {
@@ -83,9 +77,8 @@ public class AnalysisController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAnalysis(
-            // 🚀 PROD: Descomentar esta línea para usar Spring Security
-            // @AuthenticationPrincipal User user,
-            // 🛠️ DEV: Comentar esta línea cuando pases a producción
+            // 🚀 PROD: @AuthenticationPrincipal User user,
+
             @RequestHeader("user-email") String email,
             @PathVariable UUID id
     ) {

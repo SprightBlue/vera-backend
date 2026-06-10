@@ -1,6 +1,7 @@
 package com.unlam.verabackend.domain.port.out;
 
 import com.unlam.verabackend.domain.model.Analysis;
+import com.unlam.verabackend.domain.model.RiskLevel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.util.Optional;
@@ -11,5 +12,5 @@ public interface AnalysisRepository {
     void deleteById(UUID id);
     Optional<Analysis> findById(UUID id);
     Page<Analysis> findByUserEmailOrderByCreatedAtDesc(String email, Pageable pageable);
-    Page<Analysis> findByUserEmailAndRiskLevelOrderByCreatedAtDesc(String email, String riskLevel, Pageable pageable);
+    Page<Analysis> findByUserEmailAndRiskLevelOrderByCreatedAtDesc(String email, RiskLevel riskLevel, Pageable pageable);
 }

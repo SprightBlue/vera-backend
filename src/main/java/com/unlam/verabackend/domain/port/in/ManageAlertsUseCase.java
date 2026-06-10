@@ -10,4 +10,5 @@ public interface ManageAlertsUseCase {
     Page<Alerts> getHistoryByCarerEmailAndIsResolved(String email, boolean isResolved, Pageable pageable);
     Alerts getAlertDetail(UUID id, String carerEmail);
     void deleteAlert(UUID id, String carerEmail);
+    void resolveAlert(UUID id, String carerEmail);
 }
