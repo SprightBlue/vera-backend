@@ -1,10 +1,12 @@
 package com.unlam.verabackend.infrastructure.repository;
 
 import com.unlam.verabackend.domain.model.Analysis;
+import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.out.AnalysisRepository;
 import com.unlam.verabackend.infrastructure.entity.AnalysisEntity;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.mapper.AnalysisMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
@@ -13,19 +15,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
+@RequiredArgsConstructor
 public class AnalysisRepositoryAdapter implements AnalysisRepository {
 
     private final JpaAnalysisRepository jpaRepository;
     private final UserRepository userRepository;
     private final AnalysisMapper mapper;
-
-    public AnalysisRepositoryAdapter(JpaAnalysisRepository jpaRepository,
-                                     UserRepository userRepository,
-                                     AnalysisMapper mapper) {
-        this.jpaRepository = jpaRepository;
-        this.userRepository = userRepository;
-        this.mapper = mapper;
-    }
 
     @Override
     public Analysis save(Analysis analysis) {
@@ -42,6 +37,9 @@ public class AnalysisRepositoryAdapter implements AnalysisRepository {
 
     @Override
     public void deleteById(UUID id) {
+        if (!jpaRepository.existsById(id)) {
+            throw new IllegalArgumentException("No se puede eliminar. Alerta no encontrada con ID: " + id);
+        }
         jpaRepository.deleteById(id);
     }
 
@@ -57,7 +55,7 @@ public class AnalysisRepositoryAdapter implements AnalysisRepository {
     }
 
     @Override
-    public Page<Analysis> findByUserEmailAndRiskLevelOrderByCreatedAtDesc(String email, String riskLevel, Pageable pageable) {
+    public Page<Analysis> findByUserEmailAndRiskLevelOrderByCreatedAtDesc(String email, RiskLevel riskLevel, Pageable pageable) {
         return jpaRepository.findByUserEmailAndRiskLevel(email, riskLevel, pageable)
                 .map(mapper::toDomain);
     }

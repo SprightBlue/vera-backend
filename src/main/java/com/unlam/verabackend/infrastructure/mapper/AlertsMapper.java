@@ -1,8 +1,6 @@
 package com.unlam.verabackend.infrastructure.mapper;
 
 import com.unlam.verabackend.domain.model.Alerts;
-import com.unlam.verabackend.domain.model.RiskLevel;
-import com.unlam.verabackend.domain.model.RiskType;
 import com.unlam.verabackend.infrastructure.entity.AlertsEntity;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import org.springframework.stereotype.Component;
@@ -19,8 +17,8 @@ public class AlertsMapper {
                 .title(domain.getTitle())
                 .source(domain.getSource())
                 .contentSummary(domain.getContentSummary())
-                .riskLevel(domain.getRiskLevel() != null ? domain.getRiskLevel().name() : null)
-                .riskType(domain.getRiskType() != null ? domain.getRiskType().name() : null)
+                .riskLevel(domain.getRiskLevel())
+                .riskType(domain.getRiskType() != null ? domain.getRiskType() : null)
                 .riskPercentage(domain.getRiskPercentage())
                 .suspiciousPatterns(domain.getSuspiciousPatterns())
                 .isResolved(domain.isResolved())
@@ -32,29 +30,16 @@ public class AlertsMapper {
     public Alerts toDomain(AlertsEntity entity) {
         if (entity == null) return null;
 
-        RiskLevel riskLevel = entity.getRiskLevel() != null
-                ? RiskLevel.valueOf(entity.getRiskLevel().toUpperCase().strip())
-                : null;
-
-        RiskType riskType = entity.getRiskType() != null
-                ? RiskType.valueOf(entity.getRiskType().toUpperCase().strip())
-                : RiskType.NONE;
-
-        TrustContact domainContact = null;
-        if (entity.getTrustContact() != null) {
-            domainContact = TrustContact.builder()
-                    .id(entity.getTrustContact().getId())
-                    .build();
-        }
-
         return Alerts.builder()
                 .id(entity.getId())
-                .trustContact(domainContact)
+                .trustContact(entity.getTrustContact() != null
+                        ? TrustContact.builder().id(entity.getTrustContact().getId()).build()
+                        : null)
                 .title(entity.getTitle())
                 .source(entity.getSource())
                 .contentSummary(entity.getContentSummary())
-                .riskLevel(riskLevel)
-                .riskType(riskType)
+                .riskLevel(entity.getRiskLevel())
+                .riskType(entity.getRiskType())
                 .riskPercentage(entity.getRiskPercentage())
                 .suspiciousPatterns(entity.getSuspiciousPatterns())
                 .isResolved(entity.isResolved())

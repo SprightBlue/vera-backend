@@ -3,12 +3,9 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.application.service.ValidatorService;
 import com.unlam.verabackend.application.service.PromptBuilderService;
 import com.unlam.verabackend.application.service.ExtractorService;
-import com.unlam.verabackend.application.service.DomainCreationService;
+import com.unlam.verabackend.application.service.NotificationService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
-import com.unlam.verabackend.domain.model.Analysis;
-import com.unlam.verabackend.domain.model.Alerts;
-import com.unlam.verabackend.domain.model.Source;
-import com.unlam.verabackend.domain.model.RiskLevel;
+import com.unlam.verabackend.domain.model.*;
 import com.unlam.verabackend.domain.port.in.AnalyzeContentUseCase;
 import com.unlam.verabackend.domain.port.out.AnalysisRepository;
 import com.unlam.verabackend.domain.port.out.AlertsRepository;
@@ -19,14 +16,18 @@ import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
 
     private final ValidatorService fileValidator;
@@ -36,30 +37,9 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
     private final GeminiProvider geminiProvider;
     private final UserRepository userRepository;
     private final AnalysisRepository analysisRepository;
-    private final TrustContactRepository trustContactRepository;
     private final AlertsRepository alertsRepository;
-    private final DomainCreationService domainCreationService;
-
-    public AnalyzeContentUseCaseImpl(ValidatorService fileValidator, ExtractorService urlExtractor,
-                                     SafeBrowsingProvider safeBrowsingProvider,
-                                     PromptBuilderService promptBuilder,
-                                     GeminiProvider geminiProvider,
-                                     UserRepository userRepository,
-                                     AnalysisRepository analysisRepository,
-                                     TrustContactRepository trustContactRepository,
-                                     AlertsRepository alertsRepository,
-                                     DomainCreationService domainCreationService) {
-        this.fileValidator = fileValidator;
-        this.urlExtractor = urlExtractor;
-        this.safeBrowsingProvider = safeBrowsingProvider;
-        this.promptBuilder = promptBuilder;
-        this.geminiProvider = geminiProvider;
-        this.userRepository = userRepository;
-        this.analysisRepository = analysisRepository;
-        this.trustContactRepository = trustContactRepository;
-        this.alertsRepository = alertsRepository;
-        this.domainCreationService = domainCreationService;
-    }
+    private final TrustContactRepository trustContactRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -110,21 +90,56 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
             throw new IllegalStateException("No se pudo obtener una respuesta válida del motor de análisis inteligente.");
         }
 
-        Analysis analysis = domainCreationService.buildAnalysis(aiResult, user, source);
-
+        Analysis analysis = buildAnalysis(aiResult, user, source);
         Analysis savedAnalysis = analysisRepository.save(analysis);
 
         if (savedAnalysis.getRiskLevel() != null && RiskLevel.HIGH.equals(savedAnalysis.getRiskLevel())) {
-
             List<TrustContact> activeCarers = trustContactRepository.findByProtectedUserId(user.getId());
 
             for (TrustContact contact : activeCarers) {
-                Alerts newAlert = domainCreationService.buildAlert(savedAnalysis);
+                Alerts newAlert = buildAlert(savedAnalysis);
+                Alerts savedAlert = alertsRepository.save(newAlert, contact.getId());
 
-                alertsRepository.save(newAlert, contact.getId());
+                Map<String, Object> payload = Map.of("alertId", savedAlert.getId().toString());
+
+                notificationService.createAndSendNotification(
+                        contact.getCarer(),
+                        NotificationsType.ALERT,
+                        user.getFullName(),
+                        payload
+                );
             }
         }
 
         return savedAnalysis;
+    }
+
+    private Analysis buildAnalysis(GeminiResult aiResult, User user, Source source) {
+        return Analysis.builder()
+                .title(aiResult.title())
+                .contentSummary(aiResult.contentSummary())
+                .riskLevel(aiResult.riskLevel() != null ? RiskLevel.valueOf(aiResult.riskLevel().toUpperCase().strip()) : null)
+                .riskType(aiResult.riskType() != null ? RiskType.valueOf(aiResult.riskType().toUpperCase().strip()) : null)
+                .riskPercentage(aiResult.riskPercentage() != null ? aiResult.riskPercentage() : 0)
+                .suspiciousPatterns(aiResult.suspiciousPatterns())
+                .recommendation(aiResult.recommendation())
+                .user(user)
+                .createdAt(LocalDateTime.now())
+                .source(source)
+                .build();
+    }
+
+    private Alerts buildAlert(Analysis analysis) {
+        return Alerts.builder()
+                .title(analysis.getTitle())
+                .source(analysis.getSource())
+                .contentSummary(analysis.getContentSummary())
+                .riskLevel(analysis.getRiskLevel())
+                .riskType(analysis.getRiskType())
+                .riskPercentage(analysis.getRiskPercentage())
+                .suspiciousPatterns(analysis.getSuspiciousPatterns())
+                .isResolved(false)
+                .createdAt(LocalDateTime.now())
+                .build();
     }
 }

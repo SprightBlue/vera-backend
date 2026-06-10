@@ -11,6 +11,6 @@ public interface AlertsRepository {
     Alerts save(Alerts alert, Long trustContactId);
     void deleteById(UUID id);
     Optional<Alerts> findById(UUID id);
-    Page<Alerts> findByTrustContactIds(List<Long> trustContactIds, Pageable pageable);
-    Page<Alerts> findByTrustContactIdsAndIsResolved(List<Long> trustContactIds, boolean isResolved, Pageable pageable);
+    Page<Alerts> findByTrustContactIdsCreatedAtDesc(List<Long> trustContactIds, Pageable pageable);
+    Page<Alerts> findByTrustContactIdsAndIsResolvedCreatedAtDesc(List<Long> trustContactIds, boolean isResolved, Pageable pageable);
 }

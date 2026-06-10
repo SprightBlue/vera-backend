@@ -45,7 +45,7 @@ public class GeminiAdapter implements GeminiProvider {
     }
 
     @Override
-    public GeminiResult analyzeContent(String prompt, MultipartFile file) { // 🚀 Firma actualizada
+    public GeminiResult analyzeContent(String prompt, MultipartFile file) {
         try {
             return executeWithModel(PRIMARY_MODEL, prompt, file);
         } catch (Exception e) {

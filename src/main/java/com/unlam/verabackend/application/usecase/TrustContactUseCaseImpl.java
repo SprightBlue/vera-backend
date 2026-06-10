@@ -1,5 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
+import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.domain.port.in.TrustContactUseCase;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import com.unlam.verabackend.domain.model.InvitationStatus;
@@ -13,7 +14,7 @@ import com.unlam.verabackend.presentation.dto.ProtectedPersonResponse;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.TrustInvitationRepository;
-import com.unlam.verabackend.application.service.NotificationSseService;
+import com.unlam.verabackend.application.service.NotificationService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -32,7 +34,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     private final TrustContactRepository trustContactRepository;
     private final UserRepository userRepository;
     private final TrustInvitationRepository trustInvitationRepository;
-    private final NotificationSseService notificationSseService;
+    private final NotificationService notificationService;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
@@ -40,7 +42,6 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     @Override
     @Transactional
     public GenerateInvitationResponse generateInvitationLink(GenerateInvitationRequest request, String carerEmail) {
-        // Validar que el cuidador no se esté invitando a sí mismo
         if (carerEmail.equalsIgnoreCase(request.getEmail())) {
             throw new IllegalArgumentException("No puedes generar una invitación para ti mismo");
         }
@@ -66,15 +67,18 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
 
         TrustInvitation savedInvitation = trustInvitationRepository.save(invitation);
 
-        // Envío en tiempo real si el usuario ya existe registrado con ese email
         userRepository.findByEmail(request.getEmail()).ifPresent(invitedUser -> {
-            InvitationDetailsResponse realtimeDto = new InvitationDetailsResponse(
-                    savedInvitation.getId(),
-                    savedInvitation.getFullName(),
-                    carer.getFullName(),
-                    savedInvitation.getRelationship()
+            Map<String, Object> payload = Map.of(
+                    "invitationId", savedInvitation.getId().toString(),
+                    "carerName", carer.getFullName()
             );
-            notificationSseService.sendNotification(invitedUser.getId(), "TRUST_INVITATION", realtimeDto);
+
+            notificationService.createAndSendNotification(
+                    invitedUser,
+                    NotificationsType.INVITATION,
+                    carer.getFullName(),
+                    payload
+            );
         });
 
         String fullLink = frontendUrl + "/invite/" + uniqueToken;
@@ -231,11 +235,16 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                 .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
                 .build();
 
-
         trustContactRepository.save(newContact);
-
         invitation.setStatus(InvitationStatus.ACCEPTED);
         trustInvitationRepository.save(invitation);
+
+        notificationService.createAndSendNotification(
+                invitation.getCarer(),
+                NotificationsType.INVITATION_ACCEPTED,
+                protectedUser.getFullName(),
+                Map.of("invitationId", invitation.getId().toString())
+        );
     }
 
     @Override
@@ -254,6 +263,13 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
 
         invitation.setStatus(InvitationStatus.REJECTED);
         trustInvitationRepository.save(invitation);
+
+        notificationService.createAndSendNotification(
+                invitation.getCarer(),
+                NotificationsType.INVITATION_REJECTED,
+                protectedUserEmail,
+                Map.of("invitationId", invitation.getId().toString())
+        );
     }
 
     @Override
