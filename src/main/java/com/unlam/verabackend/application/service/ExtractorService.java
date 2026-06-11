@@ -13,6 +13,8 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.swing.text.DefaultStyledDocument;
+import javax.swing.text.rtf.RTFEditorKit;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -53,6 +55,13 @@ public class ExtractorService {
             return switch (extension) {
                 case "txt" -> new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
                         .lines().collect(Collectors.joining("\n"));
+
+                case "rtf" -> {
+                    RTFEditorKit rtfKit = new RTFEditorKit();
+                    DefaultStyledDocument doc = new DefaultStyledDocument();
+                    rtfKit.read(inputStream, doc, 0);
+                    yield doc.getText(0, doc.getLength());
+                }
 
                 case "pdf" -> {
                     try (PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(inputStream))) {

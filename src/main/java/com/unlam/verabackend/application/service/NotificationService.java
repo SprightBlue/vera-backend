@@ -28,7 +28,7 @@ public class NotificationService {
 
         emitter.onCompletion(() -> userEmitters.remove(email));
         emitter.onTimeout(() -> userEmitters.remove(email));
-        emitter.onError((e) -> userEmitters.remove(email));
+        emitter.onError((_) -> userEmitters.remove(email));
 
         try {
             emitter.send(SseEmitter.event().name("INIT").data("Conectado al canal de notificaciones"));
@@ -38,7 +38,7 @@ public class NotificationService {
     }
 
     @Transactional
-    public Notifications createAndSendNotification(User targetUser, NotificationsType type, String triggeringUserFullName, Map<String, Object> payload) {
+    public void createAndSendNotification(User targetUser, NotificationsType type, String triggeringUserFullName, Map<String, Object> payload) {
 
         String title = buildTitle(type);
         String message = buildMessage(type, triggeringUserFullName);
@@ -57,7 +57,6 @@ public class NotificationService {
 
         sendSse(targetUser.getEmail(), saved);
 
-        return saved;
     }
 
     private void sendSse(String email, Object data) {
