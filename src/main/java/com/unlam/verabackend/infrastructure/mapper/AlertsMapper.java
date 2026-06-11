@@ -32,9 +32,7 @@ public class AlertsMapper {
 
         return Alerts.builder()
                 .id(entity.getId())
-                .trustContact(entity.getTrustContact() != null
-                        ? TrustContact.builder().id(entity.getTrustContact().getId()).build()
-                        : null)
+                .trustContact(entity.getTrustContact())
                 .title(entity.getTitle())
                 .source(entity.getSource())
                 .contentSummary(entity.getContentSummary())
