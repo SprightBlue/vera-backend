@@ -43,9 +43,8 @@ public class AlertsRepositoryAdapter implements AlertsRepository {
 
     @Override
     public Optional<Alerts> findById(UUID id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        return jpaRepository.findWithRelationshipsById(id).map(mapper::toDomain);
     }
-
     @Override
     public Page<Alerts> findByTrustContactIdsCreatedAtDesc(List<Long> trustContactIds, Pageable pageable) {
         return jpaRepository.findByTrustContactIdIn(trustContactIds, pageable)

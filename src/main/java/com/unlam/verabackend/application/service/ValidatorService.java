@@ -24,7 +24,7 @@ public class ValidatorService {
     );
 
     private static final List<String> GEMINI_SUPPORTED_DOCUMENTS = Arrays.asList(
-            "pdf", "txt", "docx", "xlsx", "pptx"
+            "pdf", "txt", "rtf", "docx", "xlsx", "pptx"
     );
 
     public void validate(MultipartFile file) {
