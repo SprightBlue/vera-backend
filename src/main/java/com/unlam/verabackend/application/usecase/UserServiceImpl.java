@@ -13,6 +13,12 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.unlam.verabackend.application.service.EmailService;
+import com.unlam.verabackend.infrastructure.entity.PasswordResetToken;
+import com.unlam.verabackend.infrastructure.repository.PasswordResetTokenRepository;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +28,8 @@ public class UserServiceImpl implements UserUseCase {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final PasswordResetTokenRepository tokenRepository;
+    private final EmailService emailService;
 
     @Override
     public AuthResponse register(RegisterRequest request) {
@@ -39,20 +47,18 @@ public class UserServiceImpl implements UserUseCase {
 
         String token = jwtService.generateToken(user);
         return new AuthResponse(
-            token,
-            user.getEmail(),
-            user.getFullName(),
-            user.getRole().name()
-        );
+                token,
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole().name());
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                    request.getEmail(),
-                    request.getPassword())
-        );
+                        request.getEmail(),
+                        request.getPassword()));
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
@@ -60,4 +66,72 @@ public class UserServiceImpl implements UserUseCase {
         String token = jwtService.generateToken(user);
         return new AuthResponse(token, user.getEmail(), user.getFullName(), user.getRole().name());
     }
+
+   @Override
+public void forgotPassword(String email) {
+
+    User user = userRepository.findByEmail(email)
+            .orElseThrow(() ->
+                    new RuntimeException("Usuario no encontrado"));
+
+    String token = UUID.randomUUID().toString();
+
+    PasswordResetToken resetToken =
+            new PasswordResetToken();
+
+    resetToken.setToken(token);
+    resetToken.setUser(user);
+    resetToken.setExpiresAt(
+            LocalDateTime.now().plusHours(1)
+    );
+
+    tokenRepository.save(resetToken);
+
+    emailService.sendPasswordResetEmail(
+            user.getEmail(),
+            token
+    );
+}
+
+    @Override
+public void resetPassword(
+        String token,
+        String newPassword
+) {
+
+    PasswordResetToken resetToken =
+            tokenRepository.findByToken(token)
+                    .orElseThrow(() ->
+                            new RuntimeException(
+                                    "Token inválido"
+                            ));
+
+    if (resetToken.isUsed()) {
+        throw new RuntimeException(
+                "Token ya utilizado"
+        );
+    }
+
+    if (
+        resetToken.getExpiresAt()
+                .isBefore(LocalDateTime.now())
+    ) {
+        throw new RuntimeException(
+                "Token expirado"
+        );
+    }
+
+    User user = resetToken.getUser();
+
+    user.setPassword(
+            passwordEncoder.encode(newPassword)
+    );
+
+    userRepository.save(user);
+
+    resetToken.setUsed(true);
+
+    tokenRepository.save(resetToken);
+}
+
 }

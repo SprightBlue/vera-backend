@@ -11,6 +11,8 @@ import com.unlam.verabackend.domain.port.in.UserUseCase;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
+import com.unlam.verabackend.presentation.dto.ResetPasswordRequest;
+import com.unlam.verabackend.presentation.dto.ForgotPasswordRequest;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,17 +26,36 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(
-        @Valid @RequestBody RegisterRequest request
-    ) {
+            @Valid @RequestBody RegisterRequest request) {
         AuthResponse response = userService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(
-        @Valid @RequestBody LoginRequest request
-    ) {
+            @Valid @RequestBody LoginRequest request) {
         AuthResponse response = userService.login(request);
-        return ResponseEntity.ok(response); 
+        return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(
+            @RequestBody ForgotPasswordRequest request) {
+
+        userService.forgotPassword(request.getEmail());
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(
+            @RequestBody ResetPasswordRequest request) {
+
+        userService.resetPassword(
+                request.getToken(),
+                request.getNewPassword());
+
+        return ResponseEntity.ok().build();
+    }
+
 }
