@@ -13,6 +13,7 @@ import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
 import com.unlam.verabackend.presentation.dto.ResetPasswordRequest;
 import com.unlam.verabackend.presentation.dto.ForgotPasswordRequest;
+import com.unlam.verabackend.presentation.dto.GoogleLoginRequest;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -57,5 +58,18 @@ public class AuthController {
 
         return ResponseEntity.ok().build();
     }
+
+@PostMapping("/google")
+public ResponseEntity<AuthResponse> googleLogin(
+        @RequestBody GoogleLoginRequest request
+) {
+
+    AuthResponse response =
+            userService.googleLogin(
+    request.getCredential()
+);
+
+    return ResponseEntity.ok(response);
+}
 
 }
