@@ -1,7 +1,7 @@
 package com.unlam.verabackend.application.usecase;
 
 import com.unlam.verabackend.application.service.ExtractorService;
-import com.unlam.verabackend.application.service.NotificationService;
+import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.application.service.PromptBuilderService;
 import com.unlam.verabackend.application.service.ValidatorService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
@@ -39,7 +39,7 @@ class AnalyzeContentUseCaseImplTest {
     @Mock private AnalysisRepository analysisRepository;
     @Mock private AlertsRepository alertsRepository;
     @Mock private TrustContactRepository trustContactRepository;
-    @Mock private NotificationService notificationService;
+    @Mock private SseService sseService;
 
     @Captor
     private ArgumentCaptor<Map<String, Object>> payloadCaptor;
@@ -199,7 +199,7 @@ class AnalyzeContentUseCaseImplTest {
 
         verify(alertsRepository, times(1)).save(any(Alerts.class), eq(77L));
 
-        verify(notificationService, times(1)).createAndSendNotification(
+        verify(sseService, times(1)).createAndSendNotification(
                 eq(carerUser),
                 eq(NotificationsType.ALERT),
                 eq(protectedUser.getFullName()),

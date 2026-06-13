@@ -1,6 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.NotificationService;
+import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Alerts;
 import com.unlam.verabackend.domain.model.NotificationsType;
@@ -39,7 +39,7 @@ class ManageAlertsUseCaseImplTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private NotificationService notificationService;
+    private SseService sseService;
 
     @InjectMocks
     private ManageAlertsUseCaseImpl manageAlertsUseCase;
@@ -237,7 +237,7 @@ class ManageAlertsUseCaseImplTest {
         // Assert
         verify(mockAlert).resolve();
         verify(alertsRepository).save(mockAlert, 55L);
-        verify(notificationService).createAndSendNotification(
+        verify(sseService).createAndSendNotification(
                 eq(mockTrustContact.getProtectedUser()),
                 eq(NotificationsType.ALERT_SOLVED),
                 eq("Carlos Gómez"),

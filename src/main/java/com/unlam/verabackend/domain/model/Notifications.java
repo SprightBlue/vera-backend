@@ -19,4 +19,8 @@ public class Notifications {
     private Map<String, Object> payload;
     private boolean isRead;
     private LocalDateTime createdAt;
+
+    public void markAsRead() {
+        this.isRead = true;
+    }
 }

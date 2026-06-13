@@ -1,7 +1,9 @@
 package com.unlam.verabackend.presentation.controller;
 
+import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.port.in.ManageNotificationsUseCase;
-import com.unlam.verabackend.application.service.NotificationService;
+import com.unlam.verabackend.application.service.SseService;
+import com.unlam.verabackend.presentation.dto.PagedResponse;
 import com.unlam.verabackend.presentation.dto.NotificationsResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,12 +23,11 @@ import java.util.UUID;
 public class NotificationsController {
 
     private final ManageNotificationsUseCase useCase;
-    private final NotificationService sseService;
+    private final SseService sseService;
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamNotifications(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email
     ) {
         // 🚀 PROD: String email = user.getEmail();
@@ -34,16 +35,20 @@ public class NotificationsController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<NotificationsResponse>> getMyNotifications(
+    public ResponseEntity<PagedResponse<NotificationsResponse>> getMyNotifications(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email,
             @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         // 🚀 PROD: String email = user.getEmail();
 
-        Page<NotificationsResponse> response = useCase.getMyNotifications(email, pageable)
-                .map(NotificationsResponse::fromDomain);
+        Page<Notifications> page = useCase.getMyNotifications(email, pageable);
+
+        // Transformamos usando el método genérico
+        PagedResponse<NotificationsResponse> response = PagedResponse.fromPage(
+                page,
+                NotificationsResponse::fromDomain
+        );
 
         return ResponseEntity.ok(response);
     }
@@ -51,7 +56,6 @@ public class NotificationsController {
     @PatchMapping("/read-all")
     public ResponseEntity<Void> markAllAsRead(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email
     ) {
         // 🚀 PROD: String email = user.getEmail();
@@ -63,7 +67,6 @@ public class NotificationsController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNotification(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email,
             @PathVariable UUID id
     ) {

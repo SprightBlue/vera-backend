@@ -22,8 +22,8 @@ public class GeminiAdapter implements GeminiProvider {
     @Value("${google.gemini.api-key}")
     private String apiKey;
 
-    private static final String PRIMARY_MODEL = "gemini-3.5-flash";
-    private static final String FALLBACK_MODEL = "gemini-2.5-flash";
+    private static final String PRIMARY_MODEL = "gemini-3.1-flash-lite";
+    private static final String FALLBACK_MODEL = "gemini-2.5-flash-lite";
 
     private static final Map<String, String> MIME_TYPE_MAP = Map.of(
             "mp3", "audio/mpeg",
