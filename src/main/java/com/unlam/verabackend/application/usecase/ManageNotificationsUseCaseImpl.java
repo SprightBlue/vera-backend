@@ -11,6 +11,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -28,7 +29,11 @@ public class ManageNotificationsUseCaseImpl implements ManageNotificationsUseCas
     @Override
     @Transactional
     public void markAllMyNotificationsAsRead(String email) {
-        repository.markAllAsRead(email);
+        List<Notifications> unreadNotifications = repository.findUnreadByUserEmail(email);
+
+        unreadNotifications.forEach(Notifications::markAsRead);
+
+        repository.saveAll(unreadNotifications);
     }
 
     private Notifications getNotificationDetail(UUID id, String email) {

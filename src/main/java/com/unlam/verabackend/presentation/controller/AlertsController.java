@@ -2,6 +2,7 @@ package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.domain.model.Alerts;
 import com.unlam.verabackend.domain.port.in.ManageAlertsUseCase;
+import com.unlam.verabackend.presentation.dto.PagedResponse;
 import com.unlam.verabackend.presentation.dto.AlertsDetailResponse;
 import com.unlam.verabackend.presentation.dto.AlertsResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +23,8 @@ public class AlertsController {
     private final ManageAlertsUseCase manageAlertsUseCase;
 
     @GetMapping
-    public ResponseEntity<Page<AlertsResponse>> getHistoryByCarerEmail(
+    public ResponseEntity<PagedResponse<AlertsResponse>> getHistoryByCarerEmail(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email,
             @RequestParam(value = "resolved", required = false) Boolean resolved,
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -35,13 +35,18 @@ public class AlertsController {
                 ? manageAlertsUseCase.getHistoryByCarerEmailAndIsResolved(email, resolved, pageable)
                 : manageAlertsUseCase.getHistoryByCarerEmail(email, pageable);
 
-        return ResponseEntity.ok(alertsPage.map(AlertsResponse::fromDomain));
+        // Usamos la misma lógica de transformación genérica
+        PagedResponse<AlertsResponse> response = PagedResponse.fromPage(
+                alertsPage,
+                AlertsResponse::fromDomain
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AlertsDetailResponse> getAlertDetail(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email,
             @PathVariable UUID id
     ) {
@@ -54,7 +59,6 @@ public class AlertsController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAlert(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email,
             @PathVariable UUID id
     ) {
@@ -67,7 +71,6 @@ public class AlertsController {
     @PatchMapping("/{id}/resolve")
     public ResponseEntity<Void> resolveAlert(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email,
             @PathVariable UUID id
     ) {

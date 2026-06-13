@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
-public class NotificationService {
+public class SseService {
 
     private final NotificationsRepository repository;
     private final Map<String, SseEmitter> userEmitters = new ConcurrentHashMap<>();

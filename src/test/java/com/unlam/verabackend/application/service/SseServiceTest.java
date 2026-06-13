@@ -27,13 +27,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class NotificationServiceTest {
+class SseServiceTest {
 
     @Mock
     private NotificationsRepository repository;
 
     @InjectMocks
-    private NotificationService notificationService;
+    private SseService sseService;
 
     private User sampleUser;
     private final String userEmail = "test@unlam.edu.ar";
@@ -51,7 +51,7 @@ class NotificationServiceTest {
     @Test
     void createEmitter_WhenCalled_ShouldReturnEmitterAndSendInitEvent() {
         // Arrange & Act
-        SseEmitter emitter = notificationService.createEmitter(userEmail);
+        SseEmitter emitter = sseService.createEmitter(userEmail);
 
         // Assert
         assertNotNull(emitter);
@@ -61,18 +61,18 @@ class NotificationServiceTest {
     @Test
     void createEmitter_WhenEmitterCallbacksAreTriggered_ShouldExecuteRemovals() {
         // Arrange & Act
-        SseEmitter emitter = notificationService.createEmitter(userEmail);
+        SseEmitter emitter = sseService.createEmitter(userEmail);
 
         emitter.complete();
 
         // Assert
-        assertDoesNotThrow(() -> notificationService.createEmitter(userEmail));
+        assertDoesNotThrow(() -> sseService.createEmitter(userEmail));
     }
 
     @Test
     void createAndSendNotification_WhenEmitterThrowsExceptionOnInit_ShouldIgnoreException() {
         // Arrange
-        NotificationService serviceWithMockEmitter = new NotificationService(repository);
+        SseService serviceWithMockEmitter = new SseService(repository);
 
         // Act
         SseEmitter emitter = serviceWithMockEmitter.createEmitter(userEmail);
@@ -95,7 +95,7 @@ class NotificationServiceTest {
         when(repository.save(any(Notifications.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        notificationService.createAndSendNotification(sampleUser, type, triggeringUser, payload);
+        sseService.createAndSendNotification(sampleUser, type, triggeringUser, payload);
 
         // Assert
         ArgumentCaptor<Notifications> notificationCaptor = ArgumentCaptor.forClass(Notifications.class);
@@ -138,21 +138,21 @@ class NotificationServiceTest {
     @Test
     void createAndSendNotification_WhenEmitterExistsAndWorks_ShouldSendSseSuccessfully() {
         // Arrange
-        notificationService.createEmitter(userEmail);
+        sseService.createEmitter(userEmail);
 
         Notifications savedNotification = Notifications.builder().title("Test").build();
         when(repository.save(any(Notifications.class))).thenReturn(savedNotification);
 
         // Act & Assert
         assertDoesNotThrow(() ->
-                notificationService.createAndSendNotification(sampleUser, NotificationsType.ALERT, "Test", null)
+                sseService.createAndSendNotification(sampleUser, NotificationsType.ALERT, "Test", null)
         );
     }
 
     @Test
     void createAndSendNotification_WhenEmitterThrowsIOException_ShouldCatchExceptionAndRemoveEmitter() throws IOException {
         // Arrange
-        notificationService.createEmitter(userEmail);
+        sseService.createEmitter(userEmail);
 
         SseEmitter mockEmitter = Mockito.mock(SseEmitter.class);
 
@@ -162,7 +162,7 @@ class NotificationServiceTest {
 
         @SuppressWarnings("unchecked")
         ConcurrentHashMap<String, SseEmitter> internalMap =
-                (ConcurrentHashMap<String, SseEmitter>) ReflectionTestUtils.getField(notificationService, "userEmitters");
+                (ConcurrentHashMap<String, SseEmitter>) ReflectionTestUtils.getField(sseService, "userEmitters");
 
         if (internalMap != null) {
             internalMap.put(userEmail, mockEmitter);
@@ -173,7 +173,7 @@ class NotificationServiceTest {
 
         // Act & Assert
         assertDoesNotThrow(() ->
-                notificationService.createAndSendNotification(sampleUser, NotificationsType.ALERT, "Test", null)
+                sseService.createAndSendNotification(sampleUser, NotificationsType.ALERT, "Test", null)
         );
 
         if (internalMap != null) {

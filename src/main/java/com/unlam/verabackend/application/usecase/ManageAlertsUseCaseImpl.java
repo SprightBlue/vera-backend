@@ -1,6 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.NotificationService;
+import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Alerts;
 import com.unlam.verabackend.domain.model.NotificationsType;
@@ -27,7 +27,7 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
     private final AlertsRepository alertsRepository;
     private final TrustContactRepository trustContactRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
+    private final SseService sseService;
 
     private List<Long> getTrustContactIdsByEmail(String carerEmail) {
         var user = userRepository.findByEmail(carerEmail)
@@ -83,7 +83,7 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
 
         Map<String, Object> payload = Map.of("alertId", alert.getId().toString());
 
-        notificationService.createAndSendNotification(
+        sseService.createAndSendNotification(
                 alert.getTrustContact().getProtectedUser(),
                 NotificationsType.ALERT_SOLVED,
                 alert.getTrustContact().getCarer().getFullName(),

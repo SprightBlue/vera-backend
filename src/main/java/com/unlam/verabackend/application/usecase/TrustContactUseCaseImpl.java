@@ -14,7 +14,7 @@ import com.unlam.verabackend.presentation.dto.ProtectedPersonResponse;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.TrustInvitationRepository;
-import com.unlam.verabackend.application.service.NotificationService;
+import com.unlam.verabackend.application.service.SseService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,7 +34,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     private final TrustContactRepository trustContactRepository;
     private final UserRepository userRepository;
     private final TrustInvitationRepository trustInvitationRepository;
-    private final NotificationService notificationService;
+    private final SseService sseService;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
@@ -73,7 +73,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                     "carerName", carer.getFullName()
             );
 
-            notificationService.createAndSendNotification(
+            sseService.createAndSendNotification(
                     invitedUser,
                     NotificationsType.INVITATION,
                     carer.getFullName(),
@@ -221,9 +221,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                 .orElseThrow(() -> new RuntimeException("Usuario protegido no encontrado"));
 
         if (trustContactRepository.existsByCarerIdAndProtectedUser_Id(invitation.getCarer().getId(), protectedUser.getId())) {
-            invitation.setStatus(InvitationStatus.ACCEPTED);
-            trustInvitationRepository.save(invitation);
-            throw new RuntimeException("Ya existe una relación activa con este usuario");
+            throw new IllegalStateException("Ya existe una relación de cuidado activa con este usuario.");
         }
 
         TrustContact newContact = TrustContact.builder()
@@ -236,10 +234,11 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                 .build();
 
         trustContactRepository.save(newContact);
+
         invitation.setStatus(InvitationStatus.ACCEPTED);
         trustInvitationRepository.save(invitation);
 
-        notificationService.createAndSendNotification(
+        sseService.createAndSendNotification(
                 invitation.getCarer(),
                 NotificationsType.INVITATION_ACCEPTED,
                 protectedUser.getFullName(),
@@ -264,7 +263,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         invitation.setStatus(InvitationStatus.REJECTED);
         trustInvitationRepository.save(invitation);
 
-        notificationService.createAndSendNotification(
+        sseService.createAndSendNotification(
                 invitation.getCarer(),
                 NotificationsType.INVITATION_REJECTED,
                 protectedUserEmail,

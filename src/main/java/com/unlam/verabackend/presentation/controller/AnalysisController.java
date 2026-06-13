@@ -4,6 +4,7 @@ import com.unlam.verabackend.domain.model.Analysis;
 import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.in.AnalyzeContentUseCase;
 import com.unlam.verabackend.domain.port.in.ManageAnalysisUseCase;
+import com.unlam.verabackend.presentation.dto.PagedResponse;
 import com.unlam.verabackend.presentation.dto.AnalysisDetailResponse;
 import com.unlam.verabackend.presentation.dto.AnalysisResponse;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,6 @@ public class AnalysisController {
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<AnalysisDetailResponse> analyze(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email,
             @RequestParam(value = "text", required = false) String text,
             @RequestParam(value = "file", required = false) MultipartFile file,
@@ -42,9 +42,8 @@ public class AnalysisController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<AnalysisResponse>> getHistoryByUserEmail(
+    public ResponseEntity<PagedResponse<AnalysisResponse>> getHistoryByUserEmail(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email,
             @RequestParam(value = "riskLevel", required = false) String riskLevel,
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -58,14 +57,17 @@ public class AnalysisController {
             historyPage = manageAnalysisUseCase.getHistoryByUserEmail(email, pageable);
         }
 
-        Page<AnalysisResponse> response = historyPage.map(AnalysisResponse::fromDomain);
+        PagedResponse<AnalysisResponse> response = PagedResponse.fromPage(
+                historyPage,
+                AnalysisResponse::fromDomain
+        );
+
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AnalysisDetailResponse> getAnalysisDetail(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email,
             @PathVariable UUID id
     ) {
@@ -78,7 +80,6 @@ public class AnalysisController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAnalysis(
             // 🚀 PROD: @AuthenticationPrincipal User user,
-
             @RequestHeader("user-email") String email,
             @PathVariable UUID id
     ) {

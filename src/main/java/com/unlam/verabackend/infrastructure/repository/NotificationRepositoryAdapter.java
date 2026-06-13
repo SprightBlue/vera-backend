@@ -9,8 +9,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -50,7 +52,19 @@ public class NotificationRepositoryAdapter implements NotificationsRepository {
     }
 
     @Override
-    public void markAllAsRead(String email) {
-        jpaRepository.markAllAsReadByUserEmail(email);
+    public List<Notifications> findUnreadByUserEmail(String email) {
+        return jpaRepository.findByUserEmailAndIsReadFalse(email)
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public void saveAll(List<Notifications> notifications) {
+        List<NotificationsEntity> entities = notifications.stream()
+                .map(n -> mapper.toEntity(n, n.getUser()))
+                .collect(Collectors.toList());
+
+        jpaRepository.saveAll(entities);
     }
 }
