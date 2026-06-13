@@ -44,7 +44,7 @@ public class UserServiceImplTest {
     private AuthenticationManager authenticationManager;
 
     @InjectMocks
-    private UserServiceImpl userService;
+    private UserUseCaseImpl userService;
 
     private RegisterRequest registerRequest;
     private LoginRequest loginRequest;

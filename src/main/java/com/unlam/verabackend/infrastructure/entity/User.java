@@ -49,7 +49,7 @@ public class User implements UserDetails {
     private boolean accountNonLocked = true;
 
     @Column(nullable = false)
-    private boolean enabled = true;
+    private boolean enabled = false;
 
     @PrePersist
     protected void onCreate() {
