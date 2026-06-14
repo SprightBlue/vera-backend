@@ -16,6 +16,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -78,8 +79,8 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
     @Transactional
     public void resolveAlert(UUID id, String carerEmail) {
         Alerts alert = getAlertDetail(id, carerEmail);
-        alert.resolve();
-        alertsRepository.save(alert, alert.getTrustContact().getId());
+
+        alertsRepository.resolveAlertDirectly(alert.getId(), LocalDateTime.now());
 
         Map<String, Object> payload = Map.of("alertId", alert.getId().toString());
 

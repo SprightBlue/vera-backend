@@ -12,6 +12,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -19,22 +20,40 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SseService {
 
     private final NotificationsRepository repository;
-    private final Map<String, SseEmitter> userEmitters = new ConcurrentHashMap<>();
+    protected final Map<String, SseEmitter> userEmitters = new ConcurrentHashMap<>();
 
     public SseEmitter createEmitter(String email) {
-        SseEmitter emitter = new SseEmitter(10 * 60 * 1000L);
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
 
         userEmitters.put(email, emitter);
 
         emitter.onCompletion(() -> userEmitters.remove(email));
-        emitter.onTimeout(() -> userEmitters.remove(email));
-        emitter.onError((_) -> userEmitters.remove(email));
+
+        emitter.onTimeout(() -> {
+            emitter.complete();
+            userEmitters.remove(email);
+        });
+
+        emitter.onError((ex) -> userEmitters.remove(email));
 
         try {
             emitter.send(SseEmitter.event().name("INIT").data("Conectado al canal de notificaciones"));
         } catch (IOException ignored) {}
 
         return emitter;
+    }
+
+    public void sendDeleteEvent(String email, UUID notificationId) {
+        SseEmitter emitter = userEmitters.get(email);
+        if (emitter != null) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("NOTIFICATION_DELETED")
+                        .data(Map.of("id", notificationId)));
+            } catch (IOException e) {
+                userEmitters.remove(email);
+            }
+        }
     }
 
     @Transactional

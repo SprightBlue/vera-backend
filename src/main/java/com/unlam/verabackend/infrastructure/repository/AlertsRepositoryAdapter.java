@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,5 +56,10 @@ public class AlertsRepositoryAdapter implements AlertsRepository {
     public Page<Alerts> findByTrustContactIdsAndIsResolvedCreatedAtDesc(List<Long> trustContactIds, boolean isResolved, Pageable pageable) {
         return jpaRepository.findByTrustContactIdInAndIsResolved(trustContactIds, isResolved, pageable)
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    public void resolveAlertDirectly(UUID id, LocalDateTime resolvedAt) {
+        jpaRepository.resolveAlertById(id, resolvedAt);
     }
 }

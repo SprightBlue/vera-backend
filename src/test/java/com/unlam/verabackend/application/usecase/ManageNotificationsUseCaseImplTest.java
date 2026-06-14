@@ -1,5 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
+import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
@@ -28,6 +29,9 @@ class ManageNotificationsUseCaseImplTest {
 
     @Mock
     private NotificationsRepository repository;
+
+    @Mock
+    private SseService sseService = mock(SseService.class);
 
     @InjectMocks
     private ManageNotificationsUseCaseImpl useCase;
@@ -69,23 +73,13 @@ class ManageNotificationsUseCaseImplTest {
     @Test
     void markAllMyNotificationsAsRead_Success() {
         // Arrange
-        Notifications unreadNotification = Notifications.builder()
-                .id(notificationId)
-                .user(mockNotification.getUser())
-                .isRead(false)
-                .build();
-
-        List<Notifications> unreadList = List.of(unreadNotification);
-
-        when(repository.findUnreadByUserEmail(userEmail)).thenReturn(unreadList);
+        doNothing().when(repository).markAllAsReadByUserEmail(userEmail);
 
         // Act
         useCase.markAllMyNotificationsAsRead(userEmail);
 
         // Assert
-        assertTrue(unreadNotification.isRead(), "La notificación debería quedar marcada como leída");
-        verify(repository).findUnreadByUserEmail(userEmail);
-        verify(repository).saveAll(unreadList);
+        verify(repository).markAllAsReadByUserEmail(userEmail);
     }
 
     @Test

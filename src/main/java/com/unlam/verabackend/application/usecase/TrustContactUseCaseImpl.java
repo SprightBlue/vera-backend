@@ -69,8 +69,10 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
 
         userRepository.findByEmail(request.getEmail()).ifPresent(invitedUser -> {
             Map<String, Object> payload = Map.of(
-                    "invitationId", savedInvitation.getId().toString(),
-                    "carerName", carer.getFullName()
+                    "id", savedInvitation.getId(),
+                    "fullName", savedInvitation.getFullName(),
+                    "caregiverName", carer.getFullName(),
+                    "relationship", savedInvitation.getRelationship()
             );
 
             sseService.createAndSendNotification(
