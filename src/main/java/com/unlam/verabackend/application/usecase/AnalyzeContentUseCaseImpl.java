@@ -100,7 +100,11 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
                 Alerts newAlert = buildAlert(savedAnalysis);
                 Alerts savedAlert = alertsRepository.save(newAlert, contact.getId());
 
-                Map<String, Object> payload = Map.of("alertId", savedAlert.getId().toString());
+                Map<String, Object> payload = Map.of(
+                        "alertId", savedAlert.getId().toString(),
+                        "riskLevel", savedAlert.getRiskLevel().toString(),
+                        "protectedUserName", user.getFullName()
+                );
 
                 sseService.createAndSendNotification(
                         contact.getCarer(),

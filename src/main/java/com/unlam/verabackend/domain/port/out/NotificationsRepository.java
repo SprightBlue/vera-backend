@@ -14,5 +14,5 @@ public interface NotificationsRepository {
     Optional<Notifications> findById(UUID id);
     void deleteById(UUID id);
     List<Notifications> findUnreadByUserEmail(String email);
-    void saveAll(List<Notifications> notifications);
+    void markAllAsReadByUserEmail(String email);
 }

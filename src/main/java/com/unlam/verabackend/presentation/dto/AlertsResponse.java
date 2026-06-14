@@ -1,5 +1,6 @@
 package com.unlam.verabackend.presentation.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.unlam.verabackend.domain.model.Alerts;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,8 @@ public class AlertsResponse {
     private String protectedFullName;
     private String title;
     private String contentSummary;
+
+    @JsonProperty("isResolved")
     private boolean isResolved;
 
     public static AlertsResponse fromDomain(Alerts domain) {

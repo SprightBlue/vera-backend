@@ -12,7 +12,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -60,11 +59,7 @@ public class NotificationRepositoryAdapter implements NotificationsRepository {
     }
 
     @Override
-    public void saveAll(List<Notifications> notifications) {
-        List<NotificationsEntity> entities = notifications.stream()
-                .map(n -> mapper.toEntity(n, n.getUser()))
-                .collect(Collectors.toList());
-
-        jpaRepository.saveAll(entities);
+    public void markAllAsReadByUserEmail(String email) {
+        jpaRepository.markAllAsReadByUserEmail(email);
     }
 }

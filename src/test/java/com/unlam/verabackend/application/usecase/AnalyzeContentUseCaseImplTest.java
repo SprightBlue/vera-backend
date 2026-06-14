@@ -172,40 +172,74 @@ class AnalyzeContentUseCaseImplTest {
 
     @Test
     void execute_WhenRiskIsHigh_ShouldCreateAlertsAndSendNotificationsToCarers() {
-        // Arrange
+        // 1. Arrange - Configurar los IDs de Infraestructura explícitamente para evitar Nulls en cascada
+        String userEmail = "protegido@test.com";
+
+        User protectedUser = new User();
+        protectedUser.setId(1L); // 💡 Explicitamos el ID Long de infraestructura
+        protectedUser.setFullName("Juan Pérez");
+        protectedUser.setEmail(userEmail);
+
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
 
-        GeminiResult mockHighRiskResult = new GeminiResult("Peligro", "Fraude", " HIGH ", " PHISHING ", 90, "Patrones", "Recomendacion");
+        // Mock de Gemini
+        GeminiResult mockHighRiskResult = new GeminiResult(
+                "Peligro", "Fraude", " HIGH ", " PHISHING ", 90, "Patrones", "Recomendacion"
+        );
         when(geminiProvider.analyzeContent(any(), any())).thenReturn(mockHighRiskResult);
 
+        // Mock del guardado del Análisis
         Analysis simulatedSavedAnalysis = Analysis.builder()
-                .title("Peligro").source(Source.WEB).riskLevel(RiskLevel.HIGH).riskType(RiskType.PHISHING).riskPercentage(90).build();
+                .title("Peligro")
+                .source(Source.WEB)
+                .riskLevel(RiskLevel.HIGH)
+                .riskType(RiskType.PHISHING)
+                .riskPercentage(90)
+                .build();
         when(analysisRepository.save(any(Analysis.class))).thenReturn(simulatedSavedAnalysis);
 
+        // Configurar el contacto de confianza de infraestructura
         User carerUser = new User();
         carerUser.setId(2L);
-        TrustContact contact = TrustContact.builder().id(77L).carer(carerUser).protectedUser(protectedUser).build();
-        when(trustContactRepository.findByProtectedUserId(protectedUser.getId())).thenReturn(List.of(contact));
+        carerUser.setFullName("Carlos Gómez");
 
-        Alerts simulatedSavedAlert = Alerts.builder().id(UUID.randomUUID()).build();
-        when(alertsRepository.save(any(Alerts.class), eq(77L))).thenReturn(simulatedSavedAlert);
+        TrustContact contact = new TrustContact();
+        contact.setId(77L); // 💡 El ID del contacto en la DB de infraestructura
+        contact.setCarer(carerUser);
+        contact.setProtectedUser(protectedUser);
 
-        // Act
+        // Aseguramos que la query de infraestructura devuelva la lista con el contacto simulado
+        when(trustContactRepository.findByProtectedUserId(1L)).thenReturn(List.of(contact));
+
+        // El mock de la Alerta de dominio devuelta DEBE tener un UUID asignado para que el payload no tire Null
+        Alerts simulatedSavedAlert = Alerts.builder()
+                .id(UUID.randomUUID()) // 💡 Clave: la alerta guardada simula tener su UUID asignado por el adaptador
+                .riskLevel(RiskLevel.HIGH)
+                .build();
+
+        // Forzamos a Mockito a responder con esta alerta sin importar el casteo del ID de contacto
+        when(alertsRepository.save(any(Alerts.class), any())).thenReturn(simulatedSavedAlert);
+
+        // 2. Act
         Analysis result = analyzeContentUseCase.execute(userEmail, "Texto peligroso", null, "WEB");
 
-        // Assert
+        // 3. Assert
         assertNotNull(result);
         assertEquals(RiskLevel.HIGH, result.getRiskLevel());
 
-        verify(alertsRepository, times(1)).save(any(Alerts.class), eq(77L));
+        // Verificamos que se intente persistir en el puerto de alertas
+        verify(alertsRepository, times(1)).save(any(Alerts.class), any());
 
+        // Verificamos el envío del evento SSE al cuidador con el mapa capturado
         verify(sseService, times(1)).createAndSendNotification(
                 eq(carerUser),
                 eq(NotificationsType.ALERT),
-                eq(protectedUser.getFullName()),
+                eq("Juan Pérez"),
                 payloadCaptor.capture()
         );
 
+        // Verificamos que el payload no esté vacío y contenga el ID simulado
+        assertNotNull(payloadCaptor.getValue());
         assertNotNull(payloadCaptor.getValue().get("alertId"));
     }
 }

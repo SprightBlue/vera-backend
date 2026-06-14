@@ -14,13 +14,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,7 +54,7 @@ class SseServiceTest {
 
         // Assert
         assertNotNull(emitter);
-        assertEquals(600000L, emitter.getTimeout()); // 10 * 60 * 1000L
+        assertEquals(1800000L, emitter.getTimeout());
     }
 
     @Test
@@ -152,21 +151,13 @@ class SseServiceTest {
     @Test
     void createAndSendNotification_WhenEmitterThrowsIOException_ShouldCatchExceptionAndRemoveEmitter() throws IOException {
         // Arrange
-        sseService.createEmitter(userEmail);
-
         SseEmitter mockEmitter = Mockito.mock(SseEmitter.class);
 
         doThrow(new IOException("Canal roto"))
                 .when(mockEmitter)
                 .send(any(SseEmitter.SseEventBuilder.class));
 
-        @SuppressWarnings("unchecked")
-        ConcurrentHashMap<String, SseEmitter> internalMap =
-                (ConcurrentHashMap<String, SseEmitter>) ReflectionTestUtils.getField(sseService, "userEmitters");
-
-        if (internalMap != null) {
-            internalMap.put(userEmail, mockEmitter);
-        }
+        sseService.userEmitters.put(userEmail, mockEmitter);
 
         Notifications savedNotification = Notifications.builder().title("Fallo").build();
         when(repository.save(any(Notifications.class))).thenReturn(savedNotification);
@@ -176,8 +167,55 @@ class SseServiceTest {
                 sseService.createAndSendNotification(sampleUser, NotificationsType.ALERT, "Test", null)
         );
 
-        if (internalMap != null) {
-            assertFalse(internalMap.containsKey(userEmail), "El emisor debió ser removido tras la IOException");
-        }
+        assertFalse(sseService.userEmitters.containsKey(userEmail), "El emisor debió ser removido tras la IOException");
+    }
+
+    // ==========================================
+    // Tests para sendDeleteEvent()
+    // ==========================================
+
+    @Test
+    void sendDeleteEvent_WhenEmitterExistsAndWorks_ShouldSendEventSuccessfully() throws IOException {
+        // Arrange
+        UUID notificationId = UUID.randomUUID();
+        SseEmitter mockEmitter = Mockito.mock(SseEmitter.class);
+
+        sseService.userEmitters.put(userEmail, mockEmitter);
+
+        // Act & Assert
+        assertDoesNotThrow(() -> sseService.sendDeleteEvent(userEmail, notificationId));
+
+        verify(mockEmitter, times(1)).send(any(SseEmitter.SseEventBuilder.class));
+        assertTrue(sseService.userEmitters.containsKey(userEmail), "El emisor debería seguir activo si el envío fue exitoso");
+    }
+
+    @Test
+    void sendDeleteEvent_WhenEmitterThrowsIOException_ShouldCatchExceptionAndRemoveEmitter() throws IOException {
+        // Arrange
+        UUID notificationId = UUID.randomUUID();
+        SseEmitter mockEmitter = Mockito.mock(SseEmitter.class);
+
+        doThrow(new IOException("Canal de borrado interrumpido"))
+                .when(mockEmitter)
+                .send(any(SseEmitter.SseEventBuilder.class));
+
+        sseService.userEmitters.put(userEmail, mockEmitter);
+
+        // Act & Assert
+        assertDoesNotThrow(() -> sseService.sendDeleteEvent(userEmail, notificationId));
+
+        verify(mockEmitter, times(1)).send(any(SseEmitter.SseEventBuilder.class));
+        assertFalse(sseService.userEmitters.containsKey(userEmail), "El emisor debió ser removido de la caché tras la IOException");
+    }
+
+    @Test
+    void sendDeleteEvent_WhenEmitterDoesNotExist_ShouldDoNothing() {
+        // Arrange
+        UUID notificationId = UUID.randomUUID();
+
+        sseService.userEmitters.remove(userEmail);
+
+        // Act & Assert
+        assertDoesNotThrow(() -> sseService.sendDeleteEvent(userEmail, notificationId));
     }
 }
