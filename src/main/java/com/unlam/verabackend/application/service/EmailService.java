@@ -6,4 +6,6 @@ public interface EmailService {
             String to,
             String token
     );
+
+    void sendVerificationEmail(String to, String token);
 }

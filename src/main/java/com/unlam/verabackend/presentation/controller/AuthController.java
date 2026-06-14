@@ -2,9 +2,11 @@ package com.unlam.verabackend.presentation.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.unlam.verabackend.domain.port.in.UserUseCase;
@@ -13,7 +15,6 @@ import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
 import com.unlam.verabackend.presentation.dto.ResetPasswordRequest;
 import com.unlam.verabackend.presentation.dto.ForgotPasswordRequest;
-import com.unlam.verabackend.presentation.dto.GoogleLoginRequest;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -59,17 +60,14 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-@PostMapping("/google")
-public ResponseEntity<AuthResponse> googleLogin(
-        @RequestBody GoogleLoginRequest request
-) {
-
-    AuthResponse response =
-            userService.googleLogin(
-    request.getCredential()
-);
-
-    return ResponseEntity.ok(response);
-}
-
+    @GetMapping("/verify")
+    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
+        try {
+            userService.verifyEmail(token);
+            return ResponseEntity.ok("¡Cuenta verificada con éxito! Ya podés iniciar sesión en VERA.");
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body("Error al verificar: " + e.getMessage());
+        }
+    }
 }

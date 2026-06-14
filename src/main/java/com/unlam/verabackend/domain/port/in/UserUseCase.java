@@ -14,7 +14,6 @@ public interface UserUseCase {
 
     void resetPassword(String token, String newPassword);
 
-   AuthResponse googleLogin(
-    String credential
-);
+    void verifyEmail(String token);
+    
 }
