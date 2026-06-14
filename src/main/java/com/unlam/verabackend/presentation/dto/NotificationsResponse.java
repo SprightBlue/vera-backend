@@ -1,5 +1,6 @@
 package com.unlam.verabackend.presentation.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.model.NotificationsType;
 import lombok.Builder;
@@ -17,7 +18,10 @@ public class NotificationsResponse {
     private String title;
     private String message;
     private Map<String, Object> payload;
+
+    @JsonProperty("isRead")
     private boolean isRead;
+
     private LocalDateTime createdAt;
 
     public static NotificationsResponse fromDomain(Notifications domain) {

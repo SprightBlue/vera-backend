@@ -4,6 +4,8 @@ import com.unlam.verabackend.domain.model.Analysis;
 import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.in.AnalyzeContentUseCase;
 import com.unlam.verabackend.domain.port.in.ManageAnalysisUseCase;
+import com.unlam.verabackend.infrastructure.entity.User;
+import com.unlam.verabackend.presentation.dto.PagedResponse;
 import com.unlam.verabackend.presentation.dto.AnalysisDetailResponse;
 import com.unlam.verabackend.presentation.dto.AnalysisResponse;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,28 +31,24 @@ public class AnalysisController {
 
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<AnalysisDetailResponse> analyze(
-            // 🚀 PROD: @AuthenticationPrincipal User user,
-
-            @RequestHeader("user-email") String email,
+            @AuthenticationPrincipal User user,
             @RequestParam(value = "text", required = false) String text,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "source") String source
     ) {
-        // 🚀 PROD: String email = user.getEmail();
+        String email = user.getEmail();
 
         Analysis result = analyzeContentUseCase.execute(email, text, file, source);
         return new ResponseEntity<>(AnalysisDetailResponse.fromDomain(result), HttpStatus.CREATED);
     }
 
     @GetMapping
-    public ResponseEntity<Page<AnalysisResponse>> getHistoryByUserEmail(
-            // 🚀 PROD: @AuthenticationPrincipal User user,
-
-            @RequestHeader("user-email") String email,
+    public ResponseEntity<PagedResponse<AnalysisResponse>> getHistoryByUserEmail(
+            @AuthenticationPrincipal User user,
             @RequestParam(value = "riskLevel", required = false) String riskLevel,
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        // 🚀 PROD: String email = user.getEmail();
+        String email = user.getEmail();
 
         Page<Analysis> historyPage;
         if (riskLevel != null && !riskLevel.isBlank()) {
@@ -58,18 +57,20 @@ public class AnalysisController {
             historyPage = manageAnalysisUseCase.getHistoryByUserEmail(email, pageable);
         }
 
-        Page<AnalysisResponse> response = historyPage.map(AnalysisResponse::fromDomain);
+        PagedResponse<AnalysisResponse> response = PagedResponse.fromPage(
+                historyPage,
+                AnalysisResponse::fromDomain
+        );
+
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AnalysisDetailResponse> getAnalysisDetail(
-            // 🚀 PROD: @AuthenticationPrincipal User user,
-
-            @RequestHeader("user-email") String email,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
-        // 🚀 PROD: String email = user.getEmail();
+        String email = user.getEmail();
 
         Analysis analysis = manageAnalysisUseCase.getAnalysisDetail(id, email);
         return ResponseEntity.ok(AnalysisDetailResponse.fromDomain(analysis));
@@ -77,12 +78,10 @@ public class AnalysisController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAnalysis(
-            // 🚀 PROD: @AuthenticationPrincipal User user,
-
-            @RequestHeader("user-email") String email,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
-        // 🚀 PROD: String email = user.getEmail();
+        String email = user.getEmail();
 
         manageAnalysisUseCase.deleteAnalysis(id, email);
         return ResponseEntity.noContent().build();

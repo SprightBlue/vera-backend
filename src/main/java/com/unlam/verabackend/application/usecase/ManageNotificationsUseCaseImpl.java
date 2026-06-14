@@ -1,5 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
+import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.port.in.ManageNotificationsUseCase;
@@ -18,6 +19,7 @@ import java.util.UUID;
 public class ManageNotificationsUseCaseImpl implements ManageNotificationsUseCase {
 
     private final NotificationsRepository repository;
+    private final SseService sseService;
 
     @Override
     @Transactional(readOnly = true)
@@ -28,7 +30,7 @@ public class ManageNotificationsUseCaseImpl implements ManageNotificationsUseCas
     @Override
     @Transactional
     public void markAllMyNotificationsAsRead(String email) {
-        repository.markAllAsRead(email);
+        repository.markAllAsReadByUserEmail(email);
     }
 
     private Notifications getNotificationDetail(UUID id, String email) {
@@ -46,5 +48,6 @@ public class ManageNotificationsUseCaseImpl implements ManageNotificationsUseCas
     public void deleteNotification(UUID id, String email) {
         Notifications notification = getNotificationDetail(id, email);
         repository.deleteById(notification.getId());
+        sseService.sendDeleteEvent(email, id);
     }
 }

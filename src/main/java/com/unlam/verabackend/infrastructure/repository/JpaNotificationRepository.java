@@ -8,16 +8,16 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
 public interface JpaNotificationRepository extends JpaRepository<NotificationsEntity, UUID> {
     Page<NotificationsEntity> findByUserEmail(String email, Pageable pageable);
+    List<NotificationsEntity> findByUserEmailAndIsReadFalse(String email);
 
-    @Modifying
-    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE NotificationsEntity n SET n.isRead = true WHERE n.user.email = :email AND n.isRead = false")
     void markAllAsReadByUserEmail(@Param("email") String email);
 }

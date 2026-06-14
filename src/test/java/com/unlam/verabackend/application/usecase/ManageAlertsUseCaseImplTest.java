@@ -1,6 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.NotificationService;
+import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Alerts;
 import com.unlam.verabackend.domain.model.NotificationsType;
@@ -21,6 +21,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +40,7 @@ class ManageAlertsUseCaseImplTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private NotificationService notificationService;
+    private SseService sseService;
 
     @InjectMocks
     private ManageAlertsUseCaseImpl manageAlertsUseCase;
@@ -235,9 +236,9 @@ class ManageAlertsUseCaseImplTest {
         manageAlertsUseCase.resolveAlert(alertId, carerEmail);
 
         // Assert
-        verify(mockAlert).resolve();
-        verify(alertsRepository).save(mockAlert, 55L);
-        verify(notificationService).createAndSendNotification(
+        verify(alertsRepository).resolveAlertDirectly(eq(alertId), any(LocalDateTime.class));
+
+        verify(sseService).createAndSendNotification(
                 eq(mockTrustContact.getProtectedUser()),
                 eq(NotificationsType.ALERT_SOLVED),
                 eq("Carlos Gómez"),

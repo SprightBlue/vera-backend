@@ -1,5 +1,6 @@
 package com.unlam.verabackend.presentation.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.unlam.verabackend.domain.model.Alerts;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +21,10 @@ public class AlertsDetailResponse {
     private String riskLevel;
     private Integer riskPercentage;
     private String suspiciousPatterns;
+
+    @JsonProperty("isResolved")
     private boolean isResolved;
+
     private LocalDateTime resolvedAt;
 
     public static AlertsDetailResponse fromDomain(Alerts alert) {
