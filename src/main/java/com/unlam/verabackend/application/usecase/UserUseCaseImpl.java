@@ -29,138 +29,133 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserUseCaseImpl implements UserUseCase {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
-    private final PasswordResetTokenRepository tokenRepository;
-    private final VerificationTokenRepository verificationTokenRepository;
-    private final EmailService emailService;
+        private final UserRepository userRepository;
+        private final PasswordEncoder passwordEncoder;
+        private final JwtService jwtService;
+        private final AuthenticationManager authenticationManager;
+        private final PasswordResetTokenRepository tokenRepository;
+        private final VerificationTokenRepository verificationTokenRepository;
+        private final EmailService emailService;
 
-    @Override
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("El correo electrónico ya está registrado");
+        @Override
+        public AuthResponse register(RegisterRequest request) {
+
+                if (request.getAcceptedTerms() == null
+                                || !request.getAcceptedTerms()) {
+
+                        throw new IllegalArgumentException(
+                                        "Debe aceptar los términos y condiciones");
+                }
+
+                if (userRepository.existsByEmail(request.getEmail())) {
+                        throw new RuntimeException("El correo electrónico ya está registrado");
+                }
+
+                User user = new User();
+                user.setFullName(request.getFullName());
+                user.setEmail(request.getEmail());
+                user.setPassword(passwordEncoder.encode(request.getPassword()));
+                user.setRole(Role.ROLE_USER);
+                user.setEnabled(false);
+
+                userRepository.save(user);
+
+                String tokenDeEmail = java.util.UUID.randomUUID().toString();
+                VerificationToken verificationToken = new VerificationToken(tokenDeEmail, user);
+                verificationTokenRepository.save(verificationToken);
+
+                emailService.sendVerificationEmail(user.getEmail(), tokenDeEmail);
+
+                return new AuthResponse(
+                                null,
+                                user.getEmail(),
+                                user.getFullName(),
+                                user.getRole().name());
         }
 
-        User user = new User();
-        user.setFullName(request.getFullName());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(Role.ROLE_USER);
-        user.setEnabled(false);
+        @Override
+        public AuthResponse login(LoginRequest request) {
+                authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(
+                                                request.getEmail(),
+                                                request.getPassword()));
 
-        userRepository.save(user);
+                User user = userRepository.findByEmail(request.getEmail())
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        String tokenDeEmail = java.util.UUID.randomUUID().toString();
-        VerificationToken verificationToken = new VerificationToken(tokenDeEmail, user);
-        verificationTokenRepository.save(verificationToken);
+                String token = jwtService.generateToken(user);
+                return new AuthResponse(token, user.getEmail(), user.getFullName(), user.getRole().name());
+        }
 
-        emailService.sendVerificationEmail(user.getEmail(), tokenDeEmail);
-
-        return new AuthResponse(
-                null,
-                user.getEmail(),
-                user.getFullName(),
-                user.getRole().name());
-    }
-
-    @Override
-    public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()));
-
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        String token = jwtService.generateToken(user);
-        return new AuthResponse(token, user.getEmail(), user.getFullName(), user.getRole().name());
-    }
-
-   @Override
+        @Override
         public void forgotPassword(String email) {
 
-    User user = userRepository.findByEmail(email)
-            .orElseThrow(() ->
-                    new RuntimeException("Usuario no encontrado"));
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-    String token = UUID.randomUUID().toString();
+                String token = UUID.randomUUID().toString();
 
-    PasswordResetToken resetToken =
-            new PasswordResetToken();
+                PasswordResetToken resetToken = new PasswordResetToken();
 
-    resetToken.setToken(token);
-    resetToken.setUser(user);
-    resetToken.setExpiresAt(
-            LocalDateTime.now().plusHours(1)
-    );
+                resetToken.setToken(token);
+                resetToken.setUser(user);
+                resetToken.setExpiresAt(
+                                LocalDateTime.now().plusHours(1));
 
-    tokenRepository.save(resetToken);
+                tokenRepository.save(resetToken);
 
-    emailService.sendPasswordResetEmail(
-            user.getEmail(),
-            token
-    );
-}
-
-    @Override
-        public void resetPassword(
-        String token,
-        String newPassword
-) {
-
-    PasswordResetToken resetToken =
-            tokenRepository.findByToken(token)
-                    .orElseThrow(() ->
-                            new RuntimeException(
-                                    "Token inválido"
-                            ));
-
-    if (resetToken.isUsed()) {
-        throw new RuntimeException(
-                "Token ya utilizado"
-        );
-    }
-
-    if (
-        resetToken.getExpiresAt()
-                .isBefore(LocalDateTime.now())
-    ) {
-        throw new RuntimeException(
-                "Token expirado"
-        );
-    }
-
-    User user = resetToken.getUser();
-
-    user.setPassword(
-            passwordEncoder.encode(newPassword)
-    );
-
-    userRepository.save(user);
-
-    resetToken.setUsed(true);
-
-    tokenRepository.save(resetToken);
-}
-
-    @Override
-    @Transactional
-    public void verifyEmail(String token) {
-
-        VerificationToken verificationToken = verificationTokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Token inválido o no encontrado"));
-
-        if (verificationToken.getExpiryDate().isBefore(java.time.LocalDateTime.now())) {
-            throw new RuntimeException("El enlace de verificación ha expirado");
+                emailService.sendPasswordResetEmail(
+                                user.getEmail(),
+                                token);
         }
 
-        User user = verificationToken.getUser();
-        user.setEnabled(true);
-        userRepository.save(user);
+        @Override
+        public void resetPassword(
+                        String token,
+                        String newPassword) {
 
-        verificationTokenRepository.delete(verificationToken);
-    }
+                PasswordResetToken resetToken = tokenRepository.findByToken(token)
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Token inválido"));
+
+                if (resetToken.isUsed()) {
+                        throw new RuntimeException(
+                                        "Token ya utilizado");
+                }
+
+                if (resetToken.getExpiresAt()
+                                .isBefore(LocalDateTime.now())) {
+                        throw new RuntimeException(
+                                        "Token expirado");
+                }
+
+                User user = resetToken.getUser();
+
+                user.setPassword(
+                                passwordEncoder.encode(newPassword));
+
+                userRepository.save(user);
+
+                resetToken.setUsed(true);
+
+                tokenRepository.save(resetToken);
+        }
+
+        @Override
+        @Transactional
+        public void verifyEmail(String token) {
+
+                VerificationToken verificationToken = verificationTokenRepository.findByToken(token)
+                                .orElseThrow(() -> new RuntimeException("Token inválido o no encontrado"));
+
+                if (verificationToken.getExpiryDate().isBefore(java.time.LocalDateTime.now())) {
+                        throw new RuntimeException("El enlace de verificación ha expirado");
+                }
+
+                User user = verificationToken.getUser();
+                user.setEnabled(true);
+                userRepository.save(user);
+
+                verificationTokenRepository.delete(verificationToken);
+        }
 }
