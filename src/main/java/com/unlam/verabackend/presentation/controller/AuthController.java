@@ -15,6 +15,7 @@ import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
 import com.unlam.verabackend.presentation.dto.ResetPasswordRequest;
 import com.unlam.verabackend.presentation.dto.ForgotPasswordRequest;
+import com.unlam.verabackend.presentation.dto.GoogleLoginRequest;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,16 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody LoginRequest request) {
         AuthResponse response = userService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleLogin(
+            @RequestBody GoogleLoginRequest request) {
+
+        AuthResponse response = userService.googleLogin(
+                request.getCredential());
+
         return ResponseEntity.ok(response);
     }
 
@@ -65,7 +76,7 @@ public class AuthController {
         try {
             userService.verifyEmail(token);
             return ResponseEntity.ok("¡Cuenta verificada con éxito! Ya podés iniciar sesión en VERA.");
-            
+
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body("Error al verificar: " + e.getMessage());
         }

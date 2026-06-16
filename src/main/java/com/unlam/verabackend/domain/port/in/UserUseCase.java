@@ -10,6 +10,8 @@ public interface UserUseCase {
 
     AuthResponse login(LoginRequest request);
 
+    AuthResponse googleLogin(String credential);
+
     void forgotPassword(String email);
 
     void resetPassword(String token, String newPassword);

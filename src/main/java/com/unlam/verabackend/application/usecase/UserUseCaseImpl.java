@@ -21,6 +21,15 @@ import org.springframework.stereotype.Service;
 import com.unlam.verabackend.application.service.EmailService;
 import com.unlam.verabackend.infrastructure.entity.PasswordResetToken;
 import com.unlam.verabackend.infrastructure.repository.PasswordResetTokenRepository;
+import java.util.Optional;
+import java.util.Collections;
+
+import org.springframework.beans.factory.annotation.Value;
+
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -86,6 +95,79 @@ public class UserUseCaseImpl implements UserUseCase {
                 String token = jwtService.generateToken(user);
                 return new AuthResponse(token, user.getEmail(), user.getFullName(), user.getRole().name());
         }
+
+        @Override
+        public AuthResponse googleLogin(
+                        String credential) {
+
+                try {
+
+                        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                                        GoogleNetHttpTransport.newTrustedTransport(),
+                                        GsonFactory.getDefaultInstance())
+                                        .setAudience(
+                                                        Collections.singletonList(
+                                                                        googleClientId))
+                                        .build();
+
+                        GoogleIdToken idToken = verifier.verify(credential);
+
+                        if (idToken == null) {
+                                throw new RuntimeException(
+                                                "Token Google inválido");
+                        }
+
+                        GoogleIdToken.Payload payload = idToken.getPayload();
+
+                        String email = payload.getEmail();
+
+                        String fullName = (String) payload.get("name");
+
+                        Optional<User> existingUser = userRepository.findByEmail(email);
+
+                        User user;
+
+                        if (existingUser.isPresent()) {
+
+                                user = existingUser.get();
+
+                        } else {
+
+                                user = new User();
+
+                                user.setEmail(email);
+
+                                user.setFullName(fullName);
+
+                                user.setPassword(
+                                                passwordEncoder.encode(
+                                                                UUID.randomUUID().toString()));
+
+                                user.setRole(Role.ROLE_USER);
+
+                                user.setEnabled(true);
+
+                                user = userRepository.save(user);
+                        }
+
+                        String token = jwtService.generateToken(user);
+
+                        return new AuthResponse(
+                                        token,
+                                        user.getEmail(),
+                                        user.getFullName(),
+                                        user.getRole().name());
+
+                } catch (Exception e) {
+
+                        throw new RuntimeException(
+                                        "Error validando usuario Google",
+                                        e);
+                }
+        }
+
+        @Value("${google.client-id}")
+        private String googleClientId;
 
         @Override
         public void forgotPassword(String email) {
@@ -158,4 +240,5 @@ public class UserUseCaseImpl implements UserUseCase {
 
                 verificationTokenRepository.delete(verificationToken);
         }
+
 }
