@@ -1,7 +1,6 @@
 package com.unlam.verabackend.infrastructure.entity;
 
 import com.unlam.verabackend.domain.model.NotificationsType;
-import com.unlam.verabackend.infrastructure.mapper.JsonMapConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -43,6 +42,7 @@ public class NotificationsEntity {
     private Map<String, Object> payload;
 
     @Column(name = "is_read", nullable = false)
+    @Builder.Default
     private boolean isRead = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)

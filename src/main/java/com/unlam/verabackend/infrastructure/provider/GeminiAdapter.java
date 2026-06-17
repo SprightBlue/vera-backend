@@ -1,6 +1,7 @@
 package com.unlam.verabackend.infrastructure.provider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.unlam.verabackend.domain.model.ChatMessages;
 import com.unlam.verabackend.domain.port.out.GeminiProvider;
 import com.unlam.verabackend.domain.port.out.GeminiResult;
 import org.springframework.beans.factory.annotation.Value;
@@ -74,10 +75,8 @@ public class GeminiAdapter implements GeminiProvider {
         if (file != null && !file.isEmpty()) {
             Map<String, Object> inlineData = new HashMap<>();
             Map<String, Object> filePart = new HashMap<>();
-
             inlineData.put("mimeType", resolveMimeType(file));
             inlineData.put("data", Base64.getEncoder().encodeToString(file.getBytes()));
-
             filePart.put("inlineData", inlineData);
             parts.add(filePart);
         }
@@ -94,14 +93,67 @@ public class GeminiAdapter implements GeminiProvider {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
+        ResponseEntity<String> responseEntity = timedRestTemplate.postForEntity(url, entity, String.class);
+        return mapToGeminiResult(responseEntity.getBody());
+    }
+
+    @Override
+    public String generateChatResponse(String systemPrompt, List<ChatMessages> history) {
+        try {
+            return executeChatWithModel(PRIMARY_MODEL, systemPrompt, history);
+        } catch (Exception e) {
+            System.err.println("El modelo de chat primario (" + PRIMARY_MODEL + ") falló. Intentando fallback...");
+            try {
+                return executeChatWithModel(FALLBACK_MODEL, systemPrompt, history);
+            } catch (Exception ex) {
+                throw new RuntimeException("Error crítico en la comunicación con el chat de Gemini: " + ex.getMessage(), ex);
+            }
+        }
+    }
+
+    private String executeChatWithModel(String model, String systemPrompt, List<ChatMessages> history) throws Exception {
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+
+        Map<String, Object> requestBody = new HashMap<>();
+
+        Map<String, Object> systemInstruction = new HashMap<>();
+        Map<String, String> systemPart = Map.of("text", systemPrompt);
+        systemInstruction.put("parts", List.of(systemPart));
+        requestBody.put("systemInstruction", systemInstruction);
+
+        List<Map<String, Object>> contents = new ArrayList<>();
+        for (ChatMessages message : history) {
+            Map<String, Object> contentMap = new HashMap<>();
+
+            contentMap.put("role", message.getRole().name().toLowerCase());
+
+            Map<String, String> textPart = Map.of("text", message.getContent());
+            contentMap.put("parts", List.of(textPart));
+
+            contents.add(contentMap);
+        }
+        requestBody.put("contents", contents);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
         try {
             ResponseEntity<String> responseEntity = timedRestTemplate.postForEntity(url, entity, String.class);
-            return mapToGeminiResult(responseEntity.getBody());
+            return extractTextFromResponse(responseEntity.getBody());
         } catch (HttpStatusCodeException e) {
-            System.err.println("ERROR HTTP EN GOOGLE GEMINI (" + model + "): Código " + e.getStatusCode());
-            System.err.println("RESPUESTA EXACTA DE GOOGLE: " + e.getResponseBodyAsString());
+            System.err.println("ERROR HTTP EN CHAT GEMINI (" + model + "): Código " + e.getStatusCode());
+            System.err.println("RESPUESTA: " + e.getResponseBodyAsString());
             throw e;
         }
+    }
+
+    private String extractTextFromResponse(String responseBody) throws Exception {
+        var jsonNode = objectMapper.readTree(responseBody);
+        return jsonNode.path("candidates").get(0)
+                .path("content")
+                .path("parts").get(0)
+                .path("text").asText();
     }
 
     private String resolveMimeType(MultipartFile file) {
@@ -109,31 +161,25 @@ public class GeminiAdapter implements GeminiProvider {
         if (filename == null || !filename.contains(".")) {
             return file.getContentType();
         }
-
         String extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
-
         if (MIME_TYPE_MAP.containsKey(extension)) {
             return MIME_TYPE_MAP.get(extension);
         }
-
         String contentType = file.getContentType();
         if (contentType == null || contentType.equals("application/octet-stream")) {
             if (Arrays.asList("heic", "heif").contains(extension)) return "image/" + extension;
             if (Arrays.asList("webm", "mov", "avi").contains(extension)) return "video/" + extension;
             return "audio/mpeg";
         }
-
         return contentType;
     }
 
     private GeminiResult mapToGeminiResult(String responseBody) throws Exception {
         var jsonNode = objectMapper.readTree(responseBody);
-
         String rawJsonResult = jsonNode.path("candidates").get(0)
                 .path("content")
                 .path("parts").get(0)
                 .path("text").asText();
-
         return objectMapper.readValue(rawJsonResult, GeminiResult.class);
     }
 }

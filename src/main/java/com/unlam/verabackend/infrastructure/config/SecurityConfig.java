@@ -45,6 +45,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/analysis/**").permitAll()
                         .requestMatchers("/api/v1/alerts/**").permitAll()
                         .requestMatchers("/api/v1/notifications/**").permitAll()
+                        .requestMatchers("/api/v1/chats/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/trust/invite/**").permitAll()
                         .requestMatchers("/dashboard").permitAll()
                         .requestMatchers("/error").permitAll()
