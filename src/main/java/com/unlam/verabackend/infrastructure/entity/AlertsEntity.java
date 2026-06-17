@@ -51,6 +51,7 @@ public class AlertsEntity {
     private String suspiciousPatterns;
 
     @Column(name = "is_resolved", nullable = false)
+    @Builder.Default
     private boolean isResolved = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -60,5 +61,14 @@ public class AlertsEntity {
     private LocalDateTime resolvedAt;
 
     @PrePersist
-    protected void onCreate() {this.createdAt = LocalDateTime.now();}
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        if (this.isResolved && this.resolvedAt == null) {
+            this.resolvedAt = LocalDateTime.now();
+        }
+    }
 }

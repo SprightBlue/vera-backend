@@ -1,6 +1,6 @@
 package com.unlam.verabackend.application.service;
 
-import com.unlam.verabackend.domain.model.Source;
+import com.unlam.verabackend.domain.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -186,5 +186,107 @@ class PromptBuilderServiceTest {
         assertTrue(result.contains("REGLA DE NEGOCIO OBLIGATORIA: Como Google Safe Browsing detectó enlaces maliciosos activos, el 'riskLevel' DEBE SER SÍ O SÍ 'HIGH'"));
         assertTrue(result.contains("REGLA DE NEGOCIO OBLIGATORIA: Si Google Safe Browsing reportó amenazas, el 'riskType' NO puede ser 'NONE'"));
         assertFalse(result.contains("* Si Safe Browsing está limpio, determiná vos el 'riskLevel'"));
+    }
+
+    // =========================================================================
+    // Pruebas para buildChatSystemPrompt (Tipado con Enums Reales)
+    // =========================================================================
+
+    @Test
+    void buildChatSystemPrompt_WhenAnalysisIsProvided_ShouldReturnAdultoMayorContextWithSource() {
+        // Arrange
+        Analysis analysis = Analysis.builder()
+                .title("Email Sospechoso Netflix")
+                .source(Source.WEB)
+                .contentSummary("Contenido fraudulento emulando pasarela de pagos")
+                .riskType(RiskType.PHISHING)
+                .riskLevel(RiskLevel.HIGH)
+                .riskPercentage(85)
+                .suspiciousPatterns("Links extraños")
+                .recommendation("No hacer clic")
+                .build();
+
+        // Act
+        String result = promptBuilderService.buildChatSystemPrompt(analysis, null);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.contains("Te estás comunicando de forma directa con un ADULTO MAYOR."));
+        assertTrue(result.contains("Extremadamente cálido, tierno, muy paciente y empático."));
+        assertTrue(result.contains("Título del reporte: Email Sospechoso Netflix"));
+        assertTrue(result.contains("Origen: WEB"));
+        assertTrue(result.contains("Nivel de Riesgo Evaluado: HIGH (Porcentaje: 85%)"));
+        assertFalse(result.contains("CONTACTO DE CONFIANZA"));
+    }
+
+    @Test
+    void buildChatSystemPrompt_WhenAnalysisIsProvidedWithNullSource_ShouldFallbackToDesconocido() {
+        // Arrange
+        Analysis analysis = Analysis.builder()
+                .title("Analisis Sin Origen")
+                .source(null)
+                .build();
+
+        // Act
+        String result = promptBuilderService.buildChatSystemPrompt(analysis, null);
+
+        // Assert
+        assertTrue(result.contains("Origen: Desconocido"));
+    }
+
+    @Test
+    void buildChatSystemPrompt_WhenAlertIsProvided_ShouldReturnCuidadorContextWithSource() {
+        // Arrange
+        Alerts alert = Alerts.builder()
+                .title("Acceso Indebido Detectado")
+                .source(Source.MOBILE)
+                .contentSummary("Intento de login repetido")
+                .riskType(RiskType.IDENTITY_THEFT)
+                .riskLevel(RiskLevel.HIGH)
+                .riskPercentage(90)
+                .suspiciousPatterns("IP sospechosa")
+                .isResolved(false)
+                .build();
+
+        // Act
+        String result = promptBuilderService.buildChatSystemPrompt(null, alert);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.contains("Te estás comunicando con el CONTACTO DE CONFIANZA"));
+        assertTrue(result.contains("Profesional, directo, informativo, corporativo"));
+        assertTrue(result.contains("Título de la alerta: Acceso Indebido Detectado"));
+        assertTrue(result.contains("Vía de entrada: MOBILE"));
+        assertTrue(result.contains("Estado de la Alerta: ACTIVA - REQUIERE ACCIÓN"));
+        assertFalse(result.contains("ADULTO MAYOR"));
+    }
+
+    @Test
+    void buildChatSystemPrompt_WhenAlertIsProvidedWithNullSourceAndResolvedTrue_ShouldCoverInternalBranches() {
+        // Arrange
+        Alerts alert = Alerts.builder()
+                .source(null)
+                .isResolved(true)
+                .build();
+
+        // Act
+        String result = promptBuilderService.buildChatSystemPrompt(null, alert);
+
+        // Assert
+        assertTrue(result.contains("Vía de entrada: Desconocido"));
+        assertTrue(result.contains("Estado de la Alerta: Resuelta"));
+    }
+
+    @Test
+    void buildChatSystemPrompt_WhenBothAnalysisAndAlertAreNull_ShouldReturnNeutroContext() {
+        // Act
+        String result = promptBuilderService.buildChatSystemPrompt(null, null);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.contains("PÚBLICO: Usuario general de la aplicación."));
+        assertTrue(result.contains("TONO OBLIGATORIO: Equilibrado, cordial, profesional, pedagógico y empático."));
+        assertTrue(result.contains("### REGLA FINAL DE RESPUESTA (ESTILO CHAT HUMANO):"));
+        assertFalse(result.contains("### CONTEXTO DEL ANÁLISIS PREVIO REALIZADO:"));
     }
 }

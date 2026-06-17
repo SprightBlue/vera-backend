@@ -6,6 +6,7 @@ import com.unlam.verabackend.domain.port.out.AnalysisRepository;
 import com.unlam.verabackend.infrastructure.entity.AnalysisEntity;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.mapper.AnalysisMapper;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,15 +20,16 @@ import java.util.UUID;
 public class AnalysisRepositoryAdapter implements AnalysisRepository {
 
     private final JpaAnalysisRepository jpaRepository;
-    private final UserRepository userRepository;
     private final AnalysisMapper mapper;
+    private final EntityManager entityManager;
 
     @Override
     public Analysis save(Analysis analysis) {
         String emailFromDomain = analysis.getUser().getEmail();
 
-        User realUser = userRepository.findByEmail(emailFromDomain)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado en la BD con email: " + emailFromDomain));
+        User realUser = entityManager.createQuery("SELECT u FROM User u WHERE u.email = :email", User.class)
+                .setParameter("email", emailFromDomain)
+                .getSingleResult();
 
         AnalysisEntity entity = mapper.toEntity(analysis, realUser);
         AnalysisEntity savedEntity = jpaRepository.save(entity);
@@ -38,7 +40,7 @@ public class AnalysisRepositoryAdapter implements AnalysisRepository {
     @Override
     public void deleteById(UUID id) {
         if (!jpaRepository.existsById(id)) {
-            throw new IllegalArgumentException("No se puede eliminar. Alerta no encontrada con ID: " + id);
+            throw new IllegalArgumentException("No se puede eliminar. Análisis no encontrado con ID: " + id);
         }
         jpaRepository.deleteById(id);
     }

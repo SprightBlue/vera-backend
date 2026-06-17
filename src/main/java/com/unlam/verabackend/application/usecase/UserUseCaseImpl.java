@@ -1,6 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.infrastructure.provider.JwtService;
+import com.unlam.verabackend.application.service.JwtService;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
