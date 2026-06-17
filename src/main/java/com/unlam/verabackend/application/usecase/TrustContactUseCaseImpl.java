@@ -7,6 +7,7 @@ import com.unlam.verabackend.domain.model.InvitationStatus;
 import com.unlam.verabackend.domain.model.SensitivityLevel;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.entity.TrustInvitation;
+import com.unlam.verabackend.presentation.dto.CarerResponse;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
 import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;
@@ -276,12 +277,10 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     @Override
     @Transactional
     public void deleteProtectedPerson(Long id) {
-        if (trustInvitationRepository.existsById(id)) {
-            trustInvitationRepository.deleteById(id);
-        }
-        if (trustContactRepository.existsById(id)) {
-            trustContactRepository.deleteById(id);
-        }
+        TrustContact contact = trustContactRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Contacto de confianza no encontrado"));
+                
+        trustContactRepository.delete(contact);
     }
 
     @Override
@@ -289,21 +288,45 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     public void updateConfiguration(Long id, String sensitivityLevelStr, Boolean notifyHighRisk) {
         SensitivityLevel sensitivityEnum = null;
         if (sensitivityLevelStr != null) {
-            sensitivityEnum = SensitivityLevel.valueOf(sensitivityLevelStr.toUpperCase());
+            try {
+                sensitivityEnum = SensitivityLevel.valueOf(sensitivityLevelStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Nivel de sensibilidad inválido");
+            }
         }
 
         final SensitivityLevel finalSensitivity = sensitivityEnum;
 
-        trustContactRepository.findById(id).ifPresent(contact -> {
-            if (finalSensitivity != null) contact.setSensitivityLevel(finalSensitivity);
-            if (notifyHighRisk != null) contact.setNotifyHighRisk(notifyHighRisk);
-            trustContactRepository.save(contact);
-        });
+        TrustContact contact = trustContactRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Contacto de confianza no encontrado"));
 
-        trustInvitationRepository.findById(id).ifPresent(invitation -> {
-            if (finalSensitivity != null) invitation.setSensitivityLevel(finalSensitivity);
-            if (notifyHighRisk != null) invitation.setNotifyHighRisk(notifyHighRisk);
-            trustInvitationRepository.save(invitation);
-        });
+        if (finalSensitivity != null) {
+            contact.setSensitivityLevel(finalSensitivity);
+        }
+        if (notifyHighRisk != null) {
+            contact.setNotifyHighRisk(notifyHighRisk);
+        }
+        
+        trustContactRepository.save(contact);
     }
-}
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CarerResponse> getMyCarers(String protectedUserEmail) {
+        User protectedUser = userRepository.findByEmail(protectedUserEmail)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        List<TrustContact> carers = trustContactRepository.findByProtectedUserId(protectedUser.getId());
+
+        return carers.stream()
+                .map(contact -> CarerResponse.builder()
+                        .contactId(contact.getId())
+                        .fullName(contact.getCarer().getFullName())
+                        .email(contact.getCarer().getEmail())
+                        .relationship(contact.getRelationship())
+                        .sensitivityLevel(contact.getSensitivityLevel())
+                        .notifyHighRisk(contact.isNotifyHighRisk())
+                        .build())
+                .toList();
+    }
+} 
