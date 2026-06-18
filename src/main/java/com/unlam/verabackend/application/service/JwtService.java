@@ -1,4 +1,4 @@
-package com.unlam.verabackend.infrastructure.provider;
+package com.unlam.verabackend.application.service;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;

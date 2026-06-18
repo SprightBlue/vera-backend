@@ -1,6 +1,6 @@
 package com.unlam.verabackend.infrastructure.config;
 
-import com.unlam.verabackend.infrastructure.provider.JwtService;
+import com.unlam.verabackend.application.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -11,5 +11,5 @@ import java.util.UUID;
 @Repository
 public interface JpaAnalysisRepository extends JpaRepository<AnalysisEntity, UUID> {
     Page<AnalysisEntity> findByUserEmail(String email, Pageable pageable);
-    Page<AnalysisEntity> findByUserEmailAndRiskLevel(String user_email, RiskLevel riskLevel, Pageable pageable);
+    Page<AnalysisEntity> findByUserEmailAndRiskLevel(String userEmail, RiskLevel riskLevel, Pageable pageable);
 }

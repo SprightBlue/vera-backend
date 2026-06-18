@@ -57,10 +57,13 @@ public class TrustContactController {
     }
 
     @PatchMapping("/protected-people/{id}")
-    public ResponseEntity<Void> updateSensitivity(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Void> updatePreferences(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         String sensitivityLevel = (String) payload.get("sensitivityLevel");
         Boolean notifyHighRisk = (Boolean) payload.get("notifyHighRisk");
-        trustContactUseCase.updateConfiguration(id, sensitivityLevel, notifyHighRisk);
+        Boolean receiveAlertSummaries = (Boolean) payload.get("receiveAlertSummaries"); 
+
+        trustContactUseCase.updateConfiguration(id, sensitivityLevel, notifyHighRisk, receiveAlertSummaries);
+        
         return ResponseEntity.noContent().build();
     }
 
