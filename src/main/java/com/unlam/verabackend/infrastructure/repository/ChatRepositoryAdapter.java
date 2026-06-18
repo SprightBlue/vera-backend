@@ -5,7 +5,6 @@ import com.unlam.verabackend.domain.port.out.ChatsRepository;
 import com.unlam.verabackend.infrastructure.entity.ChatsEntity;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.mapper.ChatsMapper;
-import com.unlam.verabackend.infrastructure.repository.JpaChatsRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -61,5 +60,10 @@ public class ChatRepositoryAdapter implements ChatsRepository {
     @Override
     public Optional<Chats> findByAlertId(UUID alertId) {
         return jpaChatsRepository.findByAlertId(alertId).map(chatsMapper::toDomain);
+    }
+
+    @Override
+    public void deleteById(UUID id) {
+        jpaChatsRepository.deleteById(id);
     }
 }
