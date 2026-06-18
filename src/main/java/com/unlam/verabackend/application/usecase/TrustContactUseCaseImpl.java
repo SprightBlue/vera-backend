@@ -285,7 +285,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
 
     @Override
     @Transactional
-    public void updateConfiguration(Long id, String sensitivityLevelStr, Boolean notifyHighRisk) {
+    public void updateConfiguration(Long id, String sensitivityLevelStr, Boolean notifyHighRisk, Boolean receiveAlertSummaries) {
         SensitivityLevel sensitivityEnum = null;
         if (sensitivityLevelStr != null) {
             sensitivityEnum = SensitivityLevel.valueOf(sensitivityLevelStr.toUpperCase());
@@ -293,15 +293,19 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
 
         final SensitivityLevel finalSensitivity = sensitivityEnum;
 
+        // Actualiza si ya es un contacto activo
         trustContactRepository.findById(id).ifPresent(contact -> {
             if (finalSensitivity != null) contact.setSensitivityLevel(finalSensitivity);
             if (notifyHighRisk != null) contact.setNotifyHighRisk(notifyHighRisk);
+            if (receiveAlertSummaries != null) contact.setReceiveAlertSummaries(receiveAlertSummaries); // <-- Nuevo
             trustContactRepository.save(contact);
         });
 
+        // Actualiza si todavía es una invitación pendiente
         trustInvitationRepository.findById(id).ifPresent(invitation -> {
             if (finalSensitivity != null) invitation.setSensitivityLevel(finalSensitivity);
             if (notifyHighRisk != null) invitation.setNotifyHighRisk(notifyHighRisk);
+            if (receiveAlertSummaries != null) invitation.setReceiveAlertSummaries(receiveAlertSummaries); // <-- Nuevo
             trustInvitationRepository.save(invitation);
         });
     }

@@ -4,6 +4,7 @@ import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
+import com.unlam.verabackend.infrastructure.provider.EmailService; // <-- 1. Importamos tu nuevo servicio
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NotificationService {
 
     private final NotificationsRepository repository;
+    private final EmailService emailService; // <-- 2. Inyectamos el servicio de emails
     private final Map<String, SseEmitter> userEmitters = new ConcurrentHashMap<>();
 
     public SseEmitter createEmitter(String email) {
@@ -55,7 +57,19 @@ public class NotificationService {
 
         Notifications saved = repository.save(notification);
 
+        // 3. Envía la notificación en tiempo real a la web (lo que ya hacía)
         sendSse(targetUser.getEmail(), saved);
+
+        // 4. NUEVO: Si la notificación es una ALERTA crítica, disparamos el email
+        if (type == NotificationsType.ALERT) {
+            // Intentamos extraer un detalle del payload (si existe), o ponemos un texto por defecto
+            String detalle = (payload != null && payload.containsKey("details")) 
+                    ? payload.get("details").toString() 
+                    : "Se detectó actividad sospechosa que requiere tu revisión inmediata.";
+            
+            // Llamamos al método que creamos en el paso anterior
+            emailService.enviarEmailAlertaRiesgoAlto(targetUser.getEmail(), triggeringUserFullName, detalle);
+        }
 
         return saved;
     }

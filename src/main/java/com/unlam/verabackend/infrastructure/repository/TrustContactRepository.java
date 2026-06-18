@@ -15,5 +15,5 @@ public interface TrustContactRepository extends JpaRepository<TrustContact, Long
 
     boolean existsByCarerIdAndProtectedUser_Id(Long carerId, Long protectedUserId);
 
-    
+    List<TrustContact> findByReceiveAlertSummariesTrue();
 }

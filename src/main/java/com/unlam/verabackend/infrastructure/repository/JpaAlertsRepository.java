@@ -12,4 +12,8 @@ import java.util.UUID;
 public interface JpaAlertsRepository extends JpaRepository<AlertsEntity, UUID> {
     Page<AlertsEntity> findByTrustContactIdIn(List<Long> trustContactIds, Pageable pageable);
     Page<AlertsEntity> findByTrustContactIdInAndIsResolved(List<Long> trustContactIds, boolean isResolved, Pageable pageable);
+
+    long countByTrustContactIdAndRiskLevelAndCreatedAtAfter(Long trustContactId, String riskLevel, java.time.LocalDateTime date);
+
+    List<AlertsEntity> findTop3ByTrustContactIdAndCreatedAtAfterOrderByCreatedAtDesc(Long trustContactId, java.time.LocalDateTime date);
 }
