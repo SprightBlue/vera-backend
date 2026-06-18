@@ -113,8 +113,8 @@ public class PromptBuilderService {
 
         } else if (alert != null) {
             sb.append("- PÚBLICO: Te estás comunicando con el CONTACTO DE CONFIANZA (Familiar o Cuidador) de un adulto mayor en riesgo.\n");
-            sb.append("- TONO OBLIGATORIO: Profesional, directo, informativo, corporativo y de soporte ejecutivo. Él o ella necesita respuestas rápidas y precisas para proteger a su familiar.\n");
-            sb.append("- REGLA CRÍTICA: Podés usar términos técnicos de ciberseguridad con total normalidad, pero sé directo en los planes de acción o pasos de mitigación que el cuidador debe ejecutar de forma inmediata.\n\n");
+            sb.append("- TONO OBLIGATORIO: Sencillo, directo, extremadamente claro, paciente y empático. Recordá que está bajo una situación de posible fraude a su familiar.\n");
+            sb.append("- REGLA CRÍTICA: Evitá tecnicismos informáticos puros e innecesarios. Si mencionás conceptos como Phishing, Smishing o Malware, explicalos de forma didáctica con metáforas simples cotidianas. Sé muy explícito en los pasos prácticos de acción o mitigación inmediata que debe ejecutar para proteger las cuentas de su familiar sin caer en tecnicismos de sistemas complejos.\n\n");
 
             sb.append("### CONTEXTO DE LA ALERTA CRÍTICA GENERADA:\n")
                     .append("Este chat fue abierto debido a una alerta de peligro detectada en el dispositivo de su familiar protegido:\n")
@@ -138,8 +138,22 @@ public class PromptBuilderService {
         sb.append("- FLUJO: Respondé al grano, como lo haría una persona real en una aplicación de mensajería (WhatsApp).\n");
         sb.append("- FORMATO: Responde únicamente en TEXTO PLANO legible. Evitá usar listas numeradas largas o subtítulos innecesarios. Podés usar negritas con markdown ligero para destacar una advertencia clave.\n");
         sb.append("- INTERACCIÓN: Si la respuesta requiere demasiados pasos, explicá los primeros dos y cerrá tu mensaje invitando al usuario a continuar con una pregunta natural (ej: '¿Querés que te explique cómo cambiar la clave ahora?' o '¿Llegaste a hacer clic en el botón?'). Evitá abrumar de un solo tirón.\n");
-        sb.append("- NUNCA respondas con un bloque de código JSON ni uses marcas de código ```json en este modo de chat.");
+        sb.append("- NUNCA respondas con un bloque de código JSON ni uses marcas de código```json en este modo de chat.");
 
         return sb.toString();
+    }
+
+    // --- 3. CONSTRUCTOR PARA GENERAR TÍTULOS DINÁMICOS DE CHAT ---
+    public String buildTitleGenerationPrompt(String firstUserMessage) {
+
+        return "Sos un módulo automatizado de VERA que genera etiquetas concisas para historiales de chat.\n" +
+                "Tu único objetivo es resumir de forma atractiva la primera consulta que hace el usuario.\n\n" +
+                "### REGLAS ESTRICTAS DE RESPUESTA:\n" +
+                "- Extensión máxima: 4 o 5 palabras.\n" +
+                "- Idioma: Español.\n" +
+                "- Formato obligatorio: No uses comillas, ni puntos finales, ni agregues introducciones como 'Título:' o 'Resumen:'.\n" +
+                "- Estilo: Directo, intuitivo y profesional (Ejemplos correctos: 'Duda por SMS bancario', 'Mail sospechoso de ANSES', 'Consulta sobre virus APK').\n\n" +
+                "Consulta del usuario a resumir:\n" +
+                "\"" + firstUserMessage + "\"";
     }
 }

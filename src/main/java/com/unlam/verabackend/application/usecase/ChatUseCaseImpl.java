@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -54,8 +55,6 @@ public class ChatUseCaseImpl implements ChatUseCase {
         var analysis = chat.getAnalysis();
         var alert = chat.getAlert();
 
-        String systemPrompt = promptBuilder.buildChatSystemPrompt(analysis, alert);
-
         ChatMessages userChatMessage = ChatMessages.builder()
                 .chat(chat)
                 .role(ChatsRole.USER)
@@ -63,8 +62,33 @@ public class ChatUseCaseImpl implements ChatUseCase {
                 .build();
         chatMessagesRepository.save(userChatMessage);
 
-        List<ChatMessages> history = chatMessagesRepository.findLastMessages(chatId, 10);
+        if ("Nueva consulta con VERA".equals(chat.getTitle())) {
+            try {
+                String titlePrompt = promptBuilder.buildTitleGenerationPrompt(userMessage);
+                String titleSystemInstruction = "Sos un algoritmo encargado de resumir consultas de fraude en títulos breves.";
 
+                ChatMessages titleRequestMessage = ChatMessages.builder()
+                        .role(ChatsRole.USER)
+                        .content(titlePrompt)
+                        .build();
+
+                String generatedTitle = geminiProvider.generateChatResponse(titleSystemInstruction, List.of(titleRequestMessage));
+                generatedTitle = generatedTitle.replace("\"", "").replace("\n", "").trim();
+
+                if (!generatedTitle.isBlank()) {
+                    chat.setTitle(generatedTitle);
+                }
+            } catch (Exception e) {
+                System.err.println("No se pudo actualizar el título dinámico del chat: " + e.getMessage());
+            }
+        }
+
+        chat.setUpdatedAt(LocalDateTime.now());
+        chatsRepository.save(chat);
+
+        List<ChatMessages> history = chatMessagesRepository.findLastMessages(chatId);
+
+        String systemPrompt = promptBuilder.buildChatSystemPrompt(analysis, alert);
         String aiResponse = geminiProvider.generateChatResponse(systemPrompt, history);
 
         ChatMessages modelChatMessage = ChatMessages.builder()
