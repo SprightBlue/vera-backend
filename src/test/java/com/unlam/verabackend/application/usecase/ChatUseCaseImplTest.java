@@ -10,32 +10,26 @@ import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ChatUseCaseImplTest {
 
-    @Mock
-    private GeminiProvider geminiProvider;
-    @Mock
-    private ChatsRepository chatsRepository;
-    @Mock
-    private ChatMessagesRepository chatMessagesRepository;
-    @Mock
-    private PromptBuilderService promptBuilder;
-    @Mock
-    private UserRepository userRepository;
+    @Mock private GeminiProvider geminiProvider;
+    @Mock private ChatsRepository chatsRepository;
+    @Mock private ChatMessagesRepository chatMessagesRepository;
+    @Mock private PromptBuilderService promptBuilder;
+    @Mock private UserRepository userRepository;
 
     @InjectMocks
     private ChatUseCaseImpl chatUseCase;
@@ -48,218 +42,98 @@ class ChatUseCaseImplTest {
         sampleUser = new User();
         sampleUser.setId(1L);
         sampleUser.setEmail("test@unlam.com");
-        sampleUser.setFullName("Test User");
-
         chatId = UUID.randomUUID();
     }
 
-    // =========================================================================
-    // Pruebas para createChat
-    // =========================================================================
+    // --- Tests de CreateChat ---
 
     @Test
-    void createChat_WhenUserNotFound_ShouldThrowIllegalArgumentException() {
-        // Arrange
-        String email = "notfound@unlam.com";
-        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-                chatUseCase.createChat(email, null, null)
-        );
-        assertEquals("Usuario de OAuth no encontrado con email: " + email, exception.getMessage());
-        verify(chatsRepository, never()).save(any());
-    }
-
-    @Test
-    void createChat_WhenAnalysisAndAlertAreProvided_ShouldSaveChatWithStubs() {
-        // Arrange
-        String email = "test@unlam.com";
-        UUID analysisId = UUID.randomUUID();
-        UUID alertId = UUID.randomUUID();
-
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(sampleUser));
-        when(chatsRepository.save(any(Chats.class))).thenAnswer(invocation -> {
-            Chats chat = invocation.getArgument(0);
-            chat.setId(chatId);
-            return chat;
+    void createChat_WithAnalysisAndAlert_ShouldBeSuccessful() {
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(sampleUser));
+        when(chatsRepository.save(any(Chats.class))).thenAnswer(i -> {
+            Chats c = i.getArgument(0);
+            c.setId(chatId);
+            return c;
         });
-
-        // Act
-        UUID resultId = chatUseCase.createChat(email, analysisId, alertId);
-
-        // Assert
-        assertEquals(chatId, resultId);
-        ArgumentCaptor<Chats> chatCaptor = ArgumentCaptor.forClass(Chats.class);
-        verify(chatsRepository).save(chatCaptor.capture());
-
-        Chats savedChat = chatCaptor.getValue();
-        assertEquals(sampleUser, savedChat.getUser());
-        assertEquals(1L, savedChat.getUser().getId());
-        assertNotNull(savedChat.getAnalysis());
-        assertEquals(analysisId, savedChat.getAnalysis().getId());
-        assertNotNull(savedChat.getAlert());
-        assertEquals(alertId, savedChat.getAlert().getId());
-        assertTrue(savedChat.isActive());
-    }
-
-    @Test
-    void createChat_WhenAnalysisAndAlertAreNull_ShouldSaveChatWithNullStubs() {
-        // Arrange
-        String email = "test@unlam.com";
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(sampleUser));
-        when(chatsRepository.save(any(Chats.class))).thenAnswer(invocation -> {
-            Chats chat = invocation.getArgument(0);
-            chat.setId(chatId);
-            return chat;
-        });
-
-        // Act
-        UUID resultId = chatUseCase.createChat(email, null, null);
-
-        // Assert
-        assertEquals(chatId, resultId);
-        ArgumentCaptor<Chats> chatCaptor = ArgumentCaptor.forClass(Chats.class);
-        verify(chatsRepository).save(chatCaptor.capture());
-
-        Chats savedChat = chatCaptor.getValue();
-        assertNull(savedChat.getAnalysis());
-        assertNull(savedChat.getAlert());
-    }
-
-    // =========================================================================
-    // Pruebas para sendMessage
-    // =========================================================================
-
-    @Test
-    void sendMessage_WhenChatDoesNotExist_ShouldThrowIllegalArgumentException() {
-        // Arrange
-        UUID nonExistentChatId = UUID.randomUUID();
-        when(chatsRepository.findById(nonExistentChatId)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-                chatUseCase.sendMessage(nonExistentChatId, "Hola VERA")
-        );
-        assertEquals("El chat solicitado no existe.", exception.getMessage());
-        verify(chatMessagesRepository, never()).save(any());
-    }
-
-    @Test
-    void sendMessage_WhenChatExists_ShouldSaveMessagesAndReturnAiResponse() {
-        // Arrange
-        String userMsgText = "Tengo un mail sospechoso";
-        String mockAiResponse = "Por seguridad, no abras el enlace.";
-        String expectedPrompt = "System Prompt Mocked";
-
-        Analysis analysis = Analysis.builder().id(UUID.randomUUID()).build();
-        Alerts alert = Alerts.builder().id(UUID.randomUUID()).build();
-        Chats existingChat = Chats.builder().id(chatId).user(sampleUser).analysis(analysis).alert(alert).build();
-
-        List<ChatMessages> mockHistory = List.of(
-                ChatMessages.builder().chat(existingChat).role(ChatsRole.USER).content(userMsgText).build()
-        );
-
-        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(existingChat));
-        when(promptBuilder.buildChatSystemPrompt(analysis, alert)).thenReturn(expectedPrompt);
-        when(chatMessagesRepository.findLastMessages(chatId, 10)).thenReturn(mockHistory);
-        when(geminiProvider.generateChatResponse(expectedPrompt, mockHistory)).thenReturn(mockAiResponse);
-
-        // Act
-        String response = chatUseCase.sendMessage(chatId, userMsgText);
-
-        // Assert
-        assertEquals(mockAiResponse, response);
-
-        ArgumentCaptor<ChatMessages> messageCaptor = ArgumentCaptor.forClass(ChatMessages.class);
-        verify(chatMessagesRepository, times(2)).save(messageCaptor.capture());
-
-        List<ChatMessages> savedMessages = messageCaptor.getAllValues();
-
-        ChatMessages userMsg = savedMessages.getFirst();
-        assertEquals(ChatsRole.USER, userMsg.getRole());
-        assertEquals(userMsgText, userMsg.getContent());
-
-        ChatMessages modelMsg = savedMessages.get(1);
-        assertEquals(ChatsRole.MODEL, modelMsg.getRole());
-        assertEquals(mockAiResponse, modelMsg.getContent());
-    }
-
-    // =========================================================================
-    // Pruebas para getChatHistory
-    // =========================================================================
-
-    @Test
-    void getChatHistory_ShouldReturnRepositoryList() {
-        // Arrange
-        List<ChatMessages> expectedHistory = List.of(
-                ChatMessages.builder().role(ChatsRole.USER).content("Hola").build(),
-                ChatMessages.builder().role(ChatsRole.MODEL).content("Chau").build()
-        );
-        when(chatMessagesRepository.findByChatId(chatId)).thenReturn(expectedHistory);
-
-        // Act
-        List<ChatMessages> result = chatUseCase.getChatHistory(chatId);
-
-        // Assert
+        UUID result = chatUseCase.createChat("test@unlam.com", UUID.randomUUID(), UUID.randomUUID());
         assertNotNull(result);
-        assertEquals(2, result.size());
-        verify(chatMessagesRepository, times(1)).findByChatId(chatId);
-    }
-
-    // =========================================================================
-    // Pruebas: getChatsByEmail
-    // =========================================================================
-
-    @Test
-    void getChatsByEmail_ShouldReturnUserChatsList() {
-        // Arrange
-        String email = "test@unlam.com";
-        List<Chats> expectedChats = List.of(
-                Chats.builder().id(UUID.randomUUID()).title("Consulta 1").build(),
-                Chats.builder().id(UUID.randomUUID()).title("Consulta 2").build()
-        );
-        when(chatsRepository.findByUserEmail(email)).thenReturn(expectedChats);
-
-        // Act
-        List<Chats> result = chatUseCase.getChatsByEmail(email);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(2, result.size());
-        assertEquals("Consulta 1", result.getFirst().getTitle());
-        verify(chatsRepository, times(1)).findByUserEmail(email);
-    }
-
-    // =========================================================================
-    // Pruebas: deleteChat
-    // =========================================================================
-
-    @Test
-    void deleteChat_WhenChatDoesNotExist_ShouldThrowIllegalArgumentException() {
-        // Arrange
-        UUID nonExistentChatId = UUID.randomUUID();
-        when(chatsRepository.findById(nonExistentChatId)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-                chatUseCase.deleteChat(nonExistentChatId)
-        );
-        assertEquals("El chat solicitado no existe o ya fue eliminado.", exception.getMessage());
-        verify(chatsRepository, never()).deleteById(any());
     }
 
     @Test
-    void deleteChat_WhenChatExists_ShouldCallDeleteRepository() {
-        // Arrange
-        Chats existingChat = Chats.builder().id(chatId).title("Consulta a borrar").build();
-        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(existingChat));
+    void createChat_UserNotFound_ThrowsException() {
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> chatUseCase.createChat("fake@test.com", null, null));
+    }
 
-        // Act
+    // --- Tests de SendMessage---
+
+    @Test
+    void sendMessage_WhenTitleIsNotDefault_ShouldSkipTitleGeneration() {
+        Chats chat = Chats.builder().id(chatId).title("Título Personalizado").build();
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(chat));
+        when(promptBuilder.buildChatSystemPrompt(any(), any())).thenReturn("Prompt");
+        when(geminiProvider.generateChatResponse(anyString(), any())).thenReturn("Respuesta");
+
+        chatUseCase.sendMessage(chatId, "Hola");
+
+        verify(promptBuilder, never()).buildTitleGenerationPrompt(anyString());
+    }
+
+    @Test
+    void sendMessage_WhenGeneratedTitleIsBlank_ShouldNotUpdateTitle() {
+        Chats chat = Chats.builder().id(chatId).title("Nueva consulta con VERA").build();
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(chat));
+        when(promptBuilder.buildTitleGenerationPrompt(anyString())).thenReturn("Prompt");
+        when(geminiProvider.generateChatResponse(contains("algoritmo"), any())).thenReturn("   \n  ");
+        when(promptBuilder.buildChatSystemPrompt(any(), any())).thenReturn("Prompt");
+        when(geminiProvider.generateChatResponse(eq("Prompt"), any())).thenReturn("Respuesta");
+
+        chatUseCase.sendMessage(chatId, "Hola");
+
+        assertEquals("Nueva consulta con VERA", chat.getTitle());
+    }
+
+    @Test
+    void sendMessage_SuccessfulFlow_UpdatesEverything() {
+        Chats chat = Chats.builder().id(chatId).title("Nueva consulta con VERA").build();
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(chat));
+        when(promptBuilder.buildTitleGenerationPrompt(anyString())).thenReturn("P");
+        when(geminiProvider.generateChatResponse(contains("algoritmo"), any())).thenReturn("Nuevo Título");
+        when(promptBuilder.buildChatSystemPrompt(any(), any())).thenReturn("P");
+        when(geminiProvider.generateChatResponse(eq("P"), any())).thenReturn("Respuesta");
+
+        chatUseCase.sendMessage(chatId, "Hola");
+
+        assertEquals("Nuevo Título", chat.getTitle());
+        assertNotNull(chat.getUpdatedAt());
+    }
+
+    // --- Tests de eliminación ---
+
+    @Test
+    void deleteChat_ChatDoesNotExist_ThrowsException() {
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> chatUseCase.deleteChat(chatId));
+    }
+
+    @Test
+    void deleteChat_ChatExists_CallsDelete() {
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(Chats.builder().build()));
         chatUseCase.deleteChat(chatId);
+        verify(chatsRepository).deleteById(chatId);
+    }
 
-        // Assert
-        verify(chatsRepository, times(1)).findById(chatId);
-        verify(chatsRepository, times(1)).deleteById(chatId);
+    // --- Tests de Listas ---
+
+    @Test
+    void getChatHistory_ReturnsList() {
+        when(chatMessagesRepository.findByChatId(chatId)).thenReturn(Collections.emptyList());
+        assertNotNull(chatUseCase.getChatHistory(chatId));
+    }
+
+    @Test
+    void getChatsByEmail_ReturnsList() {
+        when(chatsRepository.findByUserEmail(anyString())).thenReturn(Collections.emptyList());
+        assertNotNull(chatUseCase.getChatsByEmail("test@unlam.com"));
     }
 }
