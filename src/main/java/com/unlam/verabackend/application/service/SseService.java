@@ -2,121 +2,194 @@ package com.unlam.verabackend.application.service;
 
 import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.model.NotificationsType;
-import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
+import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.provider.EmailService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
-@Service
-@RequiredArgsConstructor
-public class SseService {
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-    private final NotificationsRepository repository;
-    private final EmailService emailService;
-    private final Map<String, SseEmitter> userEmitters = new ConcurrentHashMap<>();
+@ExtendWith(MockitoExtension.class)
+class SseServiceTest {
 
-    public SseEmitter createEmitter(String email) {
-        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
+    @Mock
+    private NotificationsRepository repository;
 
-        userEmitters.put(email, emitter);
+    @Mock
+    private EmailService emailService;
 
-        emitter.onCompletion(() -> userEmitters.remove(email));
+    @InjectMocks
+    private SseService sseService;
 
-        emitter.onTimeout(() -> {
-            emitter.complete();
-            userEmitters.remove(email);
-        });
+    private User sampleUser;
+    private final String userEmail = "test@unlam.edu.ar";
 
-        emitter.onError((ex) -> userEmitters.remove(email));
-
-        try {
-            emitter.send(SseEmitter.event().name("INIT").data("Conectado al canal de notificaciones"));
-        } catch (IOException ignored) {}
-
-        return emitter;
+    @BeforeEach
+    void setUp() {
+        sampleUser = new User();
+        sampleUser.setEmail(userEmail);
     }
 
-    public void sendDeleteEvent(String email, UUID notificationId) {
-        SseEmitter emitter = userEmitters.get(email);
-        if (emitter != null) {
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("NOTIFICATION_DELETED")
-                        .data(Map.of("id", notificationId)));
-            } catch (IOException e) {
-                userEmitters.remove(email);
-            }
-        }
+    @Test
+    void createEmitter_WhenCalled_ShouldReturnEmitterAndSendInitEvent() {
+        SseEmitter emitter = sseService.createEmitter(userEmail);
+        assertNotNull(emitter);
+        assertEquals(1800000L, emitter.getTimeout());
     }
 
-    @Transactional
-    public Notifications createAndSendNotification(User targetUser, NotificationsType type, String triggeringUserFullName, Map<String, Object> payload) {
+    @Test
+    void createEmitter_WhenEmitterCallbacksAreTriggered_ShouldExecuteRemovals() {
+        SseEmitter emitter = sseService.createEmitter(userEmail);
+        emitter.complete();
+        assertDoesNotThrow(() -> sseService.createEmitter(userEmail));
+    }
 
-        String title = buildTitle(type);
-        String message = buildMessage(type, triggeringUserFullName);
+    @Test
+    void createAndSendNotification_WhenEmitterThrowsExceptionOnInit_ShouldIgnoreException() {
+        SseService serviceWithMockEmitter = new SseService(repository, emailService);
+        SseEmitter emitter = serviceWithMockEmitter.createEmitter(userEmail);
+        assertNotNull(emitter);
+    }
 
-        Notifications notification = Notifications.builder()
-                .user(targetUser)
-                .type(type)
-                .title(title)
-                .message(message)
-                .payload(payload)
-                .isRead(false)
-                .createdAt(LocalDateTime.now())
-                .build();
+    @ParameterizedTest
+    @EnumSource(NotificationsType.class)
+    void createAndSendNotification_ForAllTypes_ShouldSaveAndBuildCorrectTexts(NotificationsType type) {
+        String triggeringUser = "Juan Pérez";
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("details", "Detalle simulado");
 
-        Notifications saved = repository.save(notification);
+        when(repository.save(any(Notifications.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        sendSse(targetUser.getEmail(), saved);
+        sseService.createAndSendNotification(sampleUser, type, triggeringUser, payload);
+
+        ArgumentCaptor<Notifications> notificationCaptor = ArgumentCaptor.forClass(Notifications.class);
+        verify(repository, times(1)).save(notificationCaptor.capture());
+
+        Notifications captured = notificationCaptor.getValue();
+        assertEquals(sampleUser, captured.getUser());
+        assertEquals(type, captured.getType());
+        assertFalse(captured.isRead());
+        assertNotNull(captured.getCreatedAt());
 
         if (type == NotificationsType.ALERT) {
-            String detalle = (payload != null && payload.containsKey("details")) 
-                    ? payload.get("details").toString() 
-                    : "Se detectó actividad sospechosa que requiere tu revisión inmediata.";
-            
-            emailService.enviarEmailAlertaRiesgoAlto(targetUser.getEmail(), triggeringUserFullName, detalle);
+            verify(emailService, times(1)).enviarEmailAlertaRiesgoAlto(eq(userEmail), eq(triggeringUser), eq("Detalle simulado"));
+        } else {
+            verify(emailService, never()).enviarEmailAlertaRiesgoAlto(anyString(), anyString(), anyString());
         }
 
-        return saved;
-    }
-
-    private void sendSse(String email, Object data) {
-        SseEmitter emitter = userEmitters.get(email);
-        if (emitter != null) {
-            try {
-                emitter.send(SseEmitter.event().name("NEW_NOTIFICATION").data(data));
-            } catch (IOException e) {
-                userEmitters.remove(email);
+        switch (type) {
+            case ALERT -> {
+                assertEquals("¡Alerta de Seguridad Detectada!", captured.getTitle());
+                assertEquals("El usuario Juan Pérez ha generado una alerta de riesgo crítico.", captured.getMessage());
+            }
+            case ALERT_SOLVED -> {
+                assertEquals("Alerta Resuelta", captured.getTitle());
+                assertEquals("La alerta de Juan Pérez ha sido marcada como resuelta.", captured.getMessage());
+            }
+            case INVITATION -> {
+                assertEquals("Nueva Invitación de Contacto", captured.getTitle());
+                assertEquals("Juan Pérez te ha enviado una solicitud para ser su contacto de confianza.", captured.getMessage());
+            }
+            case INVITATION_ACCEPTED -> {
+                assertEquals("Invitación Aceptada", captured.getTitle());
+                assertEquals("Juan Pérez aceptó tu invitación de confianza.", captured.getMessage());
+            }
+            case INVITATION_REJECTED -> {
+                assertEquals("Invitación Rechazada", captured.getTitle());
+                assertEquals("Juan Pérez rechazó tu invitación de confianza.", captured.getMessage());
             }
         }
     }
 
-    private String buildTitle(NotificationsType type) {
-        return switch (type) {
-            case ALERT -> "¡Alerta de Seguridad Detectada!";
-            case ALERT_SOLVED -> "Alerta Resuelta";
-            case INVITATION -> "Nueva Invitación de Contacto";
-            case INVITATION_ACCEPTED -> "Invitación Aceptada";
-            case INVITATION_REJECTED -> "Invitación Rechazada";
-        };
+    @Test
+    void createAndSendNotification_WhenEmitterExistsAndWorks_ShouldSendSseSuccessfully() {
+        sseService.createEmitter(userEmail);
+
+        Notifications savedNotification = Notifications.builder().title("Test").build();
+        when(repository.save(any(Notifications.class))).thenReturn(savedNotification);
+
+        assertDoesNotThrow(() ->
+                sseService.createAndSendNotification(sampleUser, NotificationsType.ALERT, "Test", null)
+        );
     }
 
-    private String buildMessage(NotificationsType type, String name) {
-        return switch (type) {
-            case ALERT -> "El usuario " + name + " ha generado una alerta de riesgo crítico.";
-            case ALERT_SOLVED -> "La alerta de " + name + " ha sido marcada como resuelta.";
-            case INVITATION -> name + " te ha enviado una solicitud para ser su contacto de confianza.";
-            case INVITATION_ACCEPTED -> name + " aceptó tu invitación de confianza.";
-            case INVITATION_REJECTED -> name + " rechazó tu invitación de confianza.";
-        };
+    @Test
+    @SuppressWarnings("unchecked")
+    void createAndSendNotification_WhenEmitterThrowsIOException_ShouldCatchExceptionAndRemoveEmitter() throws IOException {
+        SseEmitter mockEmitter = Mockito.mock(SseEmitter.class);
+        doThrow(new IOException("Canal roto")).when(mockEmitter).send(any(SseEmitter.SseEventBuilder.class));
+
+        Map<String, SseEmitter> emitters = (Map<String, SseEmitter>) ReflectionTestUtils.getField(sseService, "userEmitters");
+        emitters.put(userEmail, mockEmitter);
+
+        Notifications savedNotification = Notifications.builder().title("Fallo").build();
+        when(repository.save(any(Notifications.class))).thenReturn(savedNotification);
+
+        assertDoesNotThrow(() ->
+                sseService.createAndSendNotification(sampleUser, NotificationsType.ALERT, "Test", null)
+        );
+
+        assertFalse(emitters.containsKey(userEmail));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void sendDeleteEvent_WhenEmitterExistsAndWorks_ShouldSendEventSuccessfully() throws IOException {
+        UUID notificationId = UUID.randomUUID();
+        SseEmitter mockEmitter = Mockito.mock(SseEmitter.class);
+
+        Map<String, SseEmitter> emitters = (Map<String, SseEmitter>) ReflectionTestUtils.getField(sseService, "userEmitters");
+        emitters.put(userEmail, mockEmitter);
+
+        assertDoesNotThrow(() -> sseService.sendDeleteEvent(userEmail, notificationId));
+
+        verify(mockEmitter, times(1)).send(any(SseEmitter.SseEventBuilder.class));
+        assertTrue(emitters.containsKey(userEmail));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void sendDeleteEvent_WhenEmitterThrowsIOException_ShouldCatchExceptionAndRemoveEmitter() throws IOException {
+        UUID notificationId = UUID.randomUUID();
+        SseEmitter mockEmitter = Mockito.mock(SseEmitter.class);
+
+        doThrow(new IOException("Canal de borrado interrumpido")).when(mockEmitter).send(any(SseEmitter.SseEventBuilder.class));
+
+        Map<String, SseEmitter> emitters = (Map<String, SseEmitter>) ReflectionTestUtils.getField(sseService, "userEmitters");
+        emitters.put(userEmail, mockEmitter);
+
+        assertDoesNotThrow(() -> sseService.sendDeleteEvent(userEmail, notificationId));
+
+        verify(mockEmitter, times(1)).send(any(SseEmitter.SseEventBuilder.class));
+        assertFalse(emitters.containsKey(userEmail));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void sendDeleteEvent_WhenEmitterDoesNotExist_ShouldDoNothing() {
+        UUID notificationId = UUID.randomUUID();
+
+        Map<String, SseEmitter> emitters = (Map<String, SseEmitter>) ReflectionTestUtils.getField(sseService, "userEmitters");
+        emitters.remove(userEmail);
+
+        assertDoesNotThrow(() -> sseService.sendDeleteEvent(userEmail, notificationId));
     }
 }
