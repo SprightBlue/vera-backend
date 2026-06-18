@@ -1,9 +1,11 @@
 package com.unlam.verabackend.infrastructure.entity;
 
 import com.unlam.verabackend.domain.model.NotificationsType;
-import com.unlam.verabackend.infrastructure.mapper.JsonMapConverter;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -35,11 +37,12 @@ public class NotificationsEntity {
     @Column(name = "message", nullable = false, columnDefinition = "TEXT")
     private String message;
 
-    @Column(name = "payload", columnDefinition = "jsonb")
-    @Convert(converter = JsonMapConverter.class)
+    @Column(name = "payload")
+    @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> payload;
 
     @Column(name = "is_read", nullable = false)
+    @Builder.Default
     private boolean isRead = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)

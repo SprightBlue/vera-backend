@@ -9,4 +9,13 @@ public interface UserUseCase {
     AuthResponse register(RegisterRequest request);
 
     AuthResponse login(LoginRequest request);
+
+    AuthResponse googleLogin(String credential);
+
+    void forgotPassword(String email);
+
+    void resetPassword(String token, String newPassword);
+
+    void verifyEmail(String token);
+    
 }

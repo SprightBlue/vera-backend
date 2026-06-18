@@ -3,7 +3,7 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.application.service.ValidatorService;
 import com.unlam.verabackend.application.service.PromptBuilderService;
 import com.unlam.verabackend.application.service.ExtractorService;
-import com.unlam.verabackend.application.service.NotificationService;
+import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.*;
 import com.unlam.verabackend.domain.port.in.AnalyzeContentUseCase;
@@ -39,7 +39,7 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
     private final AnalysisRepository analysisRepository;
     private final AlertsRepository alertsRepository;
     private final TrustContactRepository trustContactRepository;
-    private final NotificationService notificationService;
+    private final SseService sseService;
 
     @Override
     @Transactional
@@ -100,9 +100,13 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
                 Alerts newAlert = buildAlert(savedAnalysis);
                 Alerts savedAlert = alertsRepository.save(newAlert, contact.getId());
 
-                Map<String, Object> payload = Map.of("alertId", savedAlert.getId().toString());
+                Map<String, Object> payload = Map.of(
+                        "alertId", savedAlert.getId().toString(),
+                        "riskLevel", savedAlert.getRiskLevel().toString(),
+                        "protectedUserName", user.getFullName()
+                );
 
-                notificationService.createAndSendNotification(
+                sseService.createAndSendNotification(
                         contact.getCarer(),
                         NotificationsType.ALERT,
                         user.getFullName(),

@@ -4,7 +4,7 @@ import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
-import com.unlam.verabackend.infrastructure.provider.EmailService; // <-- 1. Importamos tu nuevo servicio
+import com.unlam.verabackend.infrastructure.provider.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,30 +13,49 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
-public class NotificationService {
+public class SseService {
 
     private final NotificationsRepository repository;
-    private final EmailService emailService; // <-- 2. Inyectamos el servicio de emails
+    private final EmailService emailService;
     private final Map<String, SseEmitter> userEmitters = new ConcurrentHashMap<>();
 
     public SseEmitter createEmitter(String email) {
-        SseEmitter emitter = new SseEmitter(10 * 60 * 1000L);
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
 
         userEmitters.put(email, emitter);
 
         emitter.onCompletion(() -> userEmitters.remove(email));
-        emitter.onTimeout(() -> userEmitters.remove(email));
-        emitter.onError((e) -> userEmitters.remove(email));
+
+        emitter.onTimeout(() -> {
+            emitter.complete();
+            userEmitters.remove(email);
+        });
+
+        emitter.onError((ex) -> userEmitters.remove(email));
 
         try {
             emitter.send(SseEmitter.event().name("INIT").data("Conectado al canal de notificaciones"));
         } catch (IOException ignored) {}
 
         return emitter;
+    }
+
+    public void sendDeleteEvent(String email, UUID notificationId) {
+        SseEmitter emitter = userEmitters.get(email);
+        if (emitter != null) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("NOTIFICATION_DELETED")
+                        .data(Map.of("id", notificationId)));
+            } catch (IOException e) {
+                userEmitters.remove(email);
+            }
+        }
     }
 
     @Transactional
@@ -57,17 +76,13 @@ public class NotificationService {
 
         Notifications saved = repository.save(notification);
 
-        // 3. Envía la notificación en tiempo real a la web (lo que ya hacía)
         sendSse(targetUser.getEmail(), saved);
 
-        // 4. NUEVO: Si la notificación es una ALERTA crítica, disparamos el email
         if (type == NotificationsType.ALERT) {
-            // Intentamos extraer un detalle del payload (si existe), o ponemos un texto por defecto
             String detalle = (payload != null && payload.containsKey("details")) 
                     ? payload.get("details").toString() 
                     : "Se detectó actividad sospechosa que requiere tu revisión inmediata.";
             
-            // Llamamos al método que creamos en el paso anterior
             emailService.enviarEmailAlertaRiesgoAlto(targetUser.getEmail(), triggeringUserFullName, detalle);
         }
 

@@ -1,6 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.NotificationService;
+import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Alerts;
 import com.unlam.verabackend.domain.model.NotificationsType;
@@ -16,6 +16,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -27,7 +28,7 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
     private final AlertsRepository alertsRepository;
     private final TrustContactRepository trustContactRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
+    private final SseService sseService;
 
     private List<Long> getTrustContactIdsByEmail(String carerEmail) {
         var user = userRepository.findByEmail(carerEmail)
@@ -78,12 +79,12 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
     @Transactional
     public void resolveAlert(UUID id, String carerEmail) {
         Alerts alert = getAlertDetail(id, carerEmail);
-        alert.resolve();
-        alertsRepository.save(alert, alert.getTrustContact().getId());
+
+        alertsRepository.resolveAlertDirectly(alert.getId(), LocalDateTime.now());
 
         Map<String, Object> payload = Map.of("alertId", alert.getId().toString());
 
-        notificationService.createAndSendNotification(
+        sseService.createAndSendNotification(
                 alert.getTrustContact().getProtectedUser(),
                 NotificationsType.ALERT_SOLVED,
                 alert.getTrustContact().getCarer().getFullName(),

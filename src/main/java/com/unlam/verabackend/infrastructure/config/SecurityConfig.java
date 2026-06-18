@@ -42,13 +42,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/analysis").permitAll()
-
-                        .requestMatchers("/api/v1/risk-alerts/**").authenticated()
-
+                        .requestMatchers("/api/v1/analysis/**").permitAll()
+                        .requestMatchers("/api/v1/alerts/**").permitAll()
+                        .requestMatchers("/api/v1/notifications/**").permitAll()
+                        .requestMatchers("/api/v1/chats/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/trust/invite/**").permitAll()
                         .requestMatchers("/dashboard").permitAll()
-                        .requestMatchers("/alerts").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )

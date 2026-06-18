@@ -1,5 +1,6 @@
 package com.unlam.verabackend.infrastructure.provider;
 
+import com.unlam.verabackend.application.service.JwtService;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.domain.model.Role;
 

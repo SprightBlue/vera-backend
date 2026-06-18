@@ -26,9 +26,4 @@ public class Alerts {
     private boolean isResolved;
     private LocalDateTime createdAt;
     private LocalDateTime resolvedAt;
-
-    public void resolve() {
-        this.isResolved = true;
-        this.resolvedAt = LocalDateTime.now();
-    }
 }

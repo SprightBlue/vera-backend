@@ -1,7 +1,10 @@
 package com.unlam.verabackend.presentation.controller;
 
+import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.port.in.ManageNotificationsUseCase;
-import com.unlam.verabackend.application.service.NotificationService;
+import com.unlam.verabackend.application.service.SseService;
+import com.unlam.verabackend.infrastructure.entity.User;
+import com.unlam.verabackend.presentation.dto.PagedResponse;
 import com.unlam.verabackend.presentation.dto.NotificationsResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -10,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -21,40 +25,38 @@ import java.util.UUID;
 public class NotificationsController {
 
     private final ManageNotificationsUseCase useCase;
-    private final NotificationService sseService;
+    private final SseService sseService;
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamNotifications(
-            // 🚀 PROD: @AuthenticationPrincipal User user,
-
-            @RequestHeader("user-email") String email
+            @AuthenticationPrincipal User user
     ) {
-        // 🚀 PROD: String email = user.getEmail();
+        String email = user.getEmail();
         return sseService.createEmitter(email);
     }
 
     @GetMapping
-    public ResponseEntity<Page<NotificationsResponse>> getMyNotifications(
-            // 🚀 PROD: @AuthenticationPrincipal User user,
-
-            @RequestHeader("user-email") String email,
+    public ResponseEntity<PagedResponse<NotificationsResponse>> getMyNotifications(
+            @AuthenticationPrincipal User user,
             @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        // 🚀 PROD: String email = user.getEmail();
+        String email = user.getEmail();
 
-        Page<NotificationsResponse> response = useCase.getMyNotifications(email, pageable)
-                .map(NotificationsResponse::fromDomain);
+        Page<Notifications> page = useCase.getMyNotifications(email, pageable);
+
+        PagedResponse<NotificationsResponse> response = PagedResponse.fromPage(
+                page,
+                NotificationsResponse::fromDomain
+        );
 
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/read-all")
     public ResponseEntity<Void> markAllAsRead(
-            // 🚀 PROD: @AuthenticationPrincipal User user,
-
-            @RequestHeader("user-email") String email
+            @AuthenticationPrincipal User user
     ) {
-        // 🚀 PROD: String email = user.getEmail();
+        String email = user.getEmail();
 
         useCase.markAllMyNotificationsAsRead(email);
         return ResponseEntity.noContent().build();
@@ -62,12 +64,10 @@ public class NotificationsController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNotification(
-            // 🚀 PROD: @AuthenticationPrincipal User user,
-
-            @RequestHeader("user-email") String email,
+            @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
-        // 🚀 PROD: String email = user.getEmail();
+        String email = user.getEmail();
 
         useCase.deleteNotification(id, email);
         return ResponseEntity.noContent().build();
