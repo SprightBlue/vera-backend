@@ -3,6 +3,7 @@ package com.unlam.verabackend.presentation.controller;
 import com.unlam.verabackend.domain.port.in.ChatUseCase;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.presentation.dto.ChatMessagesResponse;
+import com.unlam.verabackend.presentation.dto.ChatSessionResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,14 +20,26 @@ public class ChatController {
 
     private final ChatUseCase chatUseCase;
 
+    @GetMapping
+    public ResponseEntity<List<ChatSessionResponse>> getUserChats(
+            @AuthenticationPrincipal User user
+    ) {
+        String email = user.getEmail();
+
+        List<ChatSessionResponse> response = chatUseCase.getChatsByEmail(email).stream()
+                .map(ChatSessionResponse::fromDomain)
+                .toList();
+
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/init")
     public ResponseEntity<UUID> initializeChat(
-            // @AuthenticationPrincipal User user, // Comentado para testear con cURL sin auth
-            @RequestParam(value = "email") String email, // Parámetro temporal de pruebas
+            @AuthenticationPrincipal User user,
             @RequestParam(value = "analysisId", required = false) UUID analysisId,
             @RequestParam(value = "alertId", required = false) UUID alertId
     ) {
-        // String email = user.getEmail(); // Comentado para testear con cURL sin auth
+        String email = user.getEmail();
 
         UUID chatId = chatUseCase.createChat(email, analysisId, alertId);
         return new ResponseEntity<>(chatId, HttpStatus.CREATED);
@@ -54,5 +67,13 @@ public class ChatController {
                 .toList();
 
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{chatId}")
+    public ResponseEntity<Void> deleteChat(
+            @PathVariable UUID chatId
+    ) {
+        chatUseCase.deleteChat(chatId);
+        return ResponseEntity.noContent().build();
     }
 }

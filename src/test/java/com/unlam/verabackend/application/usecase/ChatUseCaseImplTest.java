@@ -206,4 +206,60 @@ class ChatUseCaseImplTest {
         assertEquals(2, result.size());
         verify(chatMessagesRepository, times(1)).findByChatId(chatId);
     }
+
+    // =========================================================================
+    // Pruebas: getChatsByEmail
+    // =========================================================================
+
+    @Test
+    void getChatsByEmail_ShouldReturnUserChatsList() {
+        // Arrange
+        String email = "test@unlam.com";
+        List<Chats> expectedChats = List.of(
+                Chats.builder().id(UUID.randomUUID()).title("Consulta 1").build(),
+                Chats.builder().id(UUID.randomUUID()).title("Consulta 2").build()
+        );
+        when(chatsRepository.findByUserEmail(email)).thenReturn(expectedChats);
+
+        // Act
+        List<Chats> result = chatUseCase.getChatsByEmail(email);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("Consulta 1", result.getFirst().getTitle());
+        verify(chatsRepository, times(1)).findByUserEmail(email);
+    }
+
+    // =========================================================================
+    // Pruebas: deleteChat
+    // =========================================================================
+
+    @Test
+    void deleteChat_WhenChatDoesNotExist_ShouldThrowIllegalArgumentException() {
+        // Arrange
+        UUID nonExistentChatId = UUID.randomUUID();
+        when(chatsRepository.findById(nonExistentChatId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                chatUseCase.deleteChat(nonExistentChatId)
+        );
+        assertEquals("El chat solicitado no existe o ya fue eliminado.", exception.getMessage());
+        verify(chatsRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteChat_WhenChatExists_ShouldCallDeleteRepository() {
+        // Arrange
+        Chats existingChat = Chats.builder().id(chatId).title("Consulta a borrar").build();
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(existingChat));
+
+        // Act
+        chatUseCase.deleteChat(chatId);
+
+        // Assert
+        verify(chatsRepository, times(1)).findById(chatId);
+        verify(chatsRepository, times(1)).deleteById(chatId);
+    }
 }

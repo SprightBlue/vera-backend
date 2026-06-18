@@ -82,4 +82,19 @@ public class ChatUseCaseImpl implements ChatUseCase {
     public List<ChatMessages> getChatHistory(UUID chatId) {
         return chatMessagesRepository.findByChatId(chatId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Chats> getChatsByEmail(String email) {
+        return chatsRepository.findByUserEmail(email);
+    }
+
+    @Override
+    @Transactional
+    public void deleteChat(UUID chatId) {
+        chatsRepository.findById(chatId)
+                .orElseThrow(() -> new IllegalArgumentException("El chat solicitado no existe o ya fue eliminado."));
+
+        chatsRepository.deleteById(chatId);
+    }
 }

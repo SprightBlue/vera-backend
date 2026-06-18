@@ -11,4 +11,5 @@ public interface ChatsRepository {
     List<Chats> findByUserEmail(String email);
     Optional<Chats> findByAnalysisId(UUID analysisId);
     Optional<Chats> findByAlertId(UUID alertId);
+    void deleteById(UUID id);
 }
