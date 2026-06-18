@@ -4,6 +4,7 @@ import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
+import com.unlam.verabackend.infrastructure.provider.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SseService {
 
     private final NotificationsRepository repository;
-    protected final Map<String, SseEmitter> userEmitters = new ConcurrentHashMap<>();
+    private final EmailService emailService;
+    private final Map<String, SseEmitter> userEmitters = new ConcurrentHashMap<>();
 
     public SseEmitter createEmitter(String email) {
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
@@ -57,7 +59,7 @@ public class SseService {
     }
 
     @Transactional
-    public void createAndSendNotification(User targetUser, NotificationsType type, String triggeringUserFullName, Map<String, Object> payload) {
+    public Notifications createAndSendNotification(User targetUser, NotificationsType type, String triggeringUserFullName, Map<String, Object> payload) {
 
         String title = buildTitle(type);
         String message = buildMessage(type, triggeringUserFullName);
@@ -76,6 +78,15 @@ public class SseService {
 
         sendSse(targetUser.getEmail(), saved);
 
+        if (type == NotificationsType.ALERT) {
+            String detalle = (payload != null && payload.containsKey("details")) 
+                    ? payload.get("details").toString() 
+                    : "Se detectó actividad sospechosa que requiere tu revisión inmediata.";
+            
+            emailService.enviarEmailAlertaRiesgoAlto(targetUser.getEmail(), triggeringUserFullName, detalle);
+        }
+
+        return saved;
     }
 
     private void sendSse(String email, Object data) {
