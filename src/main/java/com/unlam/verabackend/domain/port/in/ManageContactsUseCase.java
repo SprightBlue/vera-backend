@@ -2,6 +2,7 @@ package com.unlam.verabackend.domain.port.in;
 
 import com.unlam.verabackend.presentation.dto.AddContactRequest;
 import com.unlam.verabackend.presentation.dto.ContactResponse;
+import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
 
 import java.util.List;
 
@@ -10,5 +11,9 @@ public interface ManageContactsUseCase {
 
     ContactResponse addContact(Long protectedPersonId, String caregiverEmail, AddContactRequest request);
 
-    String generateInviteLink(Long protectedPersonId, String caregiverEmail, String contactEmail, String relationship);
+    GenerateInvitationResponse inviteContact(Long protectedPersonId, String caregiverEmail, AddContactRequest request);
+
+    void updateContact(Long contactId, String caregiverEmail, boolean emergencyContact);
+
+    void deleteContact(Long contactId, String caregiverEmail);
 }
