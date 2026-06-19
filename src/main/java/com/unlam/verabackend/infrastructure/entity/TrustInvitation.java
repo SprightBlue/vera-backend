@@ -26,6 +26,10 @@ public class TrustInvitation {
     @JoinColumn(name = "carer_id", nullable = false)
     private User carer;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "protected_person_id", nullable = true)
+    private User protectedPerson;
+
     @Column(nullable = false)
     private String fullName; 
 
