@@ -29,7 +29,7 @@ public class UserController {
 
         User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         String imageUrl = cloudinaryService.uploadImage(image);
-        user.setImageUrl(imageUrl);
+        user.setImage(imageUrl);
         userRepository.save(user);
 
         return ResponseEntity.ok(user);

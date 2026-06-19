@@ -51,6 +51,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private boolean enabled = false;
 
+    @Column(nullable = true)
+    private String image;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
