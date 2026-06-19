@@ -62,7 +62,7 @@ public class TrustContactController {
         Boolean notifyHighRisk = (Boolean) payload.get("notifyHighRisk");
         Boolean receiveAlertSummaries = (Boolean) payload.get("receiveAlertSummaries"); 
 
-        trustContactUseCase.updateConfiguration(id, sensitivityLevel, notifyHighRisk, receiveAlertSummaries);
+        trustContactUseCase.updateConfiguration(id, sensitivityLevel, notifyHighRisk);
         
         return ResponseEntity.noContent().build();
     }

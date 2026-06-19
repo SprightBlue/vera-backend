@@ -15,4 +15,6 @@ public class ProtectedPersonResponse {
     private String contactNumber;
     private String relationship;
     private String status;
+    private String sensitivityLevel;
+    private Boolean notifyHighRisk;
 }

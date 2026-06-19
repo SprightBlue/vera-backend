@@ -103,6 +103,8 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                     .fullName(contact.getProtectedUser().getFullName())
                     .email(contact.getProtectedUser().getEmail())
                     .relationship(contact.getRelationship())
+                    .sensitivityLevel(contact.getSensitivityLevel() != null ? contact.getSensitivityLevel().name() : null)
+                    .notifyHighRisk(contact.isNotifyHighRisk()) 
                     .status("ACTIVE")
                     .build());
         }
