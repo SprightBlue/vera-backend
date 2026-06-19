@@ -27,9 +27,10 @@ public class AlertsRepositoryAdapter implements AlertsRepository {
     @Override
     public Alerts save(Alerts alert, Long trustContactId) {
         TrustContact trustContactProxy = entityManager.getReference(TrustContact.class, trustContactId);
-
         AlertsEntity entity = mapper.toEntity(alert, trustContactProxy);
         AlertsEntity savedEntity = jpaRepository.save(entity);
+
+        entityManager.flush();
 
         return mapper.toDomain(savedEntity);
     }
