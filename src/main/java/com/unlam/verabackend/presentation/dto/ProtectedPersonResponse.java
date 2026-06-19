@@ -10,9 +10,12 @@ import lombok.Data;
 public class ProtectedPersonResponse {
     
     private Long id;
+    private Long protectedUserId;
     private String fullName;
     private String email;
     private String contactNumber;
     private String relationship;
     private String status;
+    private String sensitivityLevel;
+    private Boolean notifyHighRisk;
 }

@@ -7,6 +7,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import com.unlam.verabackend.domain.port.in.TrustContactUseCase;
+import com.unlam.verabackend.presentation.dto.CarerResponse;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
 import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;
@@ -61,7 +62,7 @@ public class TrustContactController {
         Boolean notifyHighRisk = (Boolean) payload.get("notifyHighRisk");
         Boolean receiveAlertSummaries = (Boolean) payload.get("receiveAlertSummaries"); 
 
-        trustContactUseCase.updateConfiguration(id, sensitivityLevel, notifyHighRisk, receiveAlertSummaries);
+        trustContactUseCase.updateConfiguration(id, sensitivityLevel, notifyHighRisk);
         
         return ResponseEntity.noContent().build();
     }
@@ -84,5 +85,11 @@ public class TrustContactController {
     public ResponseEntity<Map<String, String>> rejectInvitationById(@PathVariable Long id, @AuthenticationPrincipal User user) {
         trustContactUseCase.rejectInvitationById(id, user.getEmail());
         return ResponseEntity.ok(Map.of("message", "Invitación rechazada exitosamente."));
+    }
+
+    @GetMapping("/my-carers")
+    public ResponseEntity<List<CarerResponse>> getMyCarers(@AuthenticationPrincipal User user) {
+        List<CarerResponse> carers = trustContactUseCase.getMyCarers(user.getEmail());
+        return ResponseEntity.ok(carers);
     }
 }

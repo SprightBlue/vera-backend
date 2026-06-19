@@ -37,7 +37,7 @@ public class TrustContact {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private SensitivityLevel sensitivityLevel;
+    private SensitivityLevel sensitivityLevel= SensitivityLevel.MEDIO;
 
     @Column(name="created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -49,10 +49,10 @@ public class TrustContact {
     // Notificaciones
 
     @Column(nullable = false)
-    private boolean notifyHighRisk;
+    private boolean notifyHighRisk = true;
 
     @Column(nullable = false)
-    private boolean receiveAlertSummaries;
+    private boolean receiveAlertSummaries= false;
 
 
     @PrePersist

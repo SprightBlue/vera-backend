@@ -7,6 +7,7 @@ import com.unlam.verabackend.domain.model.InvitationStatus;
 import com.unlam.verabackend.domain.model.SensitivityLevel;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.entity.TrustInvitation;
+import com.unlam.verabackend.presentation.dto.CarerResponse;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
 import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
 import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;
@@ -99,9 +100,12 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         for (TrustContact contact : activeContacts) {
             responseList.add(ProtectedPersonResponse.builder()
                     .id(contact.getId())
+                    .protectedUserId(contact.getProtectedUser().getId())
                     .fullName(contact.getProtectedUser().getFullName())
                     .email(contact.getProtectedUser().getEmail())
                     .relationship(contact.getRelationship())
+                    .sensitivityLevel(contact.getSensitivityLevel() != null ? contact.getSensitivityLevel().name() : null)
+                    .notifyHighRisk(contact.isNotifyHighRisk()) 
                     .status("ACTIVE")
                     .build());
         }
@@ -172,14 +176,27 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
             throw new RuntimeException("Ya estás siendo protegido por este usuario");
         }
 
-        TrustContact newContact = TrustContact.builder()
-                .carer(invitation.getCarer())
-                .protectedUser(protectedUser)
-                .relationship(invitation.getRelationship())
-                .sensitivityLevel(invitation.getSensitivityLevel())
-                .notifyHighRisk(invitation.isNotifyHighRisk())
-                .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
-                .build();
+        TrustContact newContact;
+        if (invitation.getProtectedPerson() != null) {
+            // El que acepta se convierte en contacto de confianza del protegido
+            newContact = TrustContact.builder()
+                    .carer(protectedUser)
+                    .protectedUser(invitation.getProtectedPerson())
+                    .relationship(invitation.getRelationship())
+                    .sensitivityLevel(invitation.getSensitivityLevel())
+                    .notifyHighRisk(invitation.isNotifyHighRisk())
+                    .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
+                    .build();
+        } else {
+            newContact = TrustContact.builder()
+                    .carer(invitation.getCarer())
+                    .protectedUser(protectedUser)
+                    .relationship(invitation.getRelationship())
+                    .sensitivityLevel(invitation.getSensitivityLevel())
+                    .notifyHighRisk(invitation.isNotifyHighRisk())
+                    .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
+                    .build();
+        }
 
         trustContactRepository.save(newContact);
 
@@ -187,7 +204,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         trustInvitationRepository.save(invitation);
     }
 
-    // --- MÉTODOS DE BANDEJA OPERADOS POR EL EMAIL DEL PROTEGIDO (AUTH) ---
+    // --- M��TODOS DE BANDEJA OPERADOS POR EL EMAIL DEL PROTEGIDO (AUTH) ---
 
     @Override
     @Transactional(readOnly = true)
@@ -226,14 +243,26 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
             throw new IllegalStateException("Ya existe una relación de cuidado activa con este usuario.");
         }
 
-        TrustContact newContact = TrustContact.builder()
-                .carer(invitation.getCarer())
-                .protectedUser(protectedUser)
-                .relationship(invitation.getRelationship())
-                .sensitivityLevel(invitation.getSensitivityLevel())
-                .notifyHighRisk(invitation.isNotifyHighRisk())
-                .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
-                .build();
+        TrustContact newContact;
+        if (invitation.getProtectedPerson() != null) {
+            newContact = TrustContact.builder()
+                    .carer(protectedUser)
+                    .protectedUser(invitation.getProtectedPerson())
+                    .relationship(invitation.getRelationship())
+                    .sensitivityLevel(invitation.getSensitivityLevel())
+                    .notifyHighRisk(invitation.isNotifyHighRisk())
+                    .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
+                    .build();
+        } else {
+            newContact = TrustContact.builder()
+                    .carer(invitation.getCarer())
+                    .protectedUser(protectedUser)
+                    .relationship(invitation.getRelationship())
+                    .sensitivityLevel(invitation.getSensitivityLevel())
+                    .notifyHighRisk(invitation.isNotifyHighRisk())
+                    .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
+                    .build();
+        }
 
         trustContactRepository.save(newContact);
 
@@ -276,38 +305,56 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     @Override
     @Transactional
     public void deleteProtectedPerson(Long id) {
-        if (trustInvitationRepository.existsById(id)) {
-            trustInvitationRepository.deleteById(id);
-        }
-        if (trustContactRepository.existsById(id)) {
-            trustContactRepository.deleteById(id);
-        }
+        TrustContact contact = trustContactRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Contacto de confianza no encontrado"));
+                
+        trustContactRepository.delete(contact);
     }
 
     @Override
     @Transactional
-    public void updateConfiguration(Long id, String sensitivityLevelStr, Boolean notifyHighRisk, Boolean receiveAlertSummaries) {
+    public void updateConfiguration(Long id, String sensitivityLevelStr, Boolean notifyHighRisk) {
         SensitivityLevel sensitivityEnum = null;
         if (sensitivityLevelStr != null) {
-            sensitivityEnum = SensitivityLevel.valueOf(sensitivityLevelStr.toUpperCase());
+            try {
+                sensitivityEnum = SensitivityLevel.valueOf(sensitivityLevelStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Nivel de sensibilidad inválido");
+            }
         }
 
         final SensitivityLevel finalSensitivity = sensitivityEnum;
 
-        // Actualiza si ya es un contacto activo
-        trustContactRepository.findById(id).ifPresent(contact -> {
-            if (finalSensitivity != null) contact.setSensitivityLevel(finalSensitivity);
-            if (notifyHighRisk != null) contact.setNotifyHighRisk(notifyHighRisk);
-            if (receiveAlertSummaries != null) contact.setReceiveAlertSummaries(receiveAlertSummaries); // <-- Nuevo
-            trustContactRepository.save(contact);
-        });
+        TrustContact contact = trustContactRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Contacto de confianza no encontrado"));
 
-        // Actualiza si todavía es una invitación pendiente
-        trustInvitationRepository.findById(id).ifPresent(invitation -> {
-            if (finalSensitivity != null) invitation.setSensitivityLevel(finalSensitivity);
-            if (notifyHighRisk != null) invitation.setNotifyHighRisk(notifyHighRisk);
-            if (receiveAlertSummaries != null) invitation.setReceiveAlertSummaries(receiveAlertSummaries); // <-- Nuevo
-            trustInvitationRepository.save(invitation);
-        });
+        if (finalSensitivity != null) {
+            contact.setSensitivityLevel(finalSensitivity);
+        }
+        if (notifyHighRisk != null) {
+            contact.setNotifyHighRisk(notifyHighRisk);
+        }
+        
+        trustContactRepository.save(contact);
     }
-}
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CarerResponse> getMyCarers(String protectedUserEmail) {
+        User protectedUser = userRepository.findByEmail(protectedUserEmail)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        List<TrustContact> carers = trustContactRepository.findByProtectedUserId(protectedUser.getId());
+
+        return carers.stream()
+                .map(contact -> CarerResponse.builder()
+                        .contactId(contact.getId())
+                        .fullName(contact.getCarer().getFullName())
+                        .email(contact.getCarer().getEmail())
+                        .relationship(contact.getRelationship())
+                        .sensitivityLevel(contact.getSensitivityLevel())
+                        .notifyHighRisk(contact.isNotifyHighRisk())
+                        .build())
+                .toList();
+    }
+} 
