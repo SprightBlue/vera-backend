@@ -7,5 +7,5 @@ import java.util.UUID;
 public interface ChatMessagesRepository {
     ChatMessages save(ChatMessages message);
     List<ChatMessages> findByChatId(UUID chatId);
-    List<ChatMessages> findLastMessages(UUID chatId, int limit);
+    List<ChatMessages> findLastMessages(UUID chatId);
 }

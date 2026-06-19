@@ -100,6 +100,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         for (TrustContact contact : activeContacts) {
             responseList.add(ProtectedPersonResponse.builder()
                     .id(contact.getId())
+                    .protectedUserId(contact.getProtectedUser().getId())
                     .fullName(contact.getProtectedUser().getFullName())
                     .email(contact.getProtectedUser().getEmail())
                     .relationship(contact.getRelationship())
@@ -175,14 +176,27 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
             throw new RuntimeException("Ya estÃ¡s siendo protegido por este usuario");
         }
 
-        TrustContact newContact = TrustContact.builder()
-                .carer(invitation.getCarer())
-                .protectedUser(protectedUser)
-                .relationship(invitation.getRelationship())
-                .sensitivityLevel(invitation.getSensitivityLevel())
-                .notifyHighRisk(invitation.isNotifyHighRisk())
-                .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
-                .build();
+        TrustContact newContact;
+        if (invitation.getProtectedPerson() != null) {
+            // El que acepta se convierte en contacto de confianza del protegido
+            newContact = TrustContact.builder()
+                    .carer(protectedUser)
+                    .protectedUser(invitation.getProtectedPerson())
+                    .relationship(invitation.getRelationship())
+                    .sensitivityLevel(invitation.getSensitivityLevel())
+                    .notifyHighRisk(invitation.isNotifyHighRisk())
+                    .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
+                    .build();
+        } else {
+            newContact = TrustContact.builder()
+                    .carer(invitation.getCarer())
+                    .protectedUser(protectedUser)
+                    .relationship(invitation.getRelationship())
+                    .sensitivityLevel(invitation.getSensitivityLevel())
+                    .notifyHighRisk(invitation.isNotifyHighRisk())
+                    .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
+                    .build();
+        }
 
         trustContactRepository.save(newContact);
 
@@ -190,7 +204,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         trustInvitationRepository.save(invitation);
     }
 
-    // --- MÃ‰TODOS DE BANDEJA OPERADOS POR EL EMAIL DEL PROTEGIDO (AUTH) ---
+    // --- MÃÿTODOS DE BANDEJA OPERADOS POR EL EMAIL DEL PROTEGIDO (AUTH) ---
 
     @Override
     @Transactional(readOnly = true)
@@ -229,14 +243,26 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
             throw new IllegalStateException("Ya existe una relaciÃ³n de cuidado activa con este usuario.");
         }
 
-        TrustContact newContact = TrustContact.builder()
-                .carer(invitation.getCarer())
-                .protectedUser(protectedUser)
-                .relationship(invitation.getRelationship())
-                .sensitivityLevel(invitation.getSensitivityLevel())
-                .notifyHighRisk(invitation.isNotifyHighRisk())
-                .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
-                .build();
+        TrustContact newContact;
+        if (invitation.getProtectedPerson() != null) {
+            newContact = TrustContact.builder()
+                    .carer(protectedUser)
+                    .protectedUser(invitation.getProtectedPerson())
+                    .relationship(invitation.getRelationship())
+                    .sensitivityLevel(invitation.getSensitivityLevel())
+                    .notifyHighRisk(invitation.isNotifyHighRisk())
+                    .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
+                    .build();
+        } else {
+            newContact = TrustContact.builder()
+                    .carer(invitation.getCarer())
+                    .protectedUser(protectedUser)
+                    .relationship(invitation.getRelationship())
+                    .sensitivityLevel(invitation.getSensitivityLevel())
+                    .notifyHighRisk(invitation.isNotifyHighRisk())
+                    .receiveAlertSummaries(invitation.isReceiveAlertSummaries())
+                    .build();
+        }
 
         trustContactRepository.save(newContact);
 
