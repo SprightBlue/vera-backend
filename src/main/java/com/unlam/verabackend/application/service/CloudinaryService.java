@@ -18,12 +18,9 @@ public class CloudinaryService {
         this.cloudinary = cloudinary;
     }
 
-    public String uploadImage(MultipartFile image) throws IOException {
-        Map result = cloudinary.uploader()
-                .upload(
-                        image.getBytes(),
-                        ObjectUtils.emptyMap()
-                );
+    public String uploadImage(MultipartFile image, String folder) throws IOException {
+        Map<String, Object> options = ObjectUtils.asMap("folder", folder);
+        Map result = cloudinary.uploader().upload(image.getBytes(), options);
         return result.get("secure_url").toString();
     }
 }

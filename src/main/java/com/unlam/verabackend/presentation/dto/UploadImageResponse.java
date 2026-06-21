@@ -5,11 +5,8 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class AuthResponse {
+public class UploadImageResponse {
 
-    private String token;      
     private String email;
-    private String fullName;
-    private String role;
     private String image;
 }

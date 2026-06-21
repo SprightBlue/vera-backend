@@ -1,10 +1,12 @@
 package com.unlam.verabackend.application.usecase;
 
+import com.unlam.verabackend.application.service.CloudinaryService;
 import com.unlam.verabackend.application.service.JwtService;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
 
+import com.unlam.verabackend.presentation.dto.UploadImageResponse;
 import jakarta.transaction.Transactional;
 
 import com.unlam.verabackend.domain.model.Role;
@@ -21,6 +23,8 @@ import org.springframework.stereotype.Service;
 import com.unlam.verabackend.application.service.EmailService;
 import com.unlam.verabackend.infrastructure.entity.PasswordResetToken;
 import com.unlam.verabackend.infrastructure.repository.PasswordResetTokenRepository;
+
+import java.io.IOException;
 import java.util.Optional;
 import java.util.Collections;
 
@@ -30,6 +34,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -45,6 +50,7 @@ public class UserUseCaseImpl implements UserUseCase {
         private final PasswordResetTokenRepository tokenRepository;
         private final VerificationTokenRepository verificationTokenRepository;
         private final EmailService emailService;
+        private final CloudinaryService cloudinaryService;
 
         @Override
         public AuthResponse register(RegisterRequest request) {
@@ -79,7 +85,8 @@ public class UserUseCaseImpl implements UserUseCase {
                                 null,
                                 user.getEmail(),
                                 user.getFullName(),
-                                user.getRole().name());
+                                user.getRole().name(),
+                                user.getImage());
         }
 
         @Override
@@ -93,7 +100,7 @@ public class UserUseCaseImpl implements UserUseCase {
                                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
                 String token = jwtService.generateToken(user);
-                return new AuthResponse(token, user.getEmail(), user.getFullName(), user.getRole().name());
+                return new AuthResponse(token, user.getEmail(), user.getFullName(), user.getRole().name(), user.getImage());
         }
 
         @Override
@@ -156,7 +163,8 @@ public class UserUseCaseImpl implements UserUseCase {
                                         token,
                                         user.getEmail(),
                                         user.getFullName(),
-                                        user.getRole().name());
+                                        user.getRole().name(),
+                                        user.getImage());
 
                 } catch (Exception e) {
 
@@ -239,6 +247,23 @@ public class UserUseCaseImpl implements UserUseCase {
                 userRepository.save(user);
 
                 verificationTokenRepository.delete(verificationToken);
+        }
+
+        @Override
+        public UploadImageResponse uploadUserImage(String email, MultipartFile image) throws IOException {
+
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+            String imageUrl = cloudinaryService.uploadImage(image, "users");
+
+            user.setImage(imageUrl);
+            userRepository.save(user);
+
+            return new UploadImageResponse(
+                    user.getEmail(),
+                    user.getImage()
+            );
         }
 
 }
