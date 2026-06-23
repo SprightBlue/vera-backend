@@ -4,7 +4,9 @@ import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.port.in.ManageNotificationsUseCase;
+import com.unlam.verabackend.domain.port.out.DeviceTokenRepository;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
+import com.unlam.verabackend.infrastructure.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +21,7 @@ import java.util.UUID;
 public class ManageNotificationsUseCaseImpl implements ManageNotificationsUseCase {
 
     private final NotificationsRepository repository;
+    private final DeviceTokenRepository deviceTokenRepository;
     private final SseService sseService;
 
     @Override
@@ -49,5 +52,21 @@ public class ManageNotificationsUseCaseImpl implements ManageNotificationsUseCas
         Notifications notification = getNotificationDetail(id, email);
         repository.deleteById(notification.getId());
         sseService.sendDeleteEvent(email, id);
+    }
+
+    @Override
+    @Transactional
+    public void registerDeviceToken(User user, String token, String platform) {
+        if (user == null) {
+            throw new IllegalArgumentException("Usuario autenticado requerido.");
+        }
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("El token del dispositivo es obligatorio.");
+        }
+        if (platform == null || platform.isBlank()) {
+            throw new IllegalArgumentException("La plataforma del dispositivo es obligatoria.");
+        }
+
+        deviceTokenRepository.saveOrUpdate(user, token.trim(), platform.trim().toLowerCase());
     }
 }

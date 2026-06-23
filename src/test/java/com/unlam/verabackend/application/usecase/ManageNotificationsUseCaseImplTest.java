@@ -3,6 +3,7 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Notifications;
+import com.unlam.verabackend.domain.port.out.DeviceTokenRepository;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
 import com.unlam.verabackend.infrastructure.entity.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,9 @@ class ManageNotificationsUseCaseImplTest {
 
     @Mock
     private NotificationsRepository repository;
+
+    @Mock
+    private DeviceTokenRepository deviceTokenRepository;
 
     @Mock
     private SseService sseService = mock(SseService.class);
@@ -119,5 +123,26 @@ class ManageNotificationsUseCaseImplTest {
         // Act & Assert
         assertThrows(AccessDeniedException.class, () ->
                 useCase.deleteNotification(notificationId, userEmail));
+    }
+
+    @Test
+    void registerDeviceToken_CreatesTokenForAuthenticatedUser() {
+        User user = new User();
+        user.setEmail(userEmail);
+
+        useCase.registerDeviceToken(user, " token-123 ", "Android");
+
+        verify(deviceTokenRepository).saveOrUpdate(user, "token-123", "android");
+    }
+
+    @Test
+    void registerDeviceToken_WhenSameTokenRegistered_DelegatesToUpsertRepository() {
+        User user = new User();
+        user.setEmail(userEmail);
+
+        useCase.registerDeviceToken(user, "same-token", "android");
+        useCase.registerDeviceToken(user, "same-token", "android");
+
+        verify(deviceTokenRepository, times(2)).saveOrUpdate(user, "same-token", "android");
     }
 }

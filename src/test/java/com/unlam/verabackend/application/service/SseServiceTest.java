@@ -3,6 +3,7 @@ package com.unlam.verabackend.application.service;
 import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
+import com.unlam.verabackend.domain.port.out.PushNotificationSender;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.provider.EmailService;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,9 @@ class SseServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private PushNotificationSender pushNotificationSender;
+
     @InjectMocks
     private SseService sseService;
 
@@ -64,7 +68,7 @@ class SseServiceTest {
 
     @Test
     void createAndSendNotification_WhenEmitterThrowsExceptionOnInit_ShouldIgnoreException() {
-        SseService serviceWithMockEmitter = new SseService(repository, emailService);
+        SseService serviceWithMockEmitter = new SseService(repository, emailService, pushNotificationSender);
         SseEmitter emitter = serviceWithMockEmitter.createEmitter(userEmail);
         assertNotNull(emitter);
     }
@@ -82,6 +86,7 @@ class SseServiceTest {
 
         ArgumentCaptor<Notifications> notificationCaptor = ArgumentCaptor.forClass(Notifications.class);
         verify(repository, times(1)).save(notificationCaptor.capture());
+        verify(pushNotificationSender, times(1)).send(any(Notifications.class));
 
         Notifications captured = notificationCaptor.getValue();
         assertEquals(sampleUser, captured.getUser());
@@ -148,6 +153,23 @@ class SseServiceTest {
         );
 
         assertFalse(emitters.containsKey(userEmail));
+    }
+
+    @Test
+    void createAndSendNotification_WhenPushSenderFails_ShouldNotRollbackNotificationSave() {
+        Notifications savedNotification = Notifications.builder()
+                .user(sampleUser)
+                .title("Guardada")
+                .build();
+        when(repository.save(any(Notifications.class))).thenReturn(savedNotification);
+        doThrow(new RuntimeException("firebase down")).when(pushNotificationSender).send(savedNotification);
+
+        assertDoesNotThrow(() ->
+                sseService.createAndSendNotification(sampleUser, NotificationsType.INVITATION, "Test", null)
+        );
+
+        verify(repository).save(any(Notifications.class));
+        verify(pushNotificationSender).send(savedNotification);
     }
 
     @Test

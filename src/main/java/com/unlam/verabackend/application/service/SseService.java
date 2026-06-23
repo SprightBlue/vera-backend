@@ -4,6 +4,7 @@ import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
+import com.unlam.verabackend.domain.port.out.PushNotificationSender;
 import com.unlam.verabackend.infrastructure.provider.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class SseService {
 
     private final NotificationsRepository repository;
     private final EmailService emailService;
+    private final PushNotificationSender pushNotificationSender;
     private final Map<String, SseEmitter> userEmitters = new ConcurrentHashMap<>();
 
     public SseEmitter createEmitter(String email) {
@@ -77,6 +79,7 @@ public class SseService {
         Notifications saved = repository.save(notification);
 
         sendSse(targetUser.getEmail(), saved);
+        sendPush(saved);
 
         if (type == NotificationsType.ALERT) {
             String detalle = (payload != null && payload.containsKey("details")) 
@@ -98,6 +101,12 @@ public class SseService {
                 userEmitters.remove(email);
             }
         }
+    }
+
+    private void sendPush(Notifications notification) {
+        try {
+            pushNotificationSender.send(notification);
+        } catch (RuntimeException ignored) {}
     }
 
     private String buildTitle(NotificationsType type) {

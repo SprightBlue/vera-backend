@@ -6,6 +6,8 @@ import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.presentation.dto.PagedResponse;
 import com.unlam.verabackend.presentation.dto.NotificationsResponse;
+import com.unlam.verabackend.presentation.dto.RegisterNotificationTokenRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -70,6 +72,19 @@ public class NotificationsController {
         String email = user.getEmail();
 
         useCase.deleteNotification(id, email);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/register-token")
+    public ResponseEntity<Void> registerDeviceToken(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody RegisterNotificationTokenRequest request
+    ) {
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        useCase.registerDeviceToken(user, request.getToken(), request.getPlatform());
         return ResponseEntity.noContent().build();
     }
 }

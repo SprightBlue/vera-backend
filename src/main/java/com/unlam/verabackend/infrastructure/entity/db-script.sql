@@ -52,6 +52,20 @@ CREATE TABLE notifications (
 
 CREATE INDEX idx_notifications_user_created ON notifications (user_id, created_at DESC);
 
+CREATE TABLE notification_device_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id BIGINT NOT NULL,
+    token VARCHAR(512) NOT NULL UNIQUE,
+    platform VARCHAR(32) NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_notification_device_tokens_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_notification_device_tokens_user_active ON notification_device_tokens (user_id, active);
+
 
 CREATE TABLE chats (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
