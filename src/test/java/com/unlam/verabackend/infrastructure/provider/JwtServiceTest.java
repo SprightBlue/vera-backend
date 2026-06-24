@@ -35,7 +35,7 @@ public class JwtServiceTest {
         user.setEmail("angeltest@gmail.com");
         user.setPassword("Test1234");
         user.setFullName("Angel Test");
-        user.setRole(Role.ROLE_USER);
+        user.setRole(Role.CARER);
     }
 
     @Test
@@ -155,7 +155,7 @@ void deberiaGenerarTokenParaUsuarioConRoleAdmin() {
     admin.setEmail("admin@test.com");
     admin.setPassword("Admin123");
     admin.setFullName("Admin");
-    admin.setRole(Role.ROLE_ADMIN);
+    admin.setRole(Role.ADMIN);
 
     String token = jwtService.generateToken(admin);
 

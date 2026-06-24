@@ -46,6 +46,7 @@ public class AuthControllerTest {
         loginRequest.setPassword("Test1234");
 
         authResponse = new AuthResponse(
+                1L,
                 "fake-token",
                 "angeltest@gmail.com",
                 "Angel Test",

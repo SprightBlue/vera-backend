@@ -14,7 +14,7 @@ public interface UserUseCase {
 
     AuthResponse login(LoginRequest request);
 
-    AuthResponse googleLogin(String credential);
+    AuthResponse googleLogin(String credential, String selectedRole);
 
     void forgotPassword(String email);
 

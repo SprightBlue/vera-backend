@@ -1,5 +1,4 @@
 package com.unlam.verabackend.application.usecase;
-
 import com.unlam.verabackend.application.service.CloudinaryService;
 import com.unlam.verabackend.application.service.JwtService;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
@@ -52,6 +51,9 @@ public class UserUseCaseImpl implements UserUseCase {
         private final EmailService emailService;
         private final CloudinaryService cloudinaryService;
 
+        @Value("${google.client-id}")
+        private String googleClientId;
+
         @Override
         public AuthResponse register(RegisterRequest request) {
 
@@ -70,7 +72,7 @@ public class UserUseCaseImpl implements UserUseCase {
                 user.setFullName(request.getFullName());
                 user.setEmail(request.getEmail());
                 user.setPassword(passwordEncoder.encode(request.getPassword()));
-                user.setRole(Role.ROLE_USER);
+                user.setRole(Role.valueOf(request.getRole()));
                 user.setEnabled(false);
 
                 userRepository.save(user);
@@ -78,10 +80,12 @@ public class UserUseCaseImpl implements UserUseCase {
                 String tokenDeEmail = java.util.UUID.randomUUID().toString();
                 VerificationToken verificationToken = new VerificationToken(tokenDeEmail, user);
                 verificationTokenRepository.save(verificationToken);
+                
 
                 emailService.sendVerificationEmail(user.getEmail(), tokenDeEmail);
 
                 return new AuthResponse(
+                                user.getId(),
                                 null,
                                 user.getEmail(),
                                 user.getFullName(),
@@ -100,12 +104,18 @@ public class UserUseCaseImpl implements UserUseCase {
                                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
                 String token = jwtService.generateToken(user);
-                return new AuthResponse(token, user.getEmail(), user.getFullName(), user.getRole().name(), user.getImage());
-        }
+                        return new AuthResponse(
+                                                user.getId(),
+                                                token,
+                                                user.getEmail(),
+                                                user.getFullName(),
+                                                user.getRole().name(),
+                                                user.getImage());
+                }
 
         @Override
         public AuthResponse googleLogin(
-                        String credential) {
+                        String credential, String selectedRole) {
 
                 try {
 
@@ -149,8 +159,9 @@ public class UserUseCaseImpl implements UserUseCase {
                                 user.setPassword(
                                                 passwordEncoder.encode(
                                                                 UUID.randomUUID().toString()));
+                                String roleToSet = (selectedRole != null && !selectedRole.isBlank()) ? selectedRole : "CARER";                                
 
-                                user.setRole(Role.ROLE_USER);
+                                user.setRole(Role.valueOf(roleToSet));
 
                                 user.setEnabled(true);
 
@@ -160,6 +171,7 @@ public class UserUseCaseImpl implements UserUseCase {
                         String token = jwtService.generateToken(user);
 
                         return new AuthResponse(
+                                        user.getId(),
                                         token,
                                         user.getEmail(),
                                         user.getFullName(),
@@ -174,8 +186,6 @@ public class UserUseCaseImpl implements UserUseCase {
                 }
         }
 
-        @Value("${google.client-id}")
-        private String googleClientId;
 
         @Override
         public void forgotPassword(String email) {
