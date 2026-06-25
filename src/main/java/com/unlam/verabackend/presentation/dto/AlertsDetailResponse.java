@@ -24,7 +24,6 @@ public class AlertsDetailResponse {
 
     @JsonProperty("isResolved")
     private boolean isResolved;
-
     private LocalDateTime resolvedAt;
 
     public static AlertsDetailResponse fromDomain(Alerts alert) {
