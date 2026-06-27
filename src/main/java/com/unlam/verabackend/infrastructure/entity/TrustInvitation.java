@@ -66,6 +66,9 @@ public class TrustInvitation {
     @Column(nullable = false)
     private LocalDateTime expiresAt;
 
+    @Column(nullable = true)
+    private String image;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

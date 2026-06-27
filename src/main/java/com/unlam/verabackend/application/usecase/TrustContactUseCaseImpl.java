@@ -1,5 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
+import com.unlam.verabackend.application.service.CloudinaryService;
 import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.domain.port.in.TrustContactUseCase;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
@@ -7,11 +8,7 @@ import com.unlam.verabackend.domain.model.InvitationStatus;
 import com.unlam.verabackend.domain.model.SensitivityLevel;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.entity.TrustInvitation;
-import com.unlam.verabackend.presentation.dto.CarerResponse;
-import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
-import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
-import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;
-import com.unlam.verabackend.presentation.dto.ProtectedPersonResponse;
+import com.unlam.verabackend.presentation.dto.*;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.TrustInvitationRepository;
@@ -21,7 +18,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +36,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     private final UserRepository userRepository;
     private final TrustInvitationRepository trustInvitationRepository;
     private final SseService sseService;
+    private final CloudinaryService cloudinaryService;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
@@ -121,6 +122,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                     .contactNumber(inv.getContactNumber())
                     .relationship(inv.getRelationship())
                     .status("PENDING")
+                    .image(inv.getImage())
                     .build());
         }
 
@@ -204,7 +206,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         trustInvitationRepository.save(invitation);
     }
 
-    // --- MÃÿTODOS DE BANDEJA OPERADOS POR EL EMAIL DEL PROTEGIDO (AUTH) ---
+    // --- Mï¿½ï¿½TODOS DE BANDEJA OPERADOS POR EL EMAIL DEL PROTEGIDO (AUTH) ---
 
     @Override
     @Transactional(readOnly = true)
@@ -305,10 +307,10 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     @Override
     @Transactional
     public void deleteProtectedPerson(Long id) {
-        TrustContact contact = trustContactRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Contacto de confianza no encontrado"));
-                
-        trustContactRepository.delete(contact);
+        TrustInvitation person = trustInvitationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Protejido no encontrado"));
+
+        trustInvitationRepository.delete(person);
     }
 
     @Override
@@ -356,5 +358,68 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                         .notifyHighRisk(contact.isNotifyHighRisk())
                         .build())
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public ProtectedPersonResponse getProtectedPersonById(Long id) {
+
+        TrustInvitation person = trustInvitationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Protegido no encontrado"));
+
+        return ProtectedPersonResponse.builder()
+                .id(person.getId())
+                .fullName(person.getFullName())
+                .email(person.getEmail())
+                .contactNumber(person.getContactNumber())
+                .relationship(person.getRelationship())
+                .sensitivityLevel(
+                        person.getSensitivityLevel() != null
+                                ? person.getSensitivityLevel().name()
+                                : null
+                )
+                .notifyHighRisk(person.isNotifyHighRisk())
+                .status(person.getStatus().name())
+                .image(person.getImage())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public String uploadProtectedPersonImage(MultipartFile image) throws IOException {
+        return cloudinaryService.uploadImage(image, "protected");
+    }
+
+    @Override
+    @Transactional
+    public ProtectedPersonResponse updateInformation(Long id, String fullName, String relationship, String contactNumber, String image) {
+        TrustInvitation protectedPerson = trustInvitationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Protejido no encontrado"));
+
+        protectedPerson.setFullName(fullName);
+        protectedPerson.setRelationship(relationship);
+        protectedPerson.setContactNumber(contactNumber);
+
+        if (StringUtils.hasText(image)) {
+            protectedPerson.setImage(image);
+        }
+        else {
+            protectedPerson.setImage("");
+        }
+
+        trustInvitationRepository.save(protectedPerson);
+
+        return new ProtectedPersonResponse(
+                protectedPerson.getId(),
+                protectedPerson.getCarer().getId(),
+                protectedPerson.getFullName(),
+                protectedPerson.getEmail(),
+                protectedPerson.getContactNumber(),
+                protectedPerson.getRelationship(),
+                protectedPerson.getStatus().name(),
+                protectedPerson.getSensitivityLevel().name(),
+                protectedPerson.isNotifyHighRisk(),
+                protectedPerson.getImage()
+        );
     }
 } 

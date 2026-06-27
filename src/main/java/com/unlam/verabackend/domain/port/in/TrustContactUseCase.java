@@ -1,12 +1,10 @@
 package com.unlam.verabackend.domain.port.in;
 
+import java.io.IOException;
 import java.util.List;
 
-import com.unlam.verabackend.presentation.dto.CarerResponse;
-import com.unlam.verabackend.presentation.dto.GenerateInvitationRequest;
-import com.unlam.verabackend.presentation.dto.GenerateInvitationResponse;
-import com.unlam.verabackend.presentation.dto.InvitationDetailsResponse;
-import com.unlam.verabackend.presentation.dto.ProtectedPersonResponse;
+import com.unlam.verabackend.presentation.dto.*;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface TrustContactUseCase {
     
@@ -29,4 +27,11 @@ public interface TrustContactUseCase {
     void rejectInvitationById(Long invitationId, String protectedUserEmail);
 
     List<CarerResponse> getMyCarers(String protectedUserEmail);
+
+    ProtectedPersonResponse getProtectedPersonById(Long id);
+
+    String uploadProtectedPersonImage(MultipartFile image) throws IOException;
+
+    ProtectedPersonResponse updateInformation(Long id, String fullName, String relationship, String contactNumber, String image);
+
 }

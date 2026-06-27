@@ -18,4 +18,5 @@ public class ProtectedPersonResponse {
     private String status;
     private String sensitivityLevel;
     private Boolean notifyHighRisk;
+    private String image;
 }
