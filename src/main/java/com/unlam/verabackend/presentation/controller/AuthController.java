@@ -46,7 +46,9 @@ public class AuthController {
             @RequestBody GoogleLoginRequest request) {
 
         AuthResponse response = userService.googleLogin(
-                request.getCredential());
+                request.getCredential(),
+                request.getRole()
+                );
 
         return ResponseEntity.ok(response);
     }
@@ -72,13 +74,12 @@ public class AuthController {
     }
 
     @GetMapping("/verify")
-    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
-        try {
-            userService.verifyEmail(token);
-            return ResponseEntity.ok("¡Cuenta verificada con éxito! Ya podés iniciar sesión en VERA.");
+    public ResponseEntity<String> verifyEmail(
+        @RequestParam("token") String token) {
 
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Error al verificar: " + e.getMessage());
-        }
+        userService.verifyEmail(token);
+
+        return ResponseEntity.ok("¡Cuenta verificada con éxito! Ya podés iniciar sesión en VERA.");
+    
     }
 }

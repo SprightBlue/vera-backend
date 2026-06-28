@@ -2,6 +2,7 @@ package com.unlam.verabackend.presentation.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -19,6 +20,10 @@ public class RegisterRequest {
     @NotBlank(message = "La contraseña es obligatoria")
     @Size(min = 6, max = 40, message = "La contraseña debe tener entre 6 y 40 caracteres")
     private String password;
+
+    @NotBlank(message = "El rol es obligatorio")
+    @Pattern(regexp = "^(CARER|PROTECTED)$", message = "Rol inválido. Debe ser CARER o PROTECTED")
+    private String role;
 
     private Boolean acceptedTerms;
 }

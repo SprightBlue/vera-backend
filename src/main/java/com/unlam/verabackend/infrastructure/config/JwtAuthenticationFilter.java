@@ -45,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } else {
             String requestPath = request.getRequestURI();
             if (!requestPath.contains("/api/v1/auth/verify")) {
-                jwt = request.getParameter("token");
+                jwt = request.getParameter("access_token");
             }
         }
 

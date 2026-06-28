@@ -42,13 +42,22 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/analysis/**").permitAll()
-                        .requestMatchers("/api/v1/alerts/**").permitAll()
-                        .requestMatchers("/api/v1/notifications/**").permitAll()
-                        .requestMatchers("/api/v1/chats/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/trust/invite/**").permitAll()
-                        .requestMatchers("/dashboard").permitAll()
                         .requestMatchers("/error").permitAll()
+
+                        .requestMatchers("/ws-location/**").permitAll()
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/trust/invite/**").hasRole("CARER")
+                        .requestMatchers("/api/v1/trust/protected-people/**").hasRole("CARER")
+                        
+                        .requestMatchers("/api/v1/trust/my-carers/**").hasRole("PROTECTED")
+                        
+                        .requestMatchers("/api/v1/analysis/**").hasAnyRole("CARER", "PROTECTED")
+                        .requestMatchers("/api/v1/chats/**").hasAnyRole("CARER", "PROTECTED")
+                        .requestMatchers("/api/v1/alerts/**").hasAnyRole("CARER", "PROTECTED")
+                        .requestMatchers("/api/v1/notifications/**").hasAnyRole("CARER", "PROTECTED")
+                        .requestMatchers("/dashboard").hasAnyRole("CARER", "PROTECTED")
+                        
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

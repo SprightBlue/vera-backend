@@ -1,48 +1,61 @@
 package com.unlam.verabackend.domain.model;
 
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 public class RoleTest {
 
     @Test
-    void deberiaExistirRoleUser() {
-        assertNotNull(Role.ROLE_USER);
+    void deberiaExistirRoleCarer() {
+        assertNotNull(Role.CARER);
+    }
+
+    @Test
+    void deberiaExistirRoleProtected() {
+        assertNotNull(Role.PROTECTED);
     }
 
     @Test
     void deberiaExistirRoleAdmin() {
-        assertNotNull(Role.ROLE_ADMIN);
+        assertNotNull(Role.ADMIN);
     }
 
     @Test
-    void deberiaConvertirStringARoleUser() {
-        Role role = Role.valueOf("ROLE_USER");
+    void deberiaConvertirStringARoleCarer() {
+        Role role = Role.valueOf("CARER");
+        assertEquals(Role.CARER, role);
+    }
 
-        assertEquals(Role.ROLE_USER, role);
+    @Test
+    void deberiaConvertirStringARoleProtected() {
+        Role role = Role.valueOf("PROTECTED");
+        assertEquals(Role.PROTECTED, role);
     }
 
     @Test
     void deberiaConvertirStringARoleAdmin() {
-        Role role = Role.valueOf("ROLE_ADMIN");
-
-        assertEquals(Role.ROLE_ADMIN, role);
+        Role role = Role.valueOf("ADMIN");
+        assertEquals(Role.ADMIN, role);
     }
 
     @Test
-    void roleUserDeberiaTenerNombreCorrecto() {
-        assertEquals("ROLE_USER", Role.ROLE_USER.name());
+    void roleCarerDeberiaTenerNombreCorrecto() {
+        assertEquals("CARER", Role.CARER.name());
+    }
+
+    @Test
+    void roleProtectedDeberiaTenerNombreCorrecto() {
+        assertEquals("PROTECTED", Role.PROTECTED.name());
     }
 
     @Test
     void roleAdminDeberiaTenerNombreCorrecto() {
-        assertEquals("ROLE_ADMIN", Role.ROLE_ADMIN.name());
+        assertEquals("ADMIN", Role.ADMIN.name());
     }
 
     @Test
-    void deberiaTenerDosRolesDefinidos() {
-        assertEquals(2, Role.values().length);
+    void deberiaTenerTresRolesDefinidos() {
+        assertEquals(3, Role.values().length);
     }
 
     @Test
@@ -52,15 +65,18 @@ public class RoleTest {
     }
 
     @Test
-    void roleUserYRoleAdminDeberianSerDistintos() {
-        assertNotEquals(Role.ROLE_USER, Role.ROLE_ADMIN);
+    void losRolesDeberianSerDistintosEntreSi() {
+        assertNotEquals(Role.CARER, Role.PROTECTED);
+        assertNotEquals(Role.CARER, Role.ADMIN);
+        assertNotEquals(Role.PROTECTED, Role.ADMIN);
     }
 
     @Test
-    void valuesDeberiaContenerAmbosRoles() {
+    void valuesDeberiaContenerTodosLosRoles() {
         Role[] roles = Role.values();
 
-        assertTrue(java.util.Arrays.asList(roles).contains(Role.ROLE_USER));
-        assertTrue(java.util.Arrays.asList(roles).contains(Role.ROLE_ADMIN));
+        assertTrue(java.util.Arrays.asList(roles).contains(Role.CARER));
+        assertTrue(java.util.Arrays.asList(roles).contains(Role.PROTECTED));
+        assertTrue(java.util.Arrays.asList(roles).contains(Role.ADMIN));
     }
 }

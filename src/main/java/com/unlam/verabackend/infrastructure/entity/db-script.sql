@@ -80,3 +80,17 @@ CREATE TABLE chat_messages (
 
 CREATE INDEX idx_chats_user ON chats (user_id);
 CREATE INDEX idx_chat_messages_chat_order ON chat_messages (chat_id, created_at ASC);
+
+
+CREATE TABLE user_locations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trust_contact_id BIGINT NOT NULL,
+    latitude NUMERIC(10, 8),
+    longitude NUMERIC(11, 8),
+    location_text VARCHAR(255) DEFAULT 'Ubicación desconocida',
+    is_connected BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT uk_user_location_trust_contact UNIQUE (trust_contact_id),
+    CONSTRAINT fk_user_locations_trust_contact FOREIGN KEY (trust_contact_id) REFERENCES trust_contacts (id) ON DELETE CASCADE
+);

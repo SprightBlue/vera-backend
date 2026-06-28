@@ -9,22 +9,37 @@ public class AuthResponseTest {
     @Test
     void deberiaCrearAuthResponseCorrectamente() {
         AuthResponse response = new AuthResponse(
+                1L,
                 "token123",
                 "angel@gmail.com",
                 "Angel Leyes",
-                "ROLE_USER"
+                "CARER"
         );
 
         assertNotNull(response);
     }
 
     @Test
-    void deberiaGuardarTokenCorrectamente() {
+    void deberiaGuardarIdCorrectamente() {
         AuthResponse response = new AuthResponse(
+                1L,
                 "token123",
                 "angel@gmail.com",
                 "Angel Leyes",
-                "ROLE_USER"
+                "CARER"
+        );
+
+        assertEquals(1L, response.getId());
+    }
+
+    @Test
+    void deberiaGuardarTokenCorrectamente() {
+        AuthResponse response = new AuthResponse(
+                1L,
+                "token123",
+                "angel@gmail.com",
+                "Angel Leyes",
+                "CARER"
         );
 
         assertEquals("token123", response.getToken());
@@ -33,10 +48,11 @@ public class AuthResponseTest {
     @Test
     void deberiaGuardarEmailCorrectamente() {
         AuthResponse response = new AuthResponse(
+                1L,
                 "token123",
                 "angel@gmail.com",
                 "Angel Leyes",
-                "ROLE_USER"
+                "CARER"
         );
 
         assertEquals("angel@gmail.com", response.getEmail());
@@ -45,10 +61,11 @@ public class AuthResponseTest {
     @Test
     void deberiaGuardarNombreCompletoCorrectamente() {
         AuthResponse response = new AuthResponse(
+                1L,
                 "token123",
                 "angel@gmail.com",
                 "Angel Leyes",
-                "ROLE_USER"
+                "CARER"
         );
 
         assertEquals("Angel Leyes", response.getFullName());
@@ -57,22 +74,39 @@ public class AuthResponseTest {
     @Test
     void deberiaGuardarRolCorrectamente() {
         AuthResponse response = new AuthResponse(
+                1L,
                 "token123",
                 "angel@gmail.com",
                 "Angel Leyes",
-                "ROLE_USER"
+                "CARER"
         );
 
-        assertEquals("ROLE_USER", response.getRole());
+        assertEquals("CARER", response.getRole());
+    }
+
+    @Test
+    void deberiaModificarId() {
+        AuthResponse response = new AuthResponse(
+                1L,
+                "token123",
+                "angel@gmail.com",
+                "Angel Leyes",
+                "CARER"
+        );
+
+        response.setId(2L);
+
+        assertEquals(2L, response.getId());
     }
 
     @Test
     void deberiaModificarToken() {
         AuthResponse response = new AuthResponse(
+                1L,
                 "token123",
                 "angel@gmail.com",
                 "Angel Leyes",
-                "ROLE_USER"
+                "CARER"
         );
 
         response.setToken("nuevoToken");
@@ -83,10 +117,11 @@ public class AuthResponseTest {
     @Test
     void deberiaModificarEmail() {
         AuthResponse response = new AuthResponse(
+                1L,
                 "token123",
                 "angel@gmail.com",
                 "Angel Leyes",
-                "ROLE_USER"
+                "CARER"
         );
 
         response.setEmail("nuevo@gmail.com");
@@ -97,10 +132,11 @@ public class AuthResponseTest {
     @Test
     void deberiaModificarNombreCompleto() {
         AuthResponse response = new AuthResponse(
+                1L,
                 "token123",
                 "angel@gmail.com",
                 "Angel Leyes",
-                "ROLE_USER"
+                "CARER"
         );
 
         response.setFullName("Nuevo Nombre");
@@ -111,24 +147,26 @@ public class AuthResponseTest {
     @Test
     void deberiaModificarRol() {
         AuthResponse response = new AuthResponse(
+                1L,
                 "token123",
                 "angel@gmail.com",
                 "Angel Leyes",
-                "ROLE_USER"
+                "CARER"
         );
 
-        response.setRole("ROLE_ADMIN");
+        response.setRole("ADMIN");
 
-        assertEquals("ROLE_ADMIN", response.getRole());
+        assertEquals("ADMIN", response.getRole());
     }
 
     @Test
     void tokenNoDeberiaSerNulo() {
         AuthResponse response = new AuthResponse(
+                1L,
                 "token123",
                 "angel@gmail.com",
                 "Angel Leyes",
-                "ROLE_USER"
+                "CARER"
         );
 
         assertNotNull(response.getToken());

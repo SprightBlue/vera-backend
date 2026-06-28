@@ -20,14 +20,19 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    // Construye el algoritmo de firma a partir de la clave secreta en Base64.
     private Algorithm getAlgorithm() {
         byte[] keyBytes = Base64.getDecoder().decode(secretKey);
         return Algorithm.HMAC256(keyBytes);
     }
 
-    // Genera el JWT con el email como subject.
     public String generateToken(UserDetails userDetails) {
+
+        String role = userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                .orElse("");
+
+                
         return JWT.create()
             .withSubject(userDetails.getUsername())
             .withIssuedAt(new Date(System.currentTimeMillis()))
@@ -35,19 +40,15 @@ public class JwtService {
             .sign(getAlgorithm());
     }
 
-    // Extrae el email (subject) del token.
     public String extractUsername(String token) {
         return decodeToken(token).getSubject();
     }
 
-    // Valida que el token pertenezca al usuario y no haya expirado.
     public boolean isTokenValid(String token, UserDetails userDetails) {
         try {
             String username = extractUsername(token);
             return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
         } catch (JWTVerificationException e) {
-            // Si el token está mal firmado o expiró, Auth0 lanza excepción.
-            // Lo capturamos y devolvemos false en lugar de propagar el error.
             return false;
         }
     }
@@ -57,8 +58,6 @@ public class JwtService {
         return expiration.before(new Date());
     }
 
-    // Método central: verifica la firma y decodifica el token.
-    // Si la firma es inválida, lanza JWTVerificationException automáticamente.
     private DecodedJWT decodeToken(String token) {
         return JWT.require(getAlgorithm())
             .build()
