@@ -14,10 +14,9 @@ import java.util.Collection;
 import java.util.List;
 
 @Entity
-@Table(name = "users",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = "email")
-        })
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "email")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,6 +30,12 @@ public class User implements UserDetails {
 
     @Column(nullable = false, unique = true)
     private String email;
+
+    @Column
+    private String phone;
+
+    @Column
+    private String country;
 
     @Column(nullable = false)
     private String password;
@@ -65,7 +70,6 @@ public class User implements UserDetails {
         updatedAt = LocalDateTime.now();
     }
 
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
@@ -77,14 +81,22 @@ public class User implements UserDetails {
     }
 
     @Override
-    public boolean isAccountNonLocked() { return accountNonLocked; }
+    public boolean isAccountNonLocked() {
+        return accountNonLocked;
+    }
 
     @Override
-    public boolean isEnabled() { return enabled; }
+    public boolean isEnabled() {
+        return enabled;
+    }
 
     @Override
-    public boolean isAccountNonExpired() { return true; }
+    public boolean isAccountNonExpired() {
+        return true;
+    }
 
     @Override
-    public boolean isCredentialsNonExpired() { return true; }
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
 }

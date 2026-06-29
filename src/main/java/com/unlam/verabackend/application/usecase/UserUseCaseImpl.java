@@ -1,4 +1,5 @@
 package com.unlam.verabackend.application.usecase;
+
 import com.unlam.verabackend.application.service.CloudinaryService;
 import com.unlam.verabackend.application.service.JwtService;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
@@ -22,6 +23,8 @@ import org.springframework.stereotype.Service;
 import com.unlam.verabackend.application.service.EmailService;
 import com.unlam.verabackend.infrastructure.entity.PasswordResetToken;
 import com.unlam.verabackend.infrastructure.repository.PasswordResetTokenRepository;
+import com.unlam.verabackend.presentation.dto.ProfileResponse;
+import com.unlam.verabackend.presentation.dto.UpdateProfileRequest;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -80,7 +83,6 @@ public class UserUseCaseImpl implements UserUseCase {
                 String tokenDeEmail = java.util.UUID.randomUUID().toString();
                 VerificationToken verificationToken = new VerificationToken(tokenDeEmail, user);
                 verificationTokenRepository.save(verificationToken);
-                
 
                 emailService.sendVerificationEmail(user.getEmail(), tokenDeEmail);
 
@@ -104,14 +106,14 @@ public class UserUseCaseImpl implements UserUseCase {
                                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
                 String token = jwtService.generateToken(user);
-                        return new AuthResponse(
-                                                user.getId(),
-                                                token,
-                                                user.getEmail(),
-                                                user.getFullName(),
-                                                user.getRole().name(),
-                                                user.getImage());
-                }
+                return new AuthResponse(
+                                user.getId(),
+                                token,
+                                user.getEmail(),
+                                user.getFullName(),
+                                user.getRole().name(),
+                                user.getImage());
+        }
 
         @Override
         public AuthResponse googleLogin(
@@ -159,7 +161,8 @@ public class UserUseCaseImpl implements UserUseCase {
                                 user.setPassword(
                                                 passwordEncoder.encode(
                                                                 UUID.randomUUID().toString()));
-                                String roleToSet = (selectedRole != null && !selectedRole.isBlank()) ? selectedRole : "CARER";                                
+                                String roleToSet = (selectedRole != null && !selectedRole.isBlank()) ? selectedRole
+                                                : "CARER";
 
                                 user.setRole(Role.valueOf(roleToSet));
 
@@ -185,7 +188,6 @@ public class UserUseCaseImpl implements UserUseCase {
                                         e);
                 }
         }
-
 
         @Override
         public void forgotPassword(String email) {
@@ -262,18 +264,61 @@ public class UserUseCaseImpl implements UserUseCase {
         @Override
         public UploadImageResponse uploadUserImage(String email, MultipartFile image) throws IOException {
 
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-            String imageUrl = cloudinaryService.uploadImage(image, "users");
+                String imageUrl = cloudinaryService.uploadImage(image, "users");
 
-            user.setImage(imageUrl);
-            userRepository.save(user);
+                user.setImage(imageUrl);
+                userRepository.save(user);
 
-            return new UploadImageResponse(
-                    user.getEmail(),
-                    user.getImage()
-            );
+                return new UploadImageResponse(
+                                user.getEmail(),
+                                user.getImage());
+        }
+
+        @Override
+        public ProfileResponse getProfile(String email) {
+
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+                return ProfileResponse.builder()
+                                .id(user.getId())
+                                .fullName(user.getFullName())
+                                .email(user.getEmail())
+                                .phone(user.getPhone())
+                                .country(user.getCountry())
+                                .role(user.getRole().name())
+                                .imageUrl(user.getImage())
+                                .build();
+        }
+
+        @Override
+        public ProfileResponse updateProfile(
+                        String email,
+                        UpdateProfileRequest request) {
+
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+                user.setFullName(request.getFullName());
+                user.setPhone(request.getPhone());
+
+                // Por ahora reutilizamos timezone para guardar el país
+                user.setCountry(request.getCountry());
+
+                userRepository.save(user);
+
+                return ProfileResponse.builder()
+                                .id(user.getId())
+                                .fullName(user.getFullName())
+                                .email(user.getEmail())
+                                .phone(user.getPhone())
+                                .country(user.getCountry())
+                                .role(user.getRole().name())
+                                .imageUrl(user.getImage())
+                                .build();
         }
 
 }
