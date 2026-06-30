@@ -3,6 +3,7 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.application.service.CloudinaryService;
 import com.unlam.verabackend.application.service.JwtService;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
+import com.unlam.verabackend.presentation.dto.ChangePasswordRequest;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
 
@@ -233,14 +234,58 @@ public class UserUseCaseImpl implements UserUseCase {
 
                 User user = resetToken.getUser();
 
+                updatePassword(
+                                user,
+                                newPassword);
+
+                resetToken.setUsed(true);
+
+                tokenRepository.save(resetToken);
+        }
+
+        @Override
+        public void changePassword(
+                        String email,
+                        ChangePasswordRequest request) {
+
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+                if (!passwordEncoder.matches(
+                                request.getCurrentPassword(),
+                                user.getPassword())) {
+                        throw new RuntimeException(
+                                        "La contraseña actual es incorrecta");
+                }
+
+                if (!request.getNewPassword().equals(
+                                request.getConfirmPassword())) {
+                        throw new RuntimeException(
+                                        "Las contraseñas no coinciden");
+                }
+
+                if (passwordEncoder.matches(
+                                request.getNewPassword(),
+                                user.getPassword())) {
+                        throw new RuntimeException(
+                                        "La nueva contraseña debe ser distinta a la actual");
+                }
+
+                updatePassword(
+                                user,
+                                request.getNewPassword());
+
+        }
+
+        private void updatePassword(
+                        User user,
+                        String newPassword) {
+
                 user.setPassword(
                                 passwordEncoder.encode(newPassword));
 
                 userRepository.save(user);
 
-                resetToken.setUsed(true);
-
-                tokenRepository.save(resetToken);
         }
 
         @Override

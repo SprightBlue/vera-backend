@@ -1,6 +1,7 @@
 package com.unlam.verabackend.domain.port.in;
 
 import com.unlam.verabackend.presentation.dto.AuthResponse;
+import com.unlam.verabackend.presentation.dto.ChangePasswordRequest;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
 import com.unlam.verabackend.presentation.dto.UploadImageResponse;
@@ -32,5 +33,11 @@ public interface UserUseCase {
     ProfileResponse updateProfile(
             String email,
             UpdateProfileRequest request);
+
+
+void changePassword(
+        String email,
+        ChangePasswordRequest request
+);
 
 }
