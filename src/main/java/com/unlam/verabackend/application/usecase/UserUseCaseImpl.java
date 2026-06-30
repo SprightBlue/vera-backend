@@ -3,6 +3,7 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.application.service.CloudinaryService;
 import com.unlam.verabackend.application.service.JwtService;
 import com.unlam.verabackend.presentation.dto.AuthResponse;
+import com.unlam.verabackend.presentation.dto.ChangeEmailRequest;
 import com.unlam.verabackend.presentation.dto.ChangePasswordRequest;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
@@ -364,6 +365,38 @@ public class UserUseCaseImpl implements UserUseCase {
                                 .role(user.getRole().name())
                                 .imageUrl(user.getImage())
                                 .build();
+        }
+
+        @Override
+        public void changeEmail(
+                        String currentEmail,
+                        ChangeEmailRequest request) {
+
+                User user = userRepository.findByEmail(currentEmail)
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+                if (!passwordEncoder.matches(
+                                request.getPassword(),
+                                user.getPassword())) {
+
+                        throw new RuntimeException(
+                                        "La contraseña es incorrecta");
+
+                }
+
+                if (userRepository.existsByEmail(
+                                request.getNewEmail())) {
+
+                        throw new RuntimeException(
+                                        "Ese correo ya está registrado");
+
+                }
+
+                user.setEmail(
+                                request.getNewEmail());
+
+                userRepository.save(user);
+
         }
 
 }

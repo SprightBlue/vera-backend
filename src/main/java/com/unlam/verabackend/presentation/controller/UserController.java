@@ -2,6 +2,7 @@ package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.domain.port.in.UserUseCase;
 import com.unlam.verabackend.infrastructure.entity.User;
+import com.unlam.verabackend.presentation.dto.ChangeEmailRequest;
 import com.unlam.verabackend.presentation.dto.ChangePasswordRequest;
 import com.unlam.verabackend.presentation.dto.ProfileResponse;
 import com.unlam.verabackend.presentation.dto.UpdateProfileRequest;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import com.unlam.verabackend.presentation.dto.ChangePasswordRequest;
+import com.unlam.verabackend.presentation.dto.ChangeEmailRequest;
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -48,6 +50,19 @@ public class UserController {
                                 request);
 
                 return ResponseEntity.ok().build();
+        }
+
+        @PutMapping("/email")
+        public ResponseEntity<Void> changeEmail(
+                        @AuthenticationPrincipal User user,
+                        @Valid @RequestBody ChangeEmailRequest request) {
+
+                userUseCase.changeEmail(
+                                user.getEmail(),
+                                request);
+
+                return ResponseEntity.ok().build();
+
         }
 
 }
