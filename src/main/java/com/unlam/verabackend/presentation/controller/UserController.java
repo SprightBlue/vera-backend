@@ -65,4 +65,14 @@ public class UserController {
 
         }
 
+        @DeleteMapping
+        public ResponseEntity<Void> deleteAccount(
+                        @AuthenticationPrincipal User user) {
+
+                userUseCase.deleteAccount(
+                                user.getEmail());
+
+                return ResponseEntity.noContent().build();
+
+        }
 }

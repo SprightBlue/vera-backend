@@ -44,4 +44,6 @@ public interface UserUseCase {
                         String currentEmail,
                         ChangeEmailRequest request);
 
+        void deleteAccount(String email);
+
 }

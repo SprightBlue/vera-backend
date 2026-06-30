@@ -7,6 +7,7 @@ import com.unlam.verabackend.presentation.dto.ChangeEmailRequest;
 import com.unlam.verabackend.presentation.dto.ChangePasswordRequest;
 import com.unlam.verabackend.presentation.dto.LoginRequest;
 import com.unlam.verabackend.presentation.dto.RegisterRequest;
+import java.util.List;
 
 import com.unlam.verabackend.presentation.dto.UploadImageResponse;
 import jakarta.transaction.Transactional;
@@ -27,6 +28,9 @@ import com.unlam.verabackend.infrastructure.entity.PasswordResetToken;
 import com.unlam.verabackend.infrastructure.repository.PasswordResetTokenRepository;
 import com.unlam.verabackend.presentation.dto.ProfileResponse;
 import com.unlam.verabackend.presentation.dto.UpdateProfileRequest;
+import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
+import com.unlam.verabackend.infrastructure.entity.TrustContact;
+import com.unlam.verabackend.domain.model.Role;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -55,6 +59,7 @@ public class UserUseCaseImpl implements UserUseCase {
         private final VerificationTokenRepository verificationTokenRepository;
         private final EmailService emailService;
         private final CloudinaryService cloudinaryService;
+        private final TrustContactRepository trustContactRepository;
 
         @Value("${google.client-id}")
         private String googleClientId;
@@ -399,4 +404,39 @@ public class UserUseCaseImpl implements UserUseCase {
 
         }
 
+        @Override
+        public void deleteAccount(String email) {
+
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+                if (user.getRole() == Role.CARER) {
+
+                        List<TrustContact> contacts = trustContactRepository.findByCarerId(user.getId());
+
+                        if (!contacts.isEmpty()) {
+
+                                throw new RuntimeException(
+                                                "No puedes eliminar tu cuenta porque todavía tienes personas protegidas.");
+
+                        }
+
+                }
+
+                if (user.getRole() == Role.PROTECTED) {
+
+                        List<TrustContact> contacts = trustContactRepository.findByProtectedUserId(user.getId());
+
+                        if (!contacts.isEmpty()) {
+
+                                throw new RuntimeException(
+                                                "No puedes eliminar tu cuenta porque todavía estás asociado a un cuidador.");
+
+                        }
+
+                }
+
+                userRepository.delete(user);
+
+        }
 }
