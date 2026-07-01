@@ -1,12 +1,14 @@
 package com.unlam.verabackend.application.service;
 
 import com.unlam.verabackend.domain.exception.InvalidFileException;
-import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.Arrays;
 import java.util.List;
 
-@Service
+@Slf4j
+@Component
 public class ValidatorService {
 
     private static final long MAX_FILE_SIZE_BYTES = 52_428_800;
@@ -28,19 +30,13 @@ public class ValidatorService {
     );
 
     public void validate(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new InvalidFileException("El archivo no puede estar vacío.");
-        }
+        log.debug("Iniciando validación de archivo");
 
-        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new InvalidFileException("El archivo supera el límite máximo de 50 MB soportado por VERA.");
-        }
+        checkIfEmpty(file);
+        checkFileSize(file);
+        checkFileSupport(file.getOriginalFilename());
 
-        String originalFilename = file.getOriginalFilename();
-
-        if (!isMultimedia(originalFilename) && !isDocument(originalFilename)) {
-            throw new InvalidFileException("El formato del archivo no está soportado por el motor de IA de VERA.");
-        }
+        log.debug("Archivo validado correctamente: {}", file.getOriginalFilename());
     }
 
     public boolean isDocument(String filename) {
@@ -57,11 +53,30 @@ public class ValidatorService {
                 GEMINI_SUPPORTED_VIDEO.contains(ext);
     }
 
+    private void checkIfEmpty(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            log.warn("Fallo de validación: El archivo es nulo o está vacío.");
+            throw new InvalidFileException("El archivo no puede estar vacío.");
+        }
+    }
+
+    private void checkFileSize(MultipartFile file) {
+        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
+            log.warn("Fallo de validación: El archivo supera el límite de tamaño (Tamaño actual: {} bytes).", file.getSize());
+            throw new InvalidFileException("El archivo supera el límite máximo de 50 MB soportado por VERA.");
+        }
+    }
+
+    private void checkFileSupport(String filename) {
+        if (!isMultimedia(filename) && !isDocument(filename)) {
+            log.warn("Fallo de validación: El formato del archivo '{}' no está soportado.", filename);
+            throw new InvalidFileException("El formato del archivo no está soportado por el motor de IA de VERA.");
+        }
+    }
+
     private String getExtension(String filename) {
         int lastDotIndex = filename.lastIndexOf('.');
-        if (lastDotIndex == -1) {
-            return "";
-        }
+        if (lastDotIndex == -1) return "";
         return filename.substring(lastDotIndex + 1).toLowerCase();
     }
 }

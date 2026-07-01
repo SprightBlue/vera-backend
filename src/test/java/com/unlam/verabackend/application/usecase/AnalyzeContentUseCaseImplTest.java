@@ -1,8 +1,9 @@
 package com.unlam.verabackend.application.usecase;
 
+import com.unlam.verabackend.domain.port.out.AiProvider;
 import com.unlam.verabackend.application.service.ExtractorService;
-import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.application.service.PromptBuilderService;
+import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.application.service.ValidatorService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.*;
@@ -12,8 +13,11 @@ import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -33,8 +37,8 @@ class AnalyzeContentUseCaseImplTest {
     @Mock private ValidatorService fileValidator;
     @Mock private ExtractorService urlExtractor;
     @Mock private PromptBuilderService promptBuilderService;
-    @Mock private SafeBrowsingProvider safeBrowsingProvider;
-    @Mock private GeminiProvider geminiProvider;
+    @Mock private CheckUrlProvider checkUrlProvider;
+    @Mock private AiProvider aiProvider;
     @Mock private UserRepository userRepository;
     @Mock private AnalysisRepository analysisRepository;
     @Mock private AlertsRepository alertsRepository;
@@ -61,39 +65,21 @@ class AnalyzeContentUseCaseImplTest {
         mockFile = new MockMultipartFile("file", "test.pdf", "application/pdf", "bytes".getBytes());
     }
 
-    // ==========================================
-    // 1. Tests de Excepciones y Cláusulas de Guarda
-    // ==========================================
-
     @Test
+    @DisplayName("Debe lanzar ResourceNotFoundException cuando el email provisto no pertenece a ningún usuario")
     void execute_WhenUserNotFound_ShouldThrowResourceNotFoundException() {
-        // Arrange
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThrows(ResourceNotFoundException.class, () ->
                 analyzeContentUseCase.execute(userEmail, "text", null, "WEB")
         );
     }
 
     @Test
-    void execute_WhenBothTextAndFileAreMissing_ShouldThrowIllegalArgumentException() {
-        // Arrange
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
-
-        // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-                analyzeContentUseCase.execute(userEmail, null, null, "WEB")
-        );
-        assertEquals("Debe ingresar un texto o adjuntar un archivo para comenzar el análisis.", exception.getMessage());
-    }
-
-    @Test
+    @DisplayName("Debe lanzar IllegalArgumentException cuando el origen (source) es nulo o vacío")
     void execute_WhenSourceIsMissing_ShouldThrowIllegalArgumentException() {
-        // Arrange
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
 
-        // Act & Assert
         assertThrows(IllegalArgumentException.class, () ->
                 analyzeContentUseCase.execute(userEmail, "text", null, null)
         );
@@ -103,24 +89,29 @@ class AnalyzeContentUseCaseImplTest {
     }
 
     @Test
-    void execute_WhenGeminiReturnsNull_ShouldThrowIllegalStateException() {
-        // Arrange
+    @DisplayName("Debe lanzar IllegalArgumentException cuando el origen provisto no coincide con ninguna constante de Source")
+    void execute_WhenSourceIsInvalid_ShouldThrowIllegalArgumentException() {
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
-        when(geminiProvider.analyzeContent(any(), any())).thenReturn(null);
 
-        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+                analyzeContentUseCase.execute(userEmail, "text", null, "INVALID_SOURCE")
+        );
+    }
+
+    @Test
+    @DisplayName("Debe lanzar IllegalStateException cuando el proveedor de IA retorna un resultado nulo")
+    void execute_WhenAiProviderReturnsNull_ShouldThrowIllegalStateException() {
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
+        when(aiProvider.analyzeContent(any(), any())).thenReturn(null);
+
         assertThrows(IllegalStateException.class, () ->
                 analyzeContentUseCase.execute(userEmail, "text", null, "WEB")
         );
     }
 
-    // ==========================================
-    // 2. Cobertura de Caminos de Archivos (Documentos vs Multimedia)
-    // ==========================================
-
     @Test
+    @DisplayName("Debe extraer texto y URLs exitosamente cuando se adjunta un archivo clasificado como documento")
     void execute_WhenFileIsDocumentWithUrls_ShouldExtractTextAndUrlsSuccessfully() {
-        // Arrange
         String rawText = "Texto manual";
 
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
@@ -130,116 +121,169 @@ class AnalyzeContentUseCaseImplTest {
         when(urlExtractor.findUrls(rawText)).thenReturn(Collections.emptyList());
         when(urlExtractor.findUrls("Contenido con http://url.com")).thenReturn(List.of("http://url.com"));
 
-        GeminiResult mockAiResult = new GeminiResult("Titulo", "Resumen", "LOW", "NONE", 10, "Patrones", "Recomendacion");
-        when(geminiProvider.analyzeContent(any(), any())).thenReturn(mockAiResult);
+        AiResult mockAiResult = new AiResult("Titulo", "Resumen", "LOW", "NONE", 10, "Patrones", "Recomendacion");
+        when(aiProvider.analyzeContent(any(), any())).thenReturn(mockAiResult);
         when(analysisRepository.save(any(Analysis.class))).thenAnswer(i -> i.getArgument(0));
 
-        // Act
         Analysis result = analyzeContentUseCase.execute(userEmail, rawText, mockFile, "WEB");
 
-        // Assert
         assertNotNull(result);
+        verify(fileValidator, times(1)).validate(mockFile);
         verify(urlExtractor, times(1)).convertDocumentToText(mockFile);
         verify(urlExtractor, times(1)).findUrls(rawText);
         verify(urlExtractor, times(1)).findUrls("Contenido con http://url.com");
-        verify(safeBrowsingProvider, times(1)).checkUrls(any());
+        verify(checkUrlProvider, times(1)).checkUrls(any());
     }
 
     @Test
-    void execute_WhenFileIsMultimedia_ShouldPassFileToGeminiDirectly() {
-        // Arrange
+    @DisplayName("Debe enviar el archivo binario completo a la IA cuando se clasifica como archivo multimedia")
+    void execute_WhenFileIsMultimedia_ShouldPassFileToAiDirectly() {
         MockMultipartFile imageFile = new MockMultipartFile("file", "foto.png", "image/png", "bytes".getBytes());
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
         when(fileValidator.isDocument("foto.png")).thenReturn(false);
         when(fileValidator.isMultimedia("foto.png")).thenReturn(true);
 
-        GeminiResult mockAiResult = new GeminiResult("Titulo", "Resumen", "LOW", "NONE", 0, "Patrones", "Recomendacion");
-        when(geminiProvider.analyzeContent(any(), eq(imageFile))).thenReturn(mockAiResult);
+        AiResult mockAiResult = new AiResult("Titulo", "Resumen", "LOW", "NONE", 0, "Patrones", "Recomendacion");
+        when(aiProvider.analyzeContent(any(), eq(imageFile))).thenReturn(mockAiResult);
         when(analysisRepository.save(any(Analysis.class))).thenAnswer(i -> i.getArgument(0));
 
-        // Act
         Analysis result = analyzeContentUseCase.execute(userEmail, null, imageFile, "MOBILE");
 
-        // Assert
         assertNotNull(result);
         assertEquals(Source.MOBILE, result.getSource());
-        verify(geminiProvider).analyzeContent(any(), eq(imageFile));
+        verify(fileValidator, times(1)).validate(imageFile);
+        verify(urlExtractor, never()).convertDocumentToText(any());
+        verify(aiProvider).analyzeContent(any(), eq(imageFile));
     }
 
-    // ==========================================
-    // 3. Flujo Crítico: Riesgo Alto, Alertas y Notificaciones
-    // ==========================================
-
     @Test
-    void execute_WhenRiskIsHigh_ShouldCreateAlertsAndSendNotificationsToCarers() {
-        // 1. Arrange - Configurar los IDs de Infraestructura explícitamente para evitar Nulls en cascada
-        String userEmail = "protegido@test.com";
-
-        User protectedUser = new User();
-        protectedUser.setId(1L); // 💡 Explicitamos el ID Long de infraestructura
-        protectedUser.setFullName("Juan Pérez");
-        protectedUser.setEmail(userEmail);
-
+    @DisplayName("Debe ignorar el archivo si no es documento ni multimedia o si el archivo está vacío")
+    void execute_WhenFileIsEmptyOrUnknownType_ShouldProcessTextOnly() {
+        MockMultipartFile emptyFile = new MockMultipartFile("file", "", "text/plain", new byte[0]);
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
 
-        // Mock de Gemini
-        GeminiResult mockHighRiskResult = new GeminiResult(
-                "Peligro", "Fraude", " HIGH ", " PHISHING ", 90, "Patrones", "Recomendacion"
-        );
-        when(geminiProvider.analyzeContent(any(), any())).thenReturn(mockHighRiskResult);
+        AiResult mockAiResult = new AiResult("Titulo", "Resumen", "LOW", "NONE", 0, "Patrones", "Recomendacion");
+        when(aiProvider.analyzeContent(any(), any())).thenReturn(mockAiResult);
+        when(analysisRepository.save(any(Analysis.class))).thenAnswer(i -> i.getArgument(0));
 
-        // Mock del guardado del Análisis
-        Analysis simulatedSavedAnalysis = Analysis.builder()
-                .title("Peligro")
-                .source(Source.WEB)
-                .riskLevel(RiskLevel.HIGH)
-                .riskType(RiskType.PHISHING)
-                .riskPercentage(90)
-                .build();
-        when(analysisRepository.save(any(Analysis.class))).thenReturn(simulatedSavedAnalysis);
+        Analysis result = analyzeContentUseCase.execute(userEmail, "Solo texto", emptyFile, "WEB");
 
-        // Configurar el contacto de confianza de infraestructura
+        assertNotNull(result);
+        verify(fileValidator, never()).validate(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "ALTO, LOW, true",
+            "ALTO, MEDIUM, true",
+            "ALTO, HIGH, true",
+            "MEDIO, LOW, false",
+            "MEDIO, MEDIUM, true",
+            "MEDIO, HIGH, true",
+            "BAJO, LOW, false",
+            "BAJO, MEDIUM, false",
+            "BAJO, HIGH, true"
+    })
+    @DisplayName("Debe evaluar la matriz de alertas disparando notificaciones SSE solo bajo los cruces de sensibilidad configurados")
+    void execute_WithSensitivityMatrix_ShouldConditionallyTriggerAlerts(String sensitivityStr, String riskStr, boolean expectedNotify) {
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
+
+        AiResult mockAiResult = new AiResult("Titulo", "Resumen", riskStr, "CLICKED_SUSPICIOUS_LINK", 50, "Patrones", "Recomendacion");
+        when(aiProvider.analyzeContent(any(), any())).thenReturn(mockAiResult);
+        when(analysisRepository.save(any(Analysis.class))).thenAnswer(i -> i.getArgument(0));
+
         User carerUser = new User();
         carerUser.setId(2L);
-        carerUser.setFullName("Carlos Gómez");
+        carerUser.setEmail("cuidador@gmail.com");
 
         TrustContact contact = new TrustContact();
-        contact.setId(77L); // 💡 El ID del contacto en la DB de infraestructura
+        contact.setId(99L);
+        contact.setSensitivityLevel(SensitivityLevel.valueOf(sensitivityStr));
         contact.setCarer(carerUser);
         contact.setProtectedUser(protectedUser);
 
-        // Aseguramos que la query de infraestructura devuelva la lista con el contacto simulado
-        when(trustContactRepository.findByProtectedUserId(1L)).thenReturn(List.of(contact));
+        when(trustContactRepository.findByProtectedUserId(protectedUser.getId())).thenReturn(List.of(contact));
 
-        // El mock de la Alerta de dominio devuelta DEBE tener un UUID asignado para que el payload no tire Null
-        Alerts simulatedSavedAlert = Alerts.builder()
-                .id(UUID.randomUUID()) // 💡 Clave: la alerta guardada simula tener su UUID asignado por el adaptador
-                .riskLevel(RiskLevel.HIGH)
+        if (expectedNotify) {
+            Alerts mockAlert = Alerts.builder()
+                    .id(UUID.randomUUID())
+                    .riskLevel(RiskLevel.valueOf(riskStr))
+                    .riskType(RiskType.CLICKED_SUSPICIOUS_LINK)
+                    .build();
+            when(alertsRepository.save(any(Alerts.class), eq(99L))).thenReturn(mockAlert);
+        }
+
+        analyzeContentUseCase.execute(userEmail, "Contenido de prueba", null, "WEB");
+
+        if (expectedNotify) {
+            verify(alertsRepository, times(1)).save(any(Alerts.class), eq(99L));
+            verify(sseService, times(1)).createAndSendNotification(eq(carerUser), eq(NotificationsType.ALERT), eq("Abuelo Pepe"), any());
+        } else {
+            verify(alertsRepository, never()).save(any(Alerts.class), any());
+            verify(sseService, never()).createAndSendNotification(any(), any(), any(), any());
+        }
+    }
+
+    @Test
+    @DisplayName("Debe finalizar el flujo sin alertas si el nivel de riesgo en el análisis es nulo")
+    void execute_WhenRiskLevelIsNull_ShouldNotTriggerAlerts() {
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
+
+        Analysis analysisWithoutRisk = Analysis.builder()
+                .title("Sin Riesgo")
+                .riskLevel(null)
+                .riskType(RiskType.NONE)
                 .build();
+        when(analysisRepository.save(any(Analysis.class))).thenReturn(analysisWithoutRisk);
 
-        // Forzamos a Mockito a responder con esta alerta sin importar el casteo del ID de contacto
-        when(alertsRepository.save(any(Alerts.class), any())).thenReturn(simulatedSavedAlert);
+        AiResult mockAiResult = new AiResult("Titulo", "Resumen", "LOW", "NONE", 0, "Patrones", "Recomendacion");
+        when(aiProvider.analyzeContent(any(), any())).thenReturn(mockAiResult);
 
-        // 2. Act
-        Analysis result = analyzeContentUseCase.execute(userEmail, "Texto peligroso", null, "WEB");
+        Analysis result = analyzeContentUseCase.execute(userEmail, "Mensaje", null, "WEB");
 
-        // 3. Assert
         assertNotNull(result);
-        assertEquals(RiskLevel.HIGH, result.getRiskLevel());
+        verify(trustContactRepository, never()).findByProtectedUserId(any());
+    }
 
-        // Verificamos que se intente persistir en el puerto de alertas
-        verify(alertsRepository, times(1)).save(any(Alerts.class), any());
+    @Test
+    @DisplayName("Debe adjuntar el ID de la alerta y su respectivo nivel de riesgo dentro del payload enviado por SSE")
+    void execute_WhenNotificationIsSent_ShouldContainCorrectPayloadData() {
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
 
-        // Verificamos el envío del evento SSE al cuidador con el mapa capturado
-        verify(sseService, times(1)).createAndSendNotification(
+        AiResult mockAiResult = new AiResult("Peligro", "Resumen", "HIGH", "IDENTITY_THEFT_OR_IMPERSONATION", 95, "Patrones", "Recomendacion");
+        when(aiProvider.analyzeContent(any(), any())).thenReturn(mockAiResult);
+        when(analysisRepository.save(any(Analysis.class))).thenAnswer(i -> i.getArgument(0));
+
+        User carerUser = new User();
+        carerUser.setId(3L);
+
+        TrustContact contact = new TrustContact();
+        contact.setId(10L);
+        contact.setSensitivityLevel(SensitivityLevel.BAJO);
+        contact.setCarer(carerUser);
+
+        when(trustContactRepository.findByProtectedUserId(protectedUser.getId())).thenReturn(List.of(contact));
+
+        UUID alertUuid = UUID.randomUUID();
+        Alerts mockAlert = Alerts.builder()
+                .id(alertUuid)
+                .riskLevel(RiskLevel.HIGH)
+                .riskType(RiskType.IDENTITY_THEFT_OR_IMPERSONATION)
+                .build();
+        when(alertsRepository.save(any(Alerts.class), eq(10L))).thenReturn(mockAlert);
+
+        analyzeContentUseCase.execute(userEmail, "Alerta máxima", null, "WEB");
+
+        verify(sseService).createAndSendNotification(
                 eq(carerUser),
                 eq(NotificationsType.ALERT),
-                eq("Juan Pérez"),
+                eq("Abuelo Pepe"),
                 payloadCaptor.capture()
         );
 
-        // Verificamos que el payload no esté vacío y contenga el ID simulado
-        assertNotNull(payloadCaptor.getValue());
-        assertNotNull(payloadCaptor.getValue().get("alertId"));
+        Map<String, Object> capturedPayload = payloadCaptor.getValue();
+        assertNotNull(capturedPayload);
+        assertEquals(alertUuid.toString(), capturedPayload.get("alertId"));
+        assertEquals("HIGH", capturedPayload.get("riskLevel"));
     }
 }

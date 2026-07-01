@@ -1,22 +1,16 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.ValidatorService;
-import com.unlam.verabackend.application.service.PromptBuilderService;
-import com.unlam.verabackend.application.service.ExtractorService;
-import com.unlam.verabackend.application.service.SseService;
+import com.unlam.verabackend.application.service.*;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.*;
 import com.unlam.verabackend.domain.port.in.AnalyzeContentUseCase;
-import com.unlam.verabackend.domain.port.out.AnalysisRepository;
-import com.unlam.verabackend.domain.port.out.AlertsRepository;
-import com.unlam.verabackend.domain.port.out.GeminiProvider;
-import com.unlam.verabackend.domain.port.out.GeminiResult;
-import com.unlam.verabackend.domain.port.out.SafeBrowsingProvider;
+import com.unlam.verabackend.domain.port.out.*;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,15 +20,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
 
     private final ValidatorService fileValidator;
     private final ExtractorService urlExtractor;
-    private final SafeBrowsingProvider safeBrowsingProvider;
+    private final CheckUrlProvider checkUrlProvider;
     private final PromptBuilderService promptBuilder;
-    private final GeminiProvider geminiProvider;
+    private final AiProvider aiProvider;
     private final UserRepository userRepository;
     private final AnalysisRepository analysisRepository;
     private final AlertsRepository alertsRepository;
@@ -44,87 +39,90 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
     @Override
     @Transactional
     public Analysis execute(String userEmail, String rawText, MultipartFile file, String sourceStr) {
+        log.info("Iniciando análisis de contenido para usuario: {}", userEmail);
+
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + userEmail));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + userEmail));
 
-        boolean hasText = rawText != null && !rawText.isBlank();
-        boolean hasFile = file != null && !file.isEmpty();
+        Source source = parseSource(sourceStr);
+        ContentProcessResult content = processContent(rawText, file);
 
-        if (!hasText && !hasFile) {
-            throw new IllegalArgumentException("Debe ingresar un texto o adjuntar un archivo para comenzar el análisis.");
-        }
+        List<String> safeBrowsingReport = checkUrlProvider.checkUrls(content.urls());
+        String prompt = promptBuilder.buildPrompt(safeBrowsingReport, rawText, content.fileText(), source);
 
-        if (sourceStr == null || sourceStr.isBlank()) {
-            throw new IllegalArgumentException("El origen de la consulta (source) es obligatorio.");
-        }
-
-        Source source = Source.valueOf(sourceStr.toUpperCase().strip());
-
-        List<String> allUrls = new ArrayList<>();
-        if (hasText) {
-            allUrls.addAll(urlExtractor.findUrls(rawText));
-        }
-
-        String fileText = "";
-        MultipartFile fileToSendToGemini = null;
-
-        if (hasFile) {
-            fileValidator.validate(file);
-            String filename = file.getOriginalFilename();
-
-            if (fileValidator.isDocument(filename)) {
-                fileText = urlExtractor.convertDocumentToText(file);
-                if (fileText != null && !fileText.isBlank()) {
-                    allUrls.addAll(urlExtractor.findUrls(fileText));
-                }
-            } else if (fileValidator.isMultimedia(filename)) {
-                fileToSendToGemini = file;
-            }
-        }
-
-        List<String> safeBrowsingReport = safeBrowsingProvider.checkUrls(allUrls);
-        String prompt = promptBuilder.buildPrompt(safeBrowsingReport, rawText, fileText, source);
-
-        GeminiResult aiResult = geminiProvider.analyzeContent(prompt, fileToSendToGemini);
+        AiResult aiResult = aiProvider.analyzeContent(prompt, content.fileToAnalyze());
         if (aiResult == null) {
-            throw new IllegalStateException("No se pudo obtener una respuesta válida del motor de análisis inteligente.");
+            throw new IllegalStateException("Error crítico: Respuesta nula del motor de IA.");
         }
 
-        Analysis analysis = buildAnalysis(aiResult, user, source);
-        Analysis savedAnalysis = analysisRepository.save(analysis);
+        Analysis analysis = analysisRepository.save(buildAnalysis(aiResult, user, source));
 
-        if (savedAnalysis.getRiskLevel() != null && RiskLevel.HIGH.equals(savedAnalysis.getRiskLevel())) {
-            List<TrustContact> activeCarers = trustContactRepository.findByProtectedUserId(user.getId());
+        handleRiskAlerts(analysis, user);
 
-            for (TrustContact contact : activeCarers) {
-                Alerts newAlert = buildAlert(savedAnalysis);
-                Alerts savedAlert = alertsRepository.save(newAlert, contact.getId());
-
-                Map<String, Object> payload = Map.of(
-                        "alertId", savedAlert.getId().toString(),
-                        "riskLevel", savedAlert.getRiskLevel().toString(),
-                        "protectedUserName", user.getFullName()
-                );
-
-                sseService.createAndSendNotification(
-                        contact.getCarer(),
-                        NotificationsType.ALERT,
-                        user.getFullName(),
-                        payload
-                );
-            }
-        }
-
-        return savedAnalysis;
+        log.info("Análisis finalizado exitosamente. ID: {}", analysis.getId());
+        return analysis;
     }
 
-    private Analysis buildAnalysis(GeminiResult aiResult, User user, Source source) {
+    private Source parseSource(String sourceStr) {
+        if (sourceStr == null || sourceStr.isBlank()) throw new IllegalArgumentException("Origen (source) obligatorio.");
+        return Source.valueOf(sourceStr.toUpperCase().strip());
+    }
+
+    private ContentProcessResult processContent(String rawText, MultipartFile file) {
+        List<String> urls = new ArrayList<>();
+        if (rawText != null) urls.addAll(urlExtractor.findUrls(rawText));
+
+        String fileText = "";
+        MultipartFile fileForAi = null;
+
+        if (file != null && !file.isEmpty()) {
+            fileValidator.validate(file);
+            if (fileValidator.isDocument(file.getOriginalFilename())) {
+                fileText = urlExtractor.convertDocumentToText(file);
+                urls.addAll(urlExtractor.findUrls(fileText));
+            } else if (fileValidator.isMultimedia(file.getOriginalFilename())) {
+                fileForAi = file;
+            }
+        }
+        return new ContentProcessResult(urls, fileText, fileForAi);
+    }
+
+    private void handleRiskAlerts(Analysis analysis, User user) {
+        if (analysis.getRiskLevel() == null) return;
+
+        trustContactRepository.findByProtectedUserId(user.getId())
+                .stream()
+                .filter(contact -> shouldNotify(contact.getSensitivityLevel(), analysis.getRiskLevel()))
+                .forEach(contact -> triggerAlert(analysis, user, contact));
+    }
+
+    private boolean shouldNotify(SensitivityLevel sensitivity, RiskLevel risk) {
+        return switch (sensitivity) {
+            case ALTO -> true;
+            case MEDIO -> risk == RiskLevel.MEDIUM || risk == RiskLevel.HIGH;
+            case BAJO -> risk == RiskLevel.HIGH;
+        };
+    }
+
+    private void triggerAlert(Analysis analysis, User user, TrustContact contact) {
+        Alerts alert = alertsRepository.save(buildAlert(analysis), contact.getId());
+        log.info("Enviando alerta a contacto: {} por riesgo: {}", contact.getCarer().getEmail(), analysis.getRiskLevel());
+
+        sseService.createAndSendNotification(
+                contact.getCarer(),
+                NotificationsType.ALERT,
+                user.getFullName(),
+                Map.of("alertId", alert.getId().toString(), "riskLevel", alert.getRiskLevel().toString())
+        );
+    }
+
+    private Analysis buildAnalysis(AiResult aiResult, User user, Source source) {
         return Analysis.builder()
                 .title(aiResult.title())
                 .contentSummary(aiResult.contentSummary())
-                .riskLevel(aiResult.riskLevel() != null ? RiskLevel.valueOf(aiResult.riskLevel().toUpperCase().strip()) : null)
-                .riskType(aiResult.riskType() != null ? RiskType.valueOf(aiResult.riskType().toUpperCase().strip()) : null)
-                .riskPercentage(aiResult.riskPercentage() != null ? aiResult.riskPercentage() : 0)
+                .riskLevel(RiskLevel.valueOf(aiResult.riskLevel().toUpperCase().strip()))
+                .riskType(RiskType.valueOf(aiResult.riskType().toUpperCase().strip()))
+                .riskPercentage(aiResult.riskPercentage())
                 .suspiciousPatterns(aiResult.suspiciousPatterns())
                 .recommendation(aiResult.recommendation())
                 .user(user)
@@ -146,4 +144,6 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
                 .createdAt(LocalDateTime.now())
                 .build();
     }
+
+    private record ContentProcessResult(List<String> urls, String fileText, MultipartFile fileToAnalyze) {}
 }

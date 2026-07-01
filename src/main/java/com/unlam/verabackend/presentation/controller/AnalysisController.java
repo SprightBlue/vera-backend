@@ -9,6 +9,7 @@ import com.unlam.verabackend.presentation.dto.PagedResponse;
 import com.unlam.verabackend.presentation.dto.AnalysisDetailResponse;
 import com.unlam.verabackend.presentation.dto.AnalysisResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/analysis")
 @RequiredArgsConstructor
@@ -36,10 +38,21 @@ public class AnalysisController {
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "source") String source
     ) {
-        String email = user.getEmail();
+        log.info("Iniciando análisis solicitado por usuario: {}", user.getEmail());
+        validateRequest(text, file);
 
-        Analysis result = analyzeContentUseCase.execute(email, text, file, source);
-        return new ResponseEntity<>(AnalysisDetailResponse.fromDomain(result), HttpStatus.CREATED);
+        var result = analyzeContentUseCase.execute(user.getEmail(), text, file, source);
+
+        log.info("Análisis completado exitosamente para el usuario: {}", user.getEmail());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(AnalysisDetailResponse.fromDomain(result));
+    }
+
+    private void validateRequest(String text, MultipartFile file) {
+        if ((text == null || text.isBlank()) && (file == null || file.isEmpty())) {
+            log.warn("Intento de análisis fallido: ni texto ni archivo proporcionados.");
+            throw new IllegalArgumentException("Debe proporcionar al menos un texto o un archivo para analizar.");
+        }
     }
 
     @GetMapping

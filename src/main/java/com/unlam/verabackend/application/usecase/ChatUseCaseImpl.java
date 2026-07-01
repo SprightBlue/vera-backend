@@ -1,13 +1,13 @@
 package com.unlam.verabackend.application.usecase;
 
 import com.unlam.verabackend.application.service.PromptBuilderService;
+import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.*;
 import com.unlam.verabackend.domain.port.in.ChatUseCase;
-import com.unlam.verabackend.domain.port.out.ChatsRepository;
-import com.unlam.verabackend.domain.port.out.ChatMessagesRepository;
-import com.unlam.verabackend.domain.port.out.GeminiProvider;
+import com.unlam.verabackend.domain.port.out.*;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,11 +15,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatUseCaseImpl implements ChatUseCase {
 
-    private final GeminiProvider geminiProvider;
+    private final AiProvider aiProvider;
     private final ChatsRepository chatsRepository;
     private final ChatMessagesRepository chatMessagesRepository;
     private final PromptBuilderService promptBuilder;
@@ -28,76 +29,63 @@ public class ChatUseCaseImpl implements ChatUseCase {
     @Override
     @Transactional
     public UUID createChat(String userEmail, UUID analysisId, UUID alertId) {
-        var userDomain = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario de OAuth no encontrado con email: " + userEmail));
-
-        var analysisStub = analysisId != null ? Analysis.builder().id(analysisId).build() : null;
-        var alertStub = alertId != null ? Alerts.builder().id(alertId).build() : null;
+        log.info("Creando nuevo chat para el usuario: {}", userEmail);
+        var user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + userEmail));
 
         Chats newChat = Chats.builder()
-                .user(userDomain)
-                .analysis(analysisStub)
-                .alert(alertStub)
+                .user(user)
+                .analysis(analysisId != null ? Analysis.builder().id(analysisId).build() : null)
+                .alert(alertId != null ? Alerts.builder().id(alertId).build() : null)
                 .title("Nueva consulta con VERA")
-                .isActive(true)
                 .build();
 
-        Chats savedChat = chatsRepository.save(newChat);
-        return savedChat.getId();
+        return chatsRepository.save(newChat).getId();
     }
 
     @Override
     @Transactional
     public String sendMessage(UUID chatId, String userMessage) {
+        log.info("Procesando mensaje en chat: {}", chatId);
         Chats chat = chatsRepository.findById(chatId)
-                .orElseThrow(() -> new IllegalArgumentException("El chat solicitado no existe."));
+                .orElseThrow(() -> new ResourceNotFoundException("Chat no encontrado: " + chatId));
 
-        var analysis = chat.getAnalysis();
-        var alert = chat.getAlert();
-
-        ChatMessages userChatMessage = ChatMessages.builder()
-                .chat(chat)
-                .role(ChatsRole.USER)
-                .content(userMessage)
-                .build();
-        chatMessagesRepository.save(userChatMessage);
-
-        if ("Nueva consulta con VERA".equals(chat.getTitle())) {
-            try {
-                String titlePrompt = promptBuilder.buildTitleGenerationPrompt(userMessage);
-                String titleSystemInstruction = "Sos un algoritmo encargado de resumir consultas de fraude en títulos breves.";
-
-                ChatMessages titleRequestMessage = ChatMessages.builder()
-                        .role(ChatsRole.USER)
-                        .content(titlePrompt)
-                        .build();
-
-                String generatedTitle = geminiProvider.generateChatResponse(titleSystemInstruction, List.of(titleRequestMessage));
-                generatedTitle = generatedTitle.replace("\"", "").replace("\n", "").trim();
-
-                if (!generatedTitle.isBlank()) {
-                    chat.setTitle(generatedTitle);
-                }
-            } catch (Exception e) {
-                System.err.println("No se pudo actualizar el título dinámico del chat: " + e.getMessage());
-            }
-        }
+        saveUserMessage(chat, userMessage);
+        updateChatTitleIfNeeded(chat, userMessage);
 
         chat.setUpdatedAt(LocalDateTime.now());
         chatsRepository.save(chat);
 
-        List<ChatMessages> history = chatMessagesRepository.findLastMessages(chatId);
+        return processAiResponse(chat);
+    }
 
-        String systemPrompt = promptBuilder.buildChatSystemPrompt(analysis, alert);
-        String aiResponse = geminiProvider.generateChatResponse(systemPrompt, history);
+    private void saveUserMessage(Chats chat, String content) {
+        chatMessagesRepository.save(ChatMessages.builder()
+                .chat(chat).role(ChatsRole.USER).content(content).build());
+    }
 
-        ChatMessages modelChatMessage = ChatMessages.builder()
-                .chat(chat)
-                .role(ChatsRole.MODEL)
-                .content(aiResponse)
-                .build();
-        chatMessagesRepository.save(modelChatMessage);
+    private void updateChatTitleIfNeeded(Chats chat, String userMessage) {
+        if (!"Nueva consulta con VERA".equals(chat.getTitle())) return;
 
+        try {
+            String title = aiProvider.generateChatResponse("Sos un experto en resumen de fraudes. Respondé solo con el título (máx 5 palabras).",
+                    List.of(ChatMessages.builder().role(ChatsRole.USER).content(promptBuilder.buildTitleGenerationPrompt(userMessage)).build()));
+            chat.setTitle(title.replaceAll("[\"\n]", "").trim());
+        } catch (Exception e) {
+            log.warn("No se pudo actualizar el título del chat {}: {}", chat.getId(), e.getMessage());
+        }
+    }
+
+    private String processAiResponse(Chats chat) {
+        String systemPrompt = promptBuilder.buildChatSystemPrompt(chat.getAnalysis(), chat.getAlert());
+        List<ChatMessages> history = chatMessagesRepository.findLastMessages(chat.getId());
+
+        String aiResponse = aiProvider.generateChatResponse(systemPrompt, history);
+
+        chatMessagesRepository.save(ChatMessages.builder()
+                .chat(chat).role(ChatsRole.MODEL).content(aiResponse).build());
+
+        log.info("Respuesta de IA generada para el chat: {}", chat.getId());
         return aiResponse;
     }
 
@@ -119,6 +107,7 @@ public class ChatUseCaseImpl implements ChatUseCase {
         chatsRepository.findById(chatId)
                 .orElseThrow(() -> new IllegalArgumentException("El chat solicitado no existe o ya fue eliminado."));
 
+        log.info("Eliminando chat: {}", chatId);
         chatsRepository.deleteById(chatId);
     }
 }

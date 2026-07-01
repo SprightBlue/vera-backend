@@ -24,7 +24,6 @@ public class ChatsMapper {
                 .analysis(analysisEntity)
                 .alert(alertsEntity)
                 .title(domain.getTitle())
-                .isActive(domain.isActive())
                 .createdAt(domain.getCreatedAt())
                 .updatedAt(domain.getUpdatedAt())
                 .build();
@@ -39,7 +38,6 @@ public class ChatsMapper {
                 .analysis(analysisMapper.toDomain(entity.getAnalysis()))
                 .alert(alertsMapper.toDomain(entity.getAlert()))
                 .title(entity.getTitle())
-                .isActive(entity.isActive())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();

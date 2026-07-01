@@ -1,205 +1,158 @@
 package com.unlam.verabackend.application.service;
 
 import com.unlam.verabackend.domain.exception.InvalidFileException;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class ValidatorServiceTest {
 
+    @Mock
+    private MultipartFile file;
+
+    @InjectMocks
     private ValidatorService validatorService;
 
-    @BeforeEach
-    void setUp() {
-        validatorService = new ValidatorService();
-    }
-
-    // ==========================================
-    // Tests para el método validate()
-    // ==========================================
-
     @Test
+    @DisplayName("Debe lanzar InvalidFileException si el archivo recibido es nulo")
     void validate_WhenFileIsNull_ShouldThrowInvalidFileException() {
-        // Act & Assert
-        InvalidFileException exception = assertThrows(InvalidFileException.class, () -> validatorService.validate(null));
+        InvalidFileException exception = assertThrows(InvalidFileException.class, () ->
+                validatorService.validate(null)
+        );
         assertEquals("El archivo no puede estar vacío.", exception.getMessage());
     }
 
     @Test
+    @DisplayName("Debe lanzar InvalidFileException si el archivo está vacío")
     void validate_WhenFileIsEmpty_ShouldThrowInvalidFileException() {
-        // Arrange
-        MultipartFile file = Mockito.mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(true);
 
-        // Act & Assert
-        InvalidFileException exception = assertThrows(InvalidFileException.class, () -> validatorService.validate(file));
+        InvalidFileException exception = assertThrows(InvalidFileException.class, () ->
+                validatorService.validate(file)
+        );
         assertEquals("El archivo no puede estar vacío.", exception.getMessage());
     }
 
     @Test
+    @DisplayName("Debe lanzar InvalidFileException si el peso del archivo supera el límite de 50MB")
     void validate_WhenFileSizeExceedsLimit_ShouldThrowInvalidFileException() {
-        // Arrange
-        MultipartFile file = Mockito.mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getSize()).thenReturn(52_428_801L);
 
-        // Act & Assert
-        InvalidFileException exception = assertThrows(InvalidFileException.class, () -> validatorService.validate(file));
+        InvalidFileException exception = assertThrows(InvalidFileException.class, () ->
+                validatorService.validate(file)
+        );
         assertEquals("El archivo supera el límite máximo de 50 MB soportado por VERA.", exception.getMessage());
     }
 
     @Test
+    @DisplayName("Debe lanzar InvalidFileException si la extensión del archivo no está soportada")
     void validate_WhenUnsupportedExtension_ShouldThrowInvalidFileException() {
-        // Arrange
-        MultipartFile file = Mockito.mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
-        when(file.getSize()).thenReturn(1024L); // Tamaño válido
-        when(file.getOriginalFilename()).thenReturn("archivo.exe");
+        when(file.getSize()).thenReturn(1024L);
+        when(file.getOriginalFilename()).thenReturn("malware.exe");
 
-        // Act & Assert
-        InvalidFileException exception = assertThrows(InvalidFileException.class, () -> validatorService.validate(file));
+        InvalidFileException exception = assertThrows(InvalidFileException.class, () ->
+                validatorService.validate(file)
+        );
         assertEquals("El formato del archivo no está soportado por el motor de IA de VERA.", exception.getMessage());
     }
 
     @Test
+    @DisplayName("Debe ejecutar exitosamente si el archivo es un documento válido soportado")
     void validate_WhenValidDocument_ShouldPassSuccessfully() {
-        // Arrange
-        MultipartFile file = Mockito.mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getSize()).thenReturn(1024L);
         when(file.getOriginalFilename()).thenReturn("documento.pdf");
 
-        // Act & Assert
         assertDoesNotThrow(() -> validatorService.validate(file));
     }
 
     @Test
+    @DisplayName("Debe ejecutar exitosamente si el archivo es un elemento multimedia válido soportado")
     void validate_WhenValidMultimedia_ShouldPassSuccessfully() {
-        // Arrange
-        MultipartFile file = Mockito.mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getSize()).thenReturn(1024L);
         when(file.getOriginalFilename()).thenReturn("imagen.PNG");
 
-        // Act & Assert
         assertDoesNotThrow(() -> validatorService.validate(file));
     }
 
-    // ==========================================
-    // Tests para el método isDocument()
-    // ==========================================
-
     @Test
+    @DisplayName("Debe retornar false en isDocument si el nombre del archivo es nulo")
     void isDocument_WhenFilenameIsNull_ShouldReturnFalse() {
-        // Act
         boolean result = validatorService.isDocument(null);
-
-        // Assert
         assertFalse(result);
     }
 
     @Test
+    @DisplayName("Debe retornar true en isDocument si posee una extensión de documento válida")
     void isDocument_WhenValidExtension_ShouldReturnTrue() {
-        // Arrange
-        String filename = "reporte.docx";
-
-        // Act
-        boolean result = validatorService.isDocument(filename);
-
-        // Assert
+        boolean result = validatorService.isDocument("reporte.docx");
         assertTrue(result);
     }
 
     @Test
+    @DisplayName("Debe retornar false en isDocument si posee una extensión que no corresponde a documentos")
     void isDocument_WhenInvalidExtension_ShouldReturnFalse() {
-        // Arrange
-        String filename = "foto.jpg";
-
-        // Act
-        boolean result = validatorService.isDocument(filename);
-
-        // Assert
-        assertFalse(result);
-    }
-
-    // ==========================================
-    // Tests para el método isMultimedia()
-    // ==========================================
-
-    @Test
-    void isMultimedia_WhenFilenameIsNull_ShouldReturnFalse() {
-        // Act
-        boolean result = validatorService.isMultimedia(null);
-
-        // Assert
+        boolean result = validatorService.isDocument("foto.jpg");
         assertFalse(result);
     }
 
     @Test
-    void isMultimedia_WhenValidImageExtension_ShouldReturnTrue() {
-        // Arrange
-        String filename = "avatar.webp";
-
-        // Act
-        boolean result = validatorService.isMultimedia(filename);
-
-        // Assert
-        assertTrue(result);
-    }
-
-    @Test
-    void isMultimedia_WhenValidAudioExtension_ShouldReturnTrue() {
-        // Arrange
-        String filename = "cancion.mp3";
-
-        // Act
-        boolean result = validatorService.isMultimedia(filename);
-
-        // Assert
-        assertTrue(result);
-    }
-
-    @Test
-    void isMultimedia_WhenValidVideoExtension_ShouldReturnTrue() {
-        // Arrange
-        String filename = "video.mp4";
-
-        // Act
-        boolean result = validatorService.isMultimedia(filename);
-
-        // Assert
-        assertTrue(result);
-    }
-
-    @Test
-    void isMultimedia_WhenInvalidExtension_ShouldReturnFalse() {
-        // Arrange
-        String filename = "datos.xlsx";
-
-        // Act
-        boolean result = validatorService.isMultimedia(filename);
-
-        // Assert
-        assertFalse(result);
-    }
-
-    // ==========================================
-    // Tests para cubrir la lógica interna de getExtension()
-    // ==========================================
-
-    @Test
+    @DisplayName("Debe retornar false en isDocument si el archivo no posee ninguna extensión")
     void isDocument_WhenFilenameHasNoExtension_ShouldReturnFalse() {
-        // Arrange
-        String filename = "archivoSinExtension";
+        boolean result = validatorService.isDocument("archivoSinExtension");
+        assertFalse(result);
+    }
 
-        // Act
-        boolean result = validatorService.isDocument(filename);
+    @Test
+    @DisplayName("Debe retornar false en isMultimedia si el nombre del archivo es nulo")
+    void isMultimedia_WhenFilenameIsNull_ShouldReturnFalse() {
+        boolean result = validatorService.isMultimedia(null);
+        assertFalse(result);
+    }
 
-        // Assert
+    @Test
+    @DisplayName("Debe retornar true en isMultimedia si posee una extensión de imagen válida")
+    void isMultimedia_WhenValidImageExtension_ShouldReturnTrue() {
+        boolean result = validatorService.isMultimedia("avatar.webp");
+        assertTrue(result);
+    }
+
+    @Test
+    @DisplayName("Debe retornar true en isMultimedia si posee una extensión de audio válida")
+    void isMultimedia_WhenValidAudioExtension_ShouldReturnTrue() {
+        boolean result = validatorService.isMultimedia("cancion.mp3");
+        assertTrue(result);
+    }
+
+    @Test
+    @DisplayName("Debe retornar true en isMultimedia si posee una extensión de video válida")
+    void isMultimedia_WhenValidVideoExtension_ShouldReturnTrue() {
+        boolean result = validatorService.isMultimedia("video.mp4");
+        assertTrue(result);
+    }
+
+    @Test
+    @DisplayName("Debe retornar false en isMultimedia si posee una extensión que no corresponde a multimedia")
+    void isMultimedia_WhenInvalidExtension_ShouldReturnFalse() {
+        boolean result = validatorService.isMultimedia("datos.xlsx");
+        assertFalse(result);
+    }
+
+    @Test
+    @DisplayName("Debe retornar false en isMultimedia si el archivo no posee ninguna extensión")
+    void isMultimedia_WhenFilenameHasNoExtension_ShouldReturnFalse() {
+        boolean result = validatorService.isMultimedia("video_sin_formato");
         assertFalse(result);
     }
 }

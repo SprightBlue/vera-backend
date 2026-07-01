@@ -7,8 +7,10 @@ import com.unlam.verabackend.infrastructure.entity.ChatsEntity;
 import com.unlam.verabackend.infrastructure.mapper.ChatMessagesMapper;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -39,8 +41,14 @@ public class ChatMessageRepositoryAdapter implements ChatMessagesRepository {
 
     @Override
     public List<ChatMessages> findLastMessages(UUID chatId) {
-        return jpaChatMessageRepository.findByChatIdOrderByCreatedAtAsc(chatId)
-                .stream()
+        List<ChatMessagesEntity> entities = jpaChatMessageRepository.findLastMessages(
+                chatId,
+                PageRequest.of(0, 10)
+        );
+
+        Collections.reverse(entities);
+
+        return entities.stream()
                 .map(chatMessagesMapper::toDomain)
                 .collect(Collectors.toList());
     }
