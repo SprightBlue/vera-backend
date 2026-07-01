@@ -23,11 +23,10 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Make mvnw executable
-        run: chmod +x mvnw
-
       - name: Run Unit Tests
-        run: ./mvnw test
+        run: |
+          chmod +x mvnw
+          ./mvnw test
 
   build-and-push:
     name: Build Image and Push to GHCR
