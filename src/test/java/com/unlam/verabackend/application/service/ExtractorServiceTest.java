@@ -1,12 +1,16 @@
 package com.unlam.verabackend.application.service;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,250 +19,191 @@ import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class ExtractorServiceTest {
 
+    @Mock
+    private MultipartFile file;
+
+    @InjectMocks
     private ExtractorService extractorService;
 
-    @BeforeEach
-    void setUp() {
-        extractorService = new ExtractorService();
-    }
-
-    // ==========================================
-    // Tests para el método findUrls()
-    // ==========================================
-
     @Test
+    @DisplayName("Debe retornar una lista vacía si el texto provisto es nulo")
     void findUrls_WhenTextIsNull_ShouldReturnEmptyList() {
-        // Arrange
-
-        // Act
         List<String> result = extractorService.findUrls(null);
-
-        // Assert
         assertTrue(result.isEmpty());
     }
 
     @Test
+    @DisplayName("Debe retornar una lista vacía si el texto provisto no contiene caracteres")
     void findUrls_WhenTextIsEmpty_ShouldReturnEmptyList() {
-        // Arrange
-        String text = "";
-
-        // Act
-        List<String> result = extractorService.findUrls(text);
-
-        // Assert
+        List<String> result = extractorService.findUrls("");
         assertTrue(result.isEmpty());
     }
 
     @Test
+    @DisplayName("Debe capturar y listar correctamente todas las URLs presentes en el texto")
     void findUrls_WhenTextContainsUrls_ShouldReturnListWithUrls() {
-        // Arrange
         String text = "Visitá https://www.google.com o http://unlam.edu.ar para más info.";
 
-        // Act
         List<String> result = extractorService.findUrls(text);
 
-        // Assert
         assertEquals(2, result.size());
         assertEquals("https://www.google.com", result.get(0));
         assertEquals("http://unlam.edu.ar", result.get(1));
     }
 
-    // ==========================================
-    // Tests para Cláusulas de Guarda Iniciales
-    // ==========================================
-
     @Test
+    @DisplayName("Debe retornar un String vacío si el archivo es nulo")
     void convertDocumentToText_WhenFileIsNull_ShouldReturnEmptyString() {
-        // Arrange
-
-        // Act
         String result = extractorService.convertDocumentToText(null);
-
-        // Assert
         assertEquals("", result);
     }
 
     @Test
+    @DisplayName("Debe retornar un String vacío si el archivo multipart está vacío")
     void convertDocumentToText_WhenFileIsEmpty_ShouldReturnEmptyString() {
-        // Arrange
-        MultipartFile file = Mockito.mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(true);
 
-        // Act
         String result = extractorService.convertDocumentToText(file);
 
-        // Assert
         assertEquals("", result);
     }
 
     @Test
+    @DisplayName("Debe retornar un String vacío si el nombre original del archivo es nulo")
     void convertDocumentToText_WhenFilenameIsNull_ShouldReturnEmptyString() {
-        // Arrange
-        MultipartFile file = Mockito.mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn(null);
 
-        // Act
         String result = extractorService.convertDocumentToText(file);
 
-        // Assert
         assertEquals("", result);
     }
 
     @Test
+    @DisplayName("Debe retornar un String vacío si el nombre del archivo carece de extensión")
     void convertDocumentToText_WhenFilenameHasNoExtension_ShouldReturnEmptyString() {
-        // Arrange
-        MultipartFile file = Mockito.mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("archivoSinExtension");
 
-        // Act
         String result = extractorService.convertDocumentToText(file);
 
-        // Assert
         assertEquals("", result);
     }
 
     @Test
+    @DisplayName("Debe retornar un String vacío al procesar una extensión no soportada por el switch")
     void convertDocumentToText_WhenExtensionNotSupported_ShouldReturnEmptyString() {
-        // Arrange
-        MockMultipartFile file = new MockMultipartFile(
+        MockMultipartFile unsupportedFile = new MockMultipartFile(
                 "file", "documento.exe", "application/octet-stream", "bytes".getBytes()
         );
 
-        // Act
-        String result = extractorService.convertDocumentToText(file);
+        String result = extractorService.convertDocumentToText(unsupportedFile);
 
-        // Assert
         assertEquals("", result);
     }
 
-    // ==========================================
-    // Caminos Felices: Cubriendo el Switch Línea por Línea
-    // ==========================================
-
     @Test
+    @DisplayName("Debe extraer el texto literal cuando se procesa un archivo TXT")
     void convertDocumentToText_WhenTxtFile_ShouldReturnTextContent() {
-        // Arrange
         String content = "Línea 1\nLínea 2";
-        MockMultipartFile file = new MockMultipartFile(
+        MockMultipartFile txtFile = new MockMultipartFile(
                 "file", "test.txt", "text/plain", content.getBytes()
         );
 
-        // Act
-        String result = extractorService.convertDocumentToText(file);
+        String result = extractorService.convertDocumentToText(txtFile);
 
-        // Assert
         assertEquals(content, result);
     }
 
     @Test
+    @DisplayName("Debe interpretar y extraer el contenido legible de un archivo RTF")
     void convertDocumentToText_WhenRtfFile_ShouldExtractText() {
-        // Arrange
         String rtfContent = "{\\rtf1\\ansi\\deff0 Hola Mundo RTF}";
-        MockMultipartFile file = new MockMultipartFile(
+        MockMultipartFile rtfFile = new MockMultipartFile(
                 "file", "test.rtf", "application/rtf", rtfContent.getBytes()
         );
 
-        // Act
-        String result = extractorService.convertDocumentToText(file);
+        String result = extractorService.convertDocumentToText(rtfFile);
 
-        // Assert
         assertNotNull(result);
         assertTrue(result.contains("Hola Mundo RTF"));
     }
 
     @Test
+    @DisplayName("Debe inicializar la API de PDFBox y extraer el texto de un PDF válido")
     void convertDocumentToText_WhenPdfFile_ShouldCoverAllInternalLines() throws IOException {
-        // Arrange
         byte[] pdfBytes = generateValidPdfBytes();
-        MockMultipartFile file = new MockMultipartFile(
+        MockMultipartFile pdfFile = new MockMultipartFile(
                 "file", "test.pdf", "application/pdf", pdfBytes
         );
 
-        // Act
-        String result = extractorService.convertDocumentToText(file);
+        String result = extractorService.convertDocumentToText(pdfFile);
 
-        // Assert
         assertNotNull(result);
     }
 
     @Test
+    @DisplayName("Debe inicializar Apache POI y extraer el contenido de un archivo DOCX de Word")
     void convertDocumentToText_WhenDocxFile_ShouldCoverAllInternalLines() throws IOException {
-        // Arrange
         byte[] docxBytes = generateValidDocxBytes();
-        MockMultipartFile file = new MockMultipartFile(
+        MockMultipartFile docxFile = new MockMultipartFile(
                 "file", "test.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxBytes
         );
 
-        // Act
-        String result = extractorService.convertDocumentToText(file);
+        String result = extractorService.convertDocumentToText(docxFile);
 
-        // Assert
         assertNotNull(result);
     }
 
     @Test
+    @DisplayName("Debe procesar e indexar las celdas de un archivo XLSX de Excel")
     void convertDocumentToText_WhenXlsxFile_ShouldCoverAllInternalLines() throws IOException {
-        // Arrange
         byte[] xlsxBytes = generateValidXlsxBytes();
-        MockMultipartFile file = new MockMultipartFile(
+        MockMultipartFile xlsxFile = new MockMultipartFile(
                 "file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsxBytes
         );
 
-        // Act
-        String result = extractorService.convertDocumentToText(file);
+        String result = extractorService.convertDocumentToText(xlsxFile);
 
-        // Assert
         assertNotNull(result);
     }
 
     @Test
+    @DisplayName("Debe procesar las diapositivas de una presentación PPTX de PowerPoint")
     void convertDocumentToText_WhenPptxFile_ShouldCoverAllInternalLines() throws IOException {
-        // Arrange
         byte[] pptxBytes = generateValidPptxBytes();
-        MockMultipartFile file = new MockMultipartFile(
+        MockMultipartFile pptxFile = new MockMultipartFile(
                 "file", "test.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation", pptxBytes
         );
 
-        // Act
-        String result = extractorService.convertDocumentToText(file);
+        String result = extractorService.convertDocumentToText(pptxFile);
 
-        // Assert
         assertNotNull(result);
     }
 
-    // ==========================================
-    // Cobertura del bloque Catch General
-    // ==========================================
-
     @Test
-    void convertDocumentToText_WhenInputStreamThrowsException_ShouldThrowRuntimeException() throws IOException {
-        // Arrange
-        MultipartFile file = Mockito.mock(MultipartFile.class);
+    @DisplayName("Debe lanzar IllegalStateException cuando falle la apertura del stream de datos")
+    void convertDocumentToText_WhenInputStreamThrowsException_ShouldThrowIllegalStateException() throws IOException {
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("test.txt");
         when(file.getInputStream()).thenThrow(new IOException("Stream caído"));
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> extractorService.convertDocumentToText(file));
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+                extractorService.convertDocumentToText(file)
+        );
 
-        assertTrue(exception.getMessage().contains("Error en la lectura del documento para la extracción de URLs: test.txt"));
+        assertTrue(exception.getMessage().contains("Error en la lectura del documento para la extracción de texto: test.txt"));
     }
-
-    // ==========================================
-    // Métodos Helper para generar Binarios Estructurados Válidos
-    // ==========================================
 
     private byte[] generateValidPdfBytes() throws IOException {
         try (PDDocument document = new PDDocument();
              ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            // Un documento de PDFBox necesita al menos una página interna para ser procesable sin excepciones
-            document.addPage(new org.apache.pdfbox.pdmodel.PDPage());
+            document.addPage(new PDPage());
             document.save(bos);
             return bos.toByteArray();
         }

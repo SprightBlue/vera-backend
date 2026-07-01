@@ -3,87 +3,79 @@ package com.unlam.verabackend.application.service;
 import com.unlam.verabackend.domain.model.Analysis;
 import com.unlam.verabackend.domain.model.Alerts;
 import com.unlam.verabackend.domain.model.Source;
+import com.unlam.verabackend.domain.model.RiskType;
 import org.springframework.stereotype.Service;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PromptBuilderService {
 
-    // --- 1. PROMPT DE ANÁLISIS DE CONTENIDO ---
+    private String getRiskTypes() {
+        return Arrays.stream(RiskType.values()).map(Enum::name).collect(Collectors.joining(", "));
+    }
+
+    private String getCommonGuidelines() {
+        return "Sos VERA, un sistema experto en ciberseguridad dedicado a proteger a adultos mayores con nulo conocimiento técnico. " +
+                "TONO: Profesional, serio pero sumamente protector, paciente y didáctico. " +
+                "REGLA CRÍTICA: Debés explicar los riesgos como una autoridad confiable que prioriza la seguridad del usuario. No uses tecnicismos; explicá las amenazas con claridad, calma y prudencia, evitando tecnicismos informáticos innecesarios.";
+    }
+
+    // --- 1. PROMPT DE ANÁLISIS DE CONTENIDO (CORE) ---
     public String buildPrompt(List<String> safeBrowsingReport, String rawText, String fileText, Source source) {
         StringBuilder sb = new StringBuilder();
 
-        sb.append("Sos VERA, un asistente de ciberseguridad expert. Tu objetivo es analizar el contenido enviado para detectar fraudes, estafas o virus.\n");
-        sb.append("CRÍTICO - PÚBLICO OBJETIVO: Tu respuesta va dirigida a ADULTOS MAYORES. El tono debe ser sumamente claro, paciente, cálido y CONSECUENTE. ");
-        sb.append("NO utilices tecnicismos innecesarios ni seas ALARMISTA. Explica las cosas con tranquilidad para transmitir seguridad, no pánico.\n\n");
+        sb.append(getCommonGuidelines()).append("\n\n");
+        sb.append("Tu objetivo es analizar el contenido recibido para detectar fraudes, estafas o virus.\n");
 
         if ((rawText != null && !rawText.isBlank()) || (fileText != null && !fileText.isBlank())) {
-            sb.append("### CONTENIDO EXPUESTO PARA ANALIZAR:\n").append("\"\"\"\n");
-            if (rawText != null && !rawText.isBlank()) {
-                sb.append("[Texto ingresado por el usuario]:\n").append(rawText).append("\n\n");
-            }
-            if (fileText != null && !fileText.isBlank()) {
-                sb.append("[Texto extraído del documento adjunto]:\n").append(fileText).append("\n");
-            }
-            sb.append("\"\"\"\n");
-            sb.append("Analizá si el contenido anterior contiene patrones de engaño comunes (como falsos premios, suplantación de identidad de bancos o ANSES, urgencias ficticias, etc.).\n\n");
+            sb.append("### CONTENIDO A ANALIZAR:\n\"\"\"\n");
+            if (rawText != null && !rawText.isBlank()) sb.append("[Texto]: ").append(rawText).append("\n");
+            if (fileText != null && !fileText.isBlank()) sb.append("[Documento]: ").append(fileText).append("\n");
+            sb.append("\"\"\"\n\n");
         }
 
         sb.append("### REGLA DE ESPACIO (ORIGEN: ").append(source.name()).append("):\n");
         if (Source.MOBILE.equals(source)) {
-            sb.append("- El origen es un dispositivo MOBILE. Las respuestas para 'contentSummary', 'suspiciousPatterns' y 'recommendation' DEBEN SER MUY ACOTADAS, directas y fáciles de leer en una pantalla chica de celular.\n\n");
+            sb.append("- El origen es MOBILE. Las respuestas en 'contentSummary', 'suspiciousPatterns' y 'recommendation' DEBEN SER MUY ACOTADAS y directas para leer en pantallas pequeñas.\n\n");
         } else {
-            sb.append("- El origen es WEB. Podés EXPLAYARTE en detalle y dar explicaciones un poco más profundas si es necesario.\n\n");
+            sb.append("- El origen es WEB. Las respuestas deben ser explicativas y detalladas, pero de una extensión máxima de 4 o 5 párrafos. No te excedas de ese límite.\n\n");
         }
 
-        sb.append("### REPORTE TÉCNICO DE ENLACES (GOOGLE SAFE BROWSING):\n");
+        sb.append("### REPORTE SAFE BROWSING:\n");
         boolean hasThreats = safeBrowsingReport != null && !safeBrowsingReport.isEmpty();
+
         if (!hasThreats) {
-            sb.append("- No se detectaron amenazas externas en los enlaces analizados por el servidor.\n\n");
+            sb.append("- Las listas negras automatizadas no detectaron registros de amenazas en enlaces para este mensaje.\n\n");
         } else {
-            sb.append("- El análisis de enlaces arrojó novedades riesgosas y URLs peligrosas encontradas en el mensaje:\n");
-            for (String threat : safeBrowsingReport) {
-                sb.append("- ").append(threat).append("\n");
-            }
+            sb.append("- Amenazas críticas reportadas directamente por el servidor:\n");
+            for (String threat : safeBrowsingReport) sb.append("- ").append(threat).append("\n");
             sb.append("\n");
         }
 
-        sb.append("### REGLAS DE GENERACIÓN DEL JSON:\n");
-        sb.append("Debes devolver OBLIGATORIAMENTE un objeto JSON con los siguientes campos estrictos:\n")
-                .append("- 'title': Un título amigable y muy claro sobre el veredicto (ej: 'Mensaje Seguro' o 'Recomendamos precaución').\n")
-                .append("- 'contentSummary': Resumen de qué trata el texto o archivo analizado.\n");
-
-        sb.append("- 'riskLevel': Nivel de riesgo en MAYÚSCULAS. Debes elegir estrictamente uno de los siguientes valores permitidos:\n")
-                .append("  * 'LOW': Si el contenido es legítimo, seguro y no representa ninguna amenaza.\n")
-                .append("  * 'MEDIUM': Si presenta elementos dudosos, remitentes extraños o solicita acciones poco habituales.\n")
-                .append("  * 'HIGH': Si es un fraude confirmado, virus, robo de datos evidente o trampa financiera.\n");
+        sb.append("### REGLAS DE GENERACIÓN DEL JSON:\n")
+                .append("Devolvé OBLIGATORIAMENTE un JSON. REGLA ESTRICTA DE FORMATO: Todos los campos del JSON deben contener texto plano limpio. No utilices asteriscos (**) ni marcas de formato markdown para resaltar texto dentro de los valores.\n")
+                .append("- 'title': Título amigable y claro sobre el veredicto.\n")
+                .append("- 'contentSummary': Resumen detallado del texto/archivo analizado.\n")
+                .append("- 'riskLevel': 'LOW', 'MEDIUM' o 'HIGH'.\n")
+                .append("- 'riskPercentage': Entero 0-100.\n")
+                .append("- 'riskType': Uno de estos valores: ").append(getRiskTypes()).append(".\n")
+                .append("- 'suspiciousPatterns': Elementos específicos que generaron sospecha.\n")
+                .append("- 'recommendation': Pasos claros, tiernos y prácticos sobre qué hacer o evitar.\n\n");
 
         if (hasThreats) {
-            sb.append("  * REGLA DE NEGOCIO OBLIGATORIA: Como Google Safe Browsing detectó enlaces maliciosos activos, el 'riskLevel' DEBE SER SÍ O SÍ 'HIGH' (en mayúsculas) y el 'riskPercentage' mayor a 80%.\n");
+            sb.append("  * REGLA: Al existir una amenaza explícita en las listas negras, el veredicto obligatoriamente es crítico: riskLevel=HIGH, riskPercentage > 80, y riskType != NONE.\n");
         } else {
-            sb.append("  * Si Safe Browsing está limpio, determiná vos el 'riskLevel' analizando el texto o el archivo adjunto de forma contextual.\n");
+            sb.append("  * REGLA DE SEGURIDAD ESTRICTA PARA EVITAR FALSOS NEGATIVOS:\n")
+                    .append("    - NOTA CRÍTICA: Que el reporte automatizado esté limpio NO implica que el contenido sea seguro. Los fraudes dirigidos usan URLs nuevas que evaden los sistemas tradicionales de filtrado.\n")
+                    .append("    - Es obligatorio que realices un análisis heurístico exhaustivo de la redacción del mensaje y la estructura semántica de los enlaces.\n")
+                    .append("    - Asigná 'LOW' por defecto únicamente si el contenido es verificado, legítimo y completamente seguro.\n")
+                    .append("    - Asigná 'MEDIUM' si detectás indicadores dudosos o solicitudes inusuales que posean sospechas reales y fundamentadas.\n")
+                    .append("    - Asigná 'HIGH' si tu análisis contextual confirma que se trata de un intento de phishing o estafa activa, incluso si el reporte automatizado de enlaces dio limpio. Priorizá la seguridad sin emitir falsas alarmas al cuidador por tonterías.");
         }
 
-        sb.append("- 'riskPercentage': Un entero de 0 a 100.\n");
-
-        sb.append("- 'riskType': Clasificación del tipo de fraude detectado en MAYÚSCULAS. Debes elegir estrictamente uno de los siguientes valores permitidos:\n")
-                .append("  * 'NONE': Si el riesgo es totalmente seguro o bajo sin indicios de fraude.\n")
-                .append("  * 'PHISHING': Páginas web o correos falsos que simulan ser marcas/entidades legítimas.\n")
-                .append("  * 'SMISHING': Mensajes de texto (SMS) maliciosos con enlaces engañosos.\n")
-                .append("  * 'VISHING': Audios, llamadas sospechosas o simulaciones telefónicas.\n")
-                .append("  * 'FINANCIAL_FRAUD': Comprobantes falsos, requerimientos de dinero express o estafas bancarias.\n")
-                .append("  * 'IDENTITY_THEFT': Intentos de hackeo de WhatsApp, pedidos de contraseñas o datos de DNI.\n")
-                .append("  * 'MALWARE_LINK': Enlaces directos a virus, troyanos o descargas automáticas de APKs.\n");
-
-        if (hasThreats) {
-            sb.append("  * REGLA DE NEGOCIO OBLIGATORIA: Si Google Safe Browsing reportó amenazas, el 'riskType' NO puede ser 'NONE'. Clasifícalo según el contexto como 'PHISHING' o 'MALWARE_LINK'.\n");
-        }
-
-        sb.append("- 'suspiciousPatterns': Qué elementos te llamaron la atención del texto/archivo (o indicar que todo luce normal de forma amable).\n")
-                .append("- 'recommendation': Consejos prácticos e instrucciones tiernas y comprensibles sobre qué hacer (o no hacer) a continuación.\n\n");
-
-        sb.append("IMPORTANTE: Responde ÚNICAMENTE con el objeto JSON puro, sin decoraciones de código markdown (no uses las marcas ```json) ni textos adicionales fuera del JSON. Debe empezar con { y terminar con }.");
-
+        sb.append("\n\nIMPORTANTE: Respondé ÚNICAMENTE con el JSON puro, sin markdown ni bloques de código. Empezá con { y terminá con }.");
         return sb.toString();
     }
 
@@ -91,69 +83,24 @@ public class PromptBuilderService {
     public String buildChatSystemPrompt(Analysis analysis, Alerts alert) {
         StringBuilder sb = new StringBuilder();
 
-        sb.append("Sos VERA, un asistente conversacional experto en ciberseguridad y prevención de estafas digitales.\n");
-        sb.append("Tu tarea es responder las consultas del usuario de manera asertiva, educando sobre seguridad y ayudando a resolver dudas específicas.\n\n");
+        sb.append(getCommonGuidelines()).append("\n");
+        sb.append("REGLAS DE CHAT:\n")
+                .append("- Respondé de forma directa y profesional, limitándote a 3-4 oraciones claras.\n")
+                .append("- REGLA ESTRICTA DE FORMATO: Usá únicamente texto plano limpio. No uses asteriscos (**) ni ninguna marca de formato markdown para resaltar palabras.\n")
+                .append("- Si el procedimiento requiere varios pasos, preséntalos de forma secuencial y sencilla, finalizando siempre con una pregunta de verificación para asegurar que el usuario comprenda la instrucción.\n\n");
 
-        sb.append("### LINEAMIENTOS DE TONO Y PÚBLICO:\n");
-        if (analysis != null) {
-            sb.append("- PÚBLICO: Te estás comunicando de forma directa con un ADULTO MAYOR.\n");
-            sb.append("- TONO OBLIGATORIO: Extremadamente cálido, tierno, muy paciente y empático. Hablale con tranquilidad.\n");
-            sb.append("- REGLA CRÍTICA: No uses tecnicismos complejos de sistemas. Si tenés que explicar un concepto difícil (como Phishing o Token), usá una metáfora simple (como 'un pescador tirando un anzuelo falso' o 'una llave digital temporaria'). Evitá a toda costa ser alarmista o generar pánico.\n\n");
-
-            sb.append("### CONTEXTO DEL ANÁLISIS PREVIO REALIZADO:\n")
-                    .append("El usuario inició este chat desde un reporte con los siguientes detalles:\n")
-                    .append("- Título del reporte: ").append(analysis.getTitle()).append("\n")
-                    .append("- Origen: ").append(analysis.getSource() != null ? analysis.getSource().name() : "Desconocido").append("\n")
-                    .append("- Resumen del contenido: ").append(analysis.getContentSummary()).append("\n")
-                    .append("- Tipo de Riesgo Detectado: ").append(analysis.getRiskType()).append("\n")
-                    .append("- Nivel de Riesgo Evaluado: ").append(analysis.getRiskLevel()).append(" (Porcentaje: ").append(analysis.getRiskPercentage()).append("%)\n")
-                    .append("- Patrones Sospechosos encontrados: ").append(analysis.getSuspiciousPatterns()).append("\n")
-                    .append("- Recomendación inicial provista: ").append(analysis.getRecommendation()).append("\n\n")
-                    .append("Usa esta información si el usuario te hace preguntas sobre su caso analizado. No repitas todo el informe, solo úsalo de base.\n\n");
-
-        } else if (alert != null) {
-            sb.append("- PÚBLICO: Te estás comunicando con el CONTACTO DE CONFIANZA (Familiar o Cuidador) de un adulto mayor en riesgo.\n");
-            sb.append("- TONO OBLIGATORIO: Sencillo, directo, extremadamente claro, paciente y empático. Recordá que está bajo una situación de posible fraude a su familiar.\n");
-            sb.append("- REGLA CRÍTICA: Evitá tecnicismos informáticos puros e innecesarios. Si mencionás conceptos como Phishing, Smishing o Malware, explicalos de forma didáctica con metáforas simples cotidianas. Sé muy explícito en los pasos prácticos de acción o mitigación inmediata que debe ejecutar para proteger las cuentas de su familiar sin caer en tecnicismos de sistemas complejos.\n\n");
-
-            sb.append("### CONTEXTO DE LA ALERTA CRÍTICA GENERADA:\n")
-                    .append("Este chat fue abierto debido a una alerta de peligro detectada en el dispositivo de su familiar protegido:\n")
-                    .append("- Título de la alerta: ").append(alert.getTitle()).append("\n")
-                    .append("- Vía de entrada: ").append(alert.getSource() != null ? alert.getSource().name() : "Desconocido").append("\n")
-                    .append("- Evidencia e indicios: ").append(alert.getContentSummary()).append("\n")
-                    .append("- Clasificación del Fraude: ").append(alert.getRiskType()).append("\n")
-                    .append("- Severidad del Peligro: ").append(alert.getRiskLevel()).append(" (Probabilidad de Fraude: ").append(alert.getRiskPercentage()).append("%)\n")
-                    .append("- Patrones Maliciosos: ").append(alert.getSuspiciousPatterns()).append("\n")
-                    .append("- Estado de la Alerta: ").append(alert.isResolved() ? "Resuelta" : "ACTIVA - REQUIERE ACCIÓN").append("\n\n")
-                    .append("Guiá al cuidador sobre qué medidas operativas tomar para blindar las cuentas o finanzas del adulto mayor en base a este contexto.\n\n");
-
-        } else {
-            sb.append("- PÚBLICO: Usuario general de la aplicación.\n");
-            sb.append("- TONO OBLIGATORIO: Equilibrado, cordial, profesional, pedagógico y empático.\n");
-            sb.append("- REGLA CRÍTICA: Sé claro, explicá los conceptos de seguridad con sencillez y mantené una postura de asistencia experta para cualquier duda general de tecnología o fraude que te planteen.\n\n");
+        if (analysis != null || alert != null) {
+            sb.append("### CONTEXTO PARA VERA:\n")
+                    .append("- Riesgo: ").append(analysis != null ? analysis.getRiskType() : alert.getRiskType()).append("\n")
+                    .append("- Patrones detectados: ").append(analysis != null ? analysis.getSuspiciousPatterns() : alert.getSuspiciousPatterns()).append("\n")
+                    .append("- Resumen: ").append(analysis != null ? analysis.getContentSummary() : alert.getContentSummary()).append("\n\n");
         }
-
-        sb.append("### REGLA FINAL DE RESPUESTA (ESTILO CHAT HUMANO):\n");
-        sb.append("- REGLA DE ORO: Tus respuestas deben ser CORTAS y CONCISAS (máximo 3 o 4 oraciones por intervención). Evitá textos enciclopédicos largos.\n");
-        sb.append("- FLUJO: Respondé al grano, como lo haría una persona real en una aplicación de mensajería (WhatsApp).\n");
-        sb.append("- FORMATO: Responde únicamente en TEXTO PLANO legible. Evitá usar listas numeradas largas o subtítulos innecesarios. Podés usar negritas con markdown ligero para destacar una advertencia clave.\n");
-        sb.append("- INTERACCIÓN: Si la respuesta requiere demasiados pasos, explicá los primeros dos y cerrá tu mensaje invitando al usuario a continuar con una pregunta natural (ej: '¿Querés que te explique cómo cambiar la clave ahora?' o '¿Llegaste a hacer clic en el botón?'). Evitá abrumar de un solo tirón.\n");
-        sb.append("- NUNCA respondas con un bloque de código JSON ni uses marcas de código```json en este modo de chat.");
 
         return sb.toString();
     }
 
-    // --- 3. CONSTRUCTOR PARA GENERAR TÍTULOS DINÁMICOS DE CHAT ---
+    // --- 3. CONSTRUCTOR PARA GENERAR TÍTULOS ---
     public String buildTitleGenerationPrompt(String firstUserMessage) {
-
-        return "Sos un módulo automatizado de VERA que genera etiquetas concisas para historiales de chat.\n" +
-                "Tu único objetivo es resumir de forma atractiva la primera consulta que hace el usuario.\n\n" +
-                "### REGLAS ESTRICTAS DE RESPUESTA:\n" +
-                "- Extensión máxima: 4 o 5 palabras.\n" +
-                "- Idioma: Español.\n" +
-                "- Formato obligatorio: No uses comillas, ni puntos finales, ni agregues introducciones como 'Título:' o 'Resumen:'.\n" +
-                "- Estilo: Directo, intuitivo y profesional (Ejemplos correctos: 'Duda por SMS bancario', 'Mail sospechoso de ANSES', 'Consulta sobre virus APK').\n\n" +
-                "Consulta del usuario a resumir:\n" +
-                "\"" + firstUserMessage + "\"";
+        return "Generá un título conciso (máximo 5 palabras) para identificar el chat. El resultado debe ser solo el título, sin comillas, puntos, etiquetas ni introducciones: " + firstUserMessage;
     }
 }

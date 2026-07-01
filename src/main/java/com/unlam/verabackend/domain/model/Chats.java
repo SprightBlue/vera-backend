@@ -19,7 +19,6 @@ public class Chats {
     private Analysis analysis;
     private Alerts alert;
     private String title;
-    private boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

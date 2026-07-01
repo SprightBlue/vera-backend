@@ -1,7 +1,6 @@
 package com.unlam.verabackend.infrastructure.mapper;
 
 import com.unlam.verabackend.domain.model.ChatMessages;
-import com.unlam.verabackend.domain.model.ChatsRole;
 import com.unlam.verabackend.infrastructure.entity.ChatsEntity;
 import com.unlam.verabackend.infrastructure.entity.ChatMessagesEntity;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +18,7 @@ public class ChatMessagesMapper {
         return ChatMessagesEntity.builder()
                 .id(domain.getId())
                 .chat(chatEntity)
-                .role(domain.getRole() != null ? domain.getRole().name() : null)
+                .role(domain.getRole() != null ? domain.getRole() : null)
                 .content(domain.getContent())
                 .createdAt(domain.getCreatedAt())
                 .build();
@@ -31,7 +30,7 @@ public class ChatMessagesMapper {
         return ChatMessages.builder()
                 .id(entity.getId())
                 .chat(chatMapper.toDomain(entity.getChat()))
-                .role(entity.getRole() != null ? ChatsRole.valueOf(entity.getRole()) : null)
+                .role(entity.getRole() != null ? entity.getRole() : null)
                 .content(entity.getContent())
                 .createdAt(entity.getCreatedAt())
                 .build();

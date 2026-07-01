@@ -2,6 +2,7 @@ package com.unlam.verabackend.presentation.handler;
 
 import com.unlam.verabackend.domain.exception.InvalidFileException;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -60,5 +61,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
         log.error("Error de regla de negocio en tiempo de ejecución: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(CallNotPermittedException.class)
+    public ResponseEntity<String> handleCircuitBreakerOpen() {
+        log.error("Circuit Breaker abierto: Gemini está sobrecargado.");
+        String message = "El servicio está temporalmente sobrecargado. Por favor, inténtelo de nuevo más tarde.";
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(message);
     }
 }

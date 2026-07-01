@@ -7,11 +7,13 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static java.time.temporal.ChronoUnit.DAYS;
+
 @Data
 @Builder
 public class AnalysisDetailResponse {
     private UUID id;
-    private LocalDateTime createdAt;
+    private String createdAt;
     private String title;
     private String source;
     private String contentSummary;
@@ -26,15 +28,22 @@ public class AnalysisDetailResponse {
 
         return AnalysisDetailResponse.builder()
                 .id(domain.getId())
-                .createdAt(domain.getCreatedAt())
+                .createdAt(formatDate(domain.getCreatedAt()))
                 .title(domain.getTitle())
                 .source(domain.getSource() != null ? domain.getSource().name() : null)
                 .contentSummary(domain.getContentSummary())
-                .riskType(domain.getRiskType() != null ? domain.getRiskType().name() : null)
+                .riskType(domain.getRiskType() != null ? domain.getRiskType().getSpanish() : null)
                 .riskLevel(domain.getRiskLevel() != null ? domain.getRiskLevel().name() : null)
                 .riskPercentage(domain.getRiskPercentage())
                 .suspiciousPatterns(domain.getSuspiciousPatterns())
                 .recommendation(domain.getRecommendation())
                 .build();
+    }
+
+    private static String formatDate(LocalDateTime date) {
+        long days = DAYS.between(date, LocalDateTime.now());
+        if (days == 0) return "Hoy";
+        if (days == 1) return "Hace 1 día";
+        return "Hace " + days + " días";
     }
 }

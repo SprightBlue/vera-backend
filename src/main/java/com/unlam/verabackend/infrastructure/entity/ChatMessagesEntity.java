@@ -1,5 +1,6 @@
 package com.unlam.verabackend.infrastructure.entity;
 
+import com.unlam.verabackend.domain.model.ChatsRole;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -24,8 +25,9 @@ public class ChatMessagesEntity {
     @JoinColumn(name = "chat_id", nullable = false)
     private ChatsEntity chat;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String role;
+    private ChatsRole role;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
