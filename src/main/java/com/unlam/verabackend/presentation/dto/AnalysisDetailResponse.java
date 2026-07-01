@@ -4,10 +4,7 @@ import com.unlam.verabackend.domain.model.Analysis;
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
-
-import static java.time.temporal.ChronoUnit.DAYS;
 
 @Data
 @Builder
@@ -28,7 +25,7 @@ public class AnalysisDetailResponse {
 
         return AnalysisDetailResponse.builder()
                 .id(domain.getId())
-                .createdAt(formatDate(domain.getCreatedAt()))
+                .createdAt(DateFormatter.formatRelativeDate(domain.getCreatedAt()))
                 .title(domain.getTitle())
                 .source(domain.getSource() != null ? domain.getSource().name() : null)
                 .contentSummary(domain.getContentSummary())
@@ -38,12 +35,5 @@ public class AnalysisDetailResponse {
                 .suspiciousPatterns(domain.getSuspiciousPatterns())
                 .recommendation(domain.getRecommendation())
                 .build();
-    }
-
-    private static String formatDate(LocalDateTime date) {
-        long days = DAYS.between(date, LocalDateTime.now());
-        if (days == 0) return "Hoy";
-        if (days == 1) return "Hace 1 día";
-        return "Hace " + days + " días";
     }
 }
