@@ -14,7 +14,6 @@ public class AnalysisMapper {
         return AnalysisEntity.builder()
                 .id(domain.getId())
                 .user(userEntity)
-                .createdAt(domain.getCreatedAt())
                 .title(domain.getTitle())
                 .source(domain.getSource())
                 .contentSummary(domain.getContentSummary())

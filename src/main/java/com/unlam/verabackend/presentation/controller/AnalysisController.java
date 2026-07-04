@@ -11,9 +11,6 @@ import com.unlam.verabackend.presentation.dto.AnalysisResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -38,37 +35,34 @@ public class AnalysisController {
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "source") String source
     ) {
-        log.info("Iniciando análisis solicitado por usuario: {}", user.getEmail());
+        log.info("Iniciando nuevo proceso de análisis. Solicitante: {} | Origen: {}", user.getEmail(), source);
         validateRequest(text, file);
 
         var result = analyzeContentUseCase.execute(user.getEmail(), text, file, source);
 
-        log.info("Análisis completado exitosamente para el usuario: {}", user.getEmail());
+        log.info("Proceso de análisis finalizado para el usuario: {}", user.getEmail());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(AnalysisDetailResponse.fromDomain(result));
     }
 
     private void validateRequest(String text, MultipartFile file) {
         if ((text == null || text.isBlank()) && (file == null || file.isEmpty())) {
-            log.warn("Intento de análisis fallido: ni texto ni archivo proporcionados.");
+            log.warn("Solicitud de análisis rechazada: cuerpo de mensaje y adjuntos vacíos.");
             throw new IllegalArgumentException("Debe proporcionar al menos un texto o un archivo para analizar.");
         }
     }
 
     @GetMapping
-    public ResponseEntity<PagedResponse<AnalysisResponse>> getHistoryByUserEmail(
+    public ResponseEntity<PagedResponse<AnalysisResponse>> getAnalysisHistory(
             @AuthenticationPrincipal User user,
-            @RequestParam(value = "riskLevel", required = false) String riskLevel,
-            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @RequestParam(value = "riskLevel", required = false) RiskLevel riskLevel,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "page", defaultValue = "0") int page
     ) {
-        String email = user.getEmail();
-
-        Page<Analysis> historyPage;
-        if (riskLevel != null && !riskLevel.isBlank()) {
-            historyPage = manageAnalysisUseCase.getHistoryByUserEmailAndRiskLevel(email, RiskLevel.valueOf(riskLevel.toUpperCase().strip()), pageable);
-        } else {
-            historyPage = manageAnalysisUseCase.getHistoryByUserEmail(email, pageable);
-        }
+        log.info("Petición HTTP GET recibida para historial de análisis de: {}", user.getEmail());
+        Page<Analysis> historyPage = manageAnalysisUseCase.getAnalysisHistory(
+                user.getEmail(), riskLevel, search, page
+        );
 
         PagedResponse<AnalysisResponse> response = PagedResponse.fromPage(
                 historyPage,
@@ -83,9 +77,8 @@ public class AnalysisController {
             @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
-        String email = user.getEmail();
-
-        Analysis analysis = manageAnalysisUseCase.getAnalysisDetail(id, email);
+        log.info("Petición HTTP GET detalle del análisis ID: {} por usuario: {}", id, user.getEmail());
+        Analysis analysis = manageAnalysisUseCase.getAnalysisDetail(id, user.getEmail());
         return ResponseEntity.ok(AnalysisDetailResponse.fromDomain(analysis));
     }
 
@@ -94,9 +87,8 @@ public class AnalysisController {
             @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
-        String email = user.getEmail();
-
-        manageAnalysisUseCase.deleteAnalysis(id, email);
+        log.info("Petición HTTP DELETE para remover análisis ID: {} por usuario: {}", id, user.getEmail());
+        manageAnalysisUseCase.deleteAnalysis(id, user.getEmail());
         return ResponseEntity.noContent().build();
     }
 }

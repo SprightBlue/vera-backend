@@ -3,6 +3,7 @@ package com.unlam.verabackend.infrastructure.repository;
 import com.unlam.verabackend.domain.model.Chats;
 import com.unlam.verabackend.domain.port.out.ChatsRepository;
 import com.unlam.verabackend.infrastructure.entity.ChatsEntity;
+import com.unlam.verabackend.infrastructure.entity.AnalysisEntity;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.mapper.ChatsMapper;
 import jakarta.persistence.EntityManager;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -23,25 +23,21 @@ public class ChatRepositoryAdapter implements ChatsRepository {
 
     @Override
     public Chats save(Chats chat) {
-        User userEntity = entityManager.getReference(User.class, chat.getUser().getId());
+        User userProxy = entityManager.getReference(User.class, chat.getUser().getId());
 
-        var analysisEntity = chat.getAnalysis() != null
-                ? entityManager.getReference(com.unlam.verabackend.infrastructure.entity.AnalysisEntity.class, chat.getAnalysis().getId())
+        AnalysisEntity analysisProxy = chat.getAnalysis() != null
+                ? entityManager.getReference(AnalysisEntity.class, chat.getAnalysis().getId())
                 : null;
 
-        var alertsEntity = chat.getAlert() != null
-                ? entityManager.getReference(com.unlam.verabackend.infrastructure.entity.AlertsEntity.class, chat.getAlert().getId())
-                : null;
-
-        ChatsEntity entity = chatsMapper.toEntity(chat, userEntity, analysisEntity, alertsEntity);
+        ChatsEntity entity = chatsMapper.toEntity(chat, userProxy, analysisProxy);
         ChatsEntity savedEntity = jpaChatsRepository.save(entity);
-
+        entityManager.flush();
         return chatsMapper.toDomain(savedEntity);
     }
 
     @Override
     public Optional<Chats> findById(UUID id) {
-        return jpaChatsRepository.findById(id).map(chatsMapper::toDomain);
+        return jpaChatsRepository.findByIdWithAnalysis(id).map(chatsMapper::toDomain);
     }
 
     @Override
@@ -49,17 +45,7 @@ public class ChatRepositoryAdapter implements ChatsRepository {
         return jpaChatsRepository.findByUserEmailOrderByUpdatedAtDesc(email)
                 .stream()
                 .map(chatsMapper::toDomain)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public Optional<Chats> findByAnalysisId(UUID analysisId) {
-        return jpaChatsRepository.findByAnalysisId(analysisId).map(chatsMapper::toDomain);
-    }
-
-    @Override
-    public Optional<Chats> findByAlertId(UUID alertId) {
-        return jpaChatsRepository.findByAlertId(alertId).map(chatsMapper::toDomain);
+                .toList();
     }
 
     @Override

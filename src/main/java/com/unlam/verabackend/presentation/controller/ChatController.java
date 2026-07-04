@@ -33,12 +33,11 @@ public class ChatController {
     @PostMapping("/init")
     public ResponseEntity<UUID> initializeChat(
             @AuthenticationPrincipal User user,
-            @RequestParam(required = false) UUID analysisId,
-            @RequestParam(required = false) UUID alertId
+            @RequestParam(required = false) UUID analysisId
     ) {
-        log.info("Inicializando chat para usuario: {}", user.getEmail());
+        log.info("Inicializando chat para usuario: {} desde el análisis: {}", user.getEmail(), analysisId);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(chatUseCase.createChat(user.getEmail(), analysisId, alertId));
+                .body(chatUseCase.createChat(user.getEmail(), analysisId));
     }
 
     @PostMapping("/{chatId}/messages")
@@ -48,6 +47,7 @@ public class ChatController {
             @RequestBody String message
     ) {
         validateMessage(message);
+        log.info("Usuario {} enviando mensaje en el chat: {}", user.getEmail(), chatId);
         return ResponseEntity.ok(chatUseCase.sendMessage(chatId, message));
     }
 
@@ -56,6 +56,7 @@ public class ChatController {
             @AuthenticationPrincipal User user,
             @PathVariable UUID chatId
     ) {
+        log.info("Usuario {} solicitando historial del chat: {}", user.getEmail(), chatId);
         return ResponseEntity.ok(chatUseCase.getChatHistory(chatId).stream()
                 .map(ChatMessagesResponse::fromDomain)
                 .toList());
@@ -66,11 +67,14 @@ public class ChatController {
             @AuthenticationPrincipal User user,
             @PathVariable UUID chatId
     ) {
+        log.info("Usuario {} eliminando el chat: {}", user.getEmail(), chatId);
         chatUseCase.deleteChat(chatId);
         return ResponseEntity.noContent().build();
     }
 
     private void validateMessage(String message) {
-        if (message == null || message.isBlank()) throw new IllegalArgumentException("El contenido del mensaje no puede estar vacío.");
+        if (message == null || message.isBlank()) {
+            throw new IllegalArgumentException("El contenido del mensaje no puede estar vacío.");
+        }
     }
 }

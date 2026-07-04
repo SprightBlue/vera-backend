@@ -1,7 +1,6 @@
 package com.unlam.verabackend.application.service;
 
 import com.unlam.verabackend.domain.model.Analysis;
-import com.unlam.verabackend.domain.model.Alerts;
 import com.unlam.verabackend.domain.model.Source;
 import com.unlam.verabackend.domain.model.RiskType;
 import org.springframework.stereotype.Service;
@@ -17,12 +16,11 @@ public class PromptBuilderService {
     }
 
     private String getCommonGuidelines() {
-        return "Sos VERA, un sistema experto en ciberseguridad dedicado a proteger a adultos mayores con nulo conocimiento técnico. " +
-                "TONO: Profesional, serio pero sumamente protector, paciente y didáctico. " +
-                "REGLA CRÍTICA: Debés explicar los riesgos como una autoridad confiable que prioriza la seguridad del usuario. No uses tecnicismos; explicá las amenazas con claridad, calma y prudencia, evitando tecnicismos informáticos innecesarios.";
+        return "Sos VERA, un sistema experto en ciberseguridad dedicado a proteger a adultos mayores. " +
+                "PERSONALIDAD Y TONO: Actuá como un médico de cabecera familiar y de total confianza. Alguien a quien el usuario ya conoce de años, cálido, sumamente atento, contenedor y paciente, pero firme cuando se trata de cuidar su salud (en este caso, su seguridad financiera y digital). " +
+                "REGLA CRÍTICA: Hablá con cercanía afectuosa, sin usar tecnicismos informáticos innecesarios. Transmití calma, claridad y pautas directas para que no se asuste, guiándolo con la prudencia de un profesional de la salud.";
     }
 
-    // --- 1. PROMPT DE ANÁLISIS DE CONTENIDO (CORE) ---
     public String buildPrompt(List<String> safeBrowsingReport, String rawText, String fileText, Source source) {
         StringBuilder sb = new StringBuilder();
 
@@ -38,9 +36,13 @@ public class PromptBuilderService {
 
         sb.append("### REGLA DE ESPACIO (ORIGEN: ").append(source.name()).append("):\n");
         if (Source.MOBILE.equals(source)) {
-            sb.append("- El origen es MOBILE. Las respuestas en 'contentSummary', 'suspiciousPatterns' y 'recommendation' DEBEN SER MUY ACOTADAS y directas para leer en pantallas pequeñas.\n\n");
+            sb.append("- El origen es MOBILE. Las respuestas en 'contentSummary', 'suspiciousPatterns' y 'recommendation' DEBEN SER MUY ACOTADAS (un enunciado breve por campo) para leer rápido en pantallas pequeñas.\n\n");
         } else {
-            sb.append("- El origen es WEB. Las respuestas deben ser explicativas y detalladas, pero de una extensión máxima de 4 o 5 párrafos. No te excedas de ese límite.\n\n");
+            sb.append("""
+                    - El origen es WEB. Cada campo del JSON ('contentSummary', 'suspiciousPatterns', 'recommendation') DEBE SER CONCISO Y ACOTADO. \
+                    Limitá el texto a un único párrafo corto (máximo 2 o 3 oraciones por campo). Debe ser sumamente visual y limpio para que quede estéticamente bien dentro de una tarjeta (Card) de la interfaz de usuario.
+                    
+                    """);
         }
 
         sb.append("### REPORTE SAFE BROWSING:\n");
@@ -56,13 +58,13 @@ public class PromptBuilderService {
 
         sb.append("### REGLAS DE GENERACIÓN DEL JSON:\n")
                 .append("Devolvé OBLIGATORIAMENTE un JSON. REGLA ESTRICTA DE FORMATO: Todos los campos del JSON deben contener texto plano limpio. No utilices asteriscos (**) ni marcas de formato markdown para resaltar texto dentro de los valores.\n")
-                .append("- 'title': Título amigable y claro sobre el veredicto.\n")
-                .append("- 'contentSummary': Resumen detallado del texto/archivo analizado.\n")
+                .append("- 'title': Título amigable, directo y claro sobre el veredicto.\n")
+                .append("- 'contentSummary': Resumen muy escueto de lo que trata el texto/archivo.\n")
                 .append("- 'riskLevel': 'LOW', 'MEDIUM' o 'HIGH'.\n")
                 .append("- 'riskPercentage': Entero 0-100.\n")
                 .append("- 'riskType': Uno de estos valores: ").append(getRiskTypes()).append(".\n")
-                .append("- 'suspiciousPatterns': Elementos específicos que generaron sospecha.\n")
-                .append("- 'recommendation': Pasos claros, tiernos y prácticos sobre qué hacer o evitar.\n\n");
+                .append("- 'suspiciousPatterns': Qué elemento puntual prendió las alarmas de sospecha.\n")
+                .append("- 'recommendation': El consejo del médico: qué debe hacer o evitar el usuario de forma simple y tierna.\n\n");
 
         if (hasThreats) {
             sb.append("  * REGLA: Al existir una amenaza explícita en las listas negras, el veredicto obligatoriamente es crítico: riskLevel=HIGH, riskPercentage > 80, y riskType != NONE.\n");
@@ -79,27 +81,25 @@ public class PromptBuilderService {
         return sb.toString();
     }
 
-    // --- 2. CONSTRUCTOR DEL SYSTEM PROMPT PARA CHATS ---
-    public String buildChatSystemPrompt(Analysis analysis, Alerts alert) {
+    public String buildChatSystemPrompt(Analysis analysis) {
         StringBuilder sb = new StringBuilder();
 
         sb.append(getCommonGuidelines()).append("\n");
         sb.append("REGLAS DE CHAT:\n")
-                .append("- Respondé de forma directa y profesional, limitándote a 3-4 oraciones claras.\n")
+                .append("- Respondé imitando una conversación de chat cotidiana y real: sé directo, dinámico y fluido. Limitá la longitud de tu respuesta a un máximo de 1 o 2 oraciones cortas por mensaje.\n")
                 .append("- REGLA ESTRICTA DE FORMATO: Usá únicamente texto plano limpio. No uses asteriscos (**) ni ninguna marca de formato markdown para resaltar palabras.\n")
-                .append("- Si el procedimiento requiere varios pasos, preséntalos de forma secuencial y sencilla, finalizando siempre con una pregunta de verificación para asegurar que el usuario comprenda la instrucción.\n\n");
+                .append("- Si necesitás dar instrucciones o pasos a seguir, no los tires todos juntos. Da el primer paso de forma muy simple y cerrá con una pregunta corta para verificar que el usuario te sigue (ej: '¿Pudiste encontrar ese botón?'). Esperá a que responda antes de continuar con el siguiente paso.\n\n");
 
-        if (analysis != null || alert != null) {
-            sb.append("### CONTEXTO PARA VERA:\n")
-                    .append("- Riesgo: ").append(analysis != null ? analysis.getRiskType() : alert.getRiskType()).append("\n")
-                    .append("- Patrones detectados: ").append(analysis != null ? analysis.getSuspiciousPatterns() : alert.getSuspiciousPatterns()).append("\n")
-                    .append("- Resumen: ").append(analysis != null ? analysis.getContentSummary() : alert.getContentSummary()).append("\n\n");
+        if (analysis != null && analysis.getRiskType() != null) {
+            sb.append("### CONTEXTO DEL ANÁLISIS PREVIO PARA VERA:\n")
+                    .append("- Tipo de Riesgo Detectado: ").append(analysis.getRiskType()).append("\n")
+                    .append("- Patrones sospechosos: ").append(analysis.getSuspiciousPatterns()).append("\n")
+                    .append("- Resumen de la situación: ").append(analysis.getContentSummary()).append("\n\n");
         }
 
         return sb.toString();
     }
 
-    // --- 3. CONSTRUCTOR PARA GENERAR TÍTULOS ---
     public String buildTitleGenerationPrompt(String firstUserMessage) {
         return "Generá un título conciso (máximo 5 palabras) para identificar el chat. El resultado debe ser solo el título, sin comillas, puntos, etiquetas ni introducciones: " + firstUserMessage;
     }

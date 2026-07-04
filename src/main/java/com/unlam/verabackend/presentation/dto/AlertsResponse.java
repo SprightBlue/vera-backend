@@ -5,14 +5,13 @@ import com.unlam.verabackend.domain.model.Alerts;
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
 @Builder
 public class AlertsResponse {
     private UUID id;
-    private LocalDateTime createdAt;
+    private String createdAt;
     private String protectedFullName;
     private String title;
     private String contentSummary;
@@ -28,7 +27,7 @@ public class AlertsResponse {
 
         return AlertsResponse.builder()
                 .id(domain.getId())
-                .createdAt(domain.getCreatedAt())
+                .createdAt(DateFormatter.formatRelativeDate(domain.getCreatedAt()))
                 .protectedFullName(fullName)
                 .title(domain.getTitle())
                 .contentSummary(domain.getContentSummary())

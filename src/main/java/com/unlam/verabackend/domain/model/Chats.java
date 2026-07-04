@@ -17,7 +17,6 @@ public class Chats {
     private UUID id;
     private User user;
     private Analysis analysis;
-    private Alerts alert;
     private String title;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
