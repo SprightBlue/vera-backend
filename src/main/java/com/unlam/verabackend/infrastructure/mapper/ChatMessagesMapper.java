@@ -18,9 +18,8 @@ public class ChatMessagesMapper {
         return ChatMessagesEntity.builder()
                 .id(domain.getId())
                 .chat(chatEntity)
-                .role(domain.getRole() != null ? domain.getRole() : null)
+                .role(domain.getRole())
                 .content(domain.getContent())
-                .createdAt(domain.getCreatedAt())
                 .build();
     }
 
@@ -30,7 +29,7 @@ public class ChatMessagesMapper {
         return ChatMessages.builder()
                 .id(entity.getId())
                 .chat(chatMapper.toDomain(entity.getChat()))
-                .role(entity.getRole() != null ? entity.getRole() : null)
+                .role(entity.getRole())
                 .content(entity.getContent())
                 .createdAt(entity.getCreatedAt())
                 .build();

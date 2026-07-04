@@ -3,7 +3,6 @@ package com.unlam.verabackend.presentation.dto;
 import com.unlam.verabackend.domain.model.Analysis;
 import lombok.Builder;
 import lombok.Data;
-
 import java.util.UUID;
 
 @Data
@@ -17,6 +16,7 @@ public class AnalysisResponse {
 
     public static AnalysisResponse fromDomain(Analysis domain) {
         if (domain == null) return null;
+
         return AnalysisResponse.builder()
                 .id(domain.getId())
                 .createdAt(DateFormatter.formatRelativeDate(domain.getCreatedAt()))

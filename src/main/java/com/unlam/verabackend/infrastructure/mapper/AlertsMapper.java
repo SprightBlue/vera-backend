@@ -22,7 +22,6 @@ public class AlertsMapper {
                 .riskPercentage(domain.getRiskPercentage())
                 .suspiciousPatterns(domain.getSuspiciousPatterns())
                 .isResolved(domain.isResolved())
-                .resolvedAt(domain.getResolvedAt())
                 .build();
     }
 

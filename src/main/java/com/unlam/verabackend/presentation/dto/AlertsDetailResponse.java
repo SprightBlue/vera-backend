@@ -5,14 +5,13 @@ import com.unlam.verabackend.domain.model.Alerts;
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
 @Builder
 public class AlertsDetailResponse {
     private UUID id;
-    private LocalDateTime createdAt;
+    private String createdAt;
     private String protectedFullName;
     private String title;
     private String source;
@@ -24,7 +23,7 @@ public class AlertsDetailResponse {
 
     @JsonProperty("isResolved")
     private boolean isResolved;
-    private LocalDateTime resolvedAt;
+    private String resolvedAt;
 
     public static AlertsDetailResponse fromDomain(Alerts alert) {
         if (alert == null) return null;
@@ -34,17 +33,17 @@ public class AlertsDetailResponse {
 
         return AlertsDetailResponse.builder()
                 .id(alert.getId())
-                .createdAt(alert.getCreatedAt())
+                .createdAt(DateFormatter.formatRelativeDate(alert.getCreatedAt()))
                 .protectedFullName(fullName)
                 .title(alert.getTitle())
-                .source(alert.getSource() != null ? alert.getSource().name() : null)
+                .source(alert.getSource() != null ? alert.getSource().getDisplayName() : null)
                 .contentSummary(alert.getContentSummary())
                 .riskType(alert.getRiskType() != null ? alert.getRiskType().name() : null)
                 .riskLevel(alert.getRiskLevel() != null ? alert.getRiskLevel().name() : null)
                 .riskPercentage(alert.getRiskPercentage())
                 .suspiciousPatterns(alert.getSuspiciousPatterns())
                 .isResolved(alert.isResolved())
-                .resolvedAt(alert.getResolvedAt())
+                .resolvedAt(DateFormatter.formatRelativeDate(alert.getResolvedAt()))
                 .build();
     }
 }

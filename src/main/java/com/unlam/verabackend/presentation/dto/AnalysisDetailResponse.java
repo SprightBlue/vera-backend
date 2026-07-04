@@ -3,7 +3,6 @@ package com.unlam.verabackend.presentation.dto;
 import com.unlam.verabackend.domain.model.Analysis;
 import lombok.Builder;
 import lombok.Data;
-
 import java.util.UUID;
 
 @Data
@@ -27,13 +26,13 @@ public class AnalysisDetailResponse {
                 .id(domain.getId())
                 .createdAt(DateFormatter.formatRelativeDate(domain.getCreatedAt()))
                 .title(domain.getTitle())
-                .source(domain.getSource() != null ? domain.getSource().name() : null)
-                .contentSummary(domain.getContentSummary())
-                .riskType(domain.getRiskType() != null ? domain.getRiskType().getSpanish() : null)
+                .source(domain.getSource() != null ? domain.getSource().getDisplayName() : null)
+                .riskType(domain.getRiskType() != null ? domain.getRiskType().getDisplayName() : null)
                 .riskLevel(domain.getRiskLevel() != null ? domain.getRiskLevel().name() : null)
                 .riskPercentage(domain.getRiskPercentage())
                 .suspiciousPatterns(domain.getSuspiciousPatterns())
                 .recommendation(domain.getRecommendation())
+                .contentSummary(domain.getContentSummary())
                 .build();
     }
 }

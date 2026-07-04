@@ -9,7 +9,5 @@ public interface ChatsRepository {
     Chats save(Chats chat);
     Optional<Chats> findById(UUID id);
     List<Chats> findByUserEmail(String email);
-    Optional<Chats> findByAnalysisId(UUID analysisId);
-    Optional<Chats> findByAlertId(UUID alertId);
     void deleteById(UUID id);
 }

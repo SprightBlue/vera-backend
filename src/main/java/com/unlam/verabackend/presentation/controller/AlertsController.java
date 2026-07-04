@@ -1,22 +1,22 @@
 package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.domain.model.Alerts;
+import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.in.ManageAlertsUseCase;
 import com.unlam.verabackend.infrastructure.entity.User;
-import com.unlam.verabackend.presentation.dto.PagedResponse;
 import com.unlam.verabackend.presentation.dto.AlertsDetailResponse;
 import com.unlam.verabackend.presentation.dto.AlertsResponse;
+import com.unlam.verabackend.presentation.dto.PagedResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/alerts")
 @RequiredArgsConstructor
@@ -25,23 +25,21 @@ public class AlertsController {
     private final ManageAlertsUseCase manageAlertsUseCase;
 
     @GetMapping
-    public ResponseEntity<PagedResponse<AlertsResponse>> getHistoryByCarerEmail(
+    public ResponseEntity<PagedResponse<AlertsResponse>> getAlertsHistory(
             @AuthenticationPrincipal User user,
             @RequestParam(value = "resolved", required = false) Boolean resolved,
-            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @RequestParam(value = "riskLevel", required = false) RiskLevel riskLevel,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "page", defaultValue = "0") int page
     ) {
-        String email = user.getEmail();
+        log.info("Buscando historial de alertas para el cuidador: {} - Filtros [resolved: {}, riskLevel: {}, search: {}, page: {}]",
+                user.getEmail(), resolved, riskLevel, search, page);
 
-        Page<Alerts> alertsPage = (resolved != null)
-                ? manageAlertsUseCase.getHistoryByCarerEmailAndIsResolved(email, resolved, pageable)
-                : manageAlertsUseCase.getHistoryByCarerEmail(email, pageable);
-
-        PagedResponse<AlertsResponse> response = PagedResponse.fromPage(
-                alertsPage,
-                AlertsResponse::fromDomain
+        Page<Alerts> alertsPage = manageAlertsUseCase.getAlertsHistory(
+                user.getEmail(), resolved, riskLevel, search, page
         );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(PagedResponse.fromPage(alertsPage, AlertsResponse::fromDomain));
     }
 
     @GetMapping("/{id}")
@@ -49,9 +47,8 @@ public class AlertsController {
             @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
-        String email = user.getEmail();
-
-        Alerts alert = manageAlertsUseCase.getAlertDetail(id, email);
+        log.info("Solicitando detalle de alerta ID: {} por usuario: {}", id, user.getEmail());
+        Alerts alert = manageAlertsUseCase.getAlertDetail(id, user.getEmail());
         return ResponseEntity.ok(AlertsDetailResponse.fromDomain(alert));
     }
 
@@ -60,9 +57,8 @@ public class AlertsController {
             @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
-        String email = user.getEmail();
-
-        manageAlertsUseCase.deleteAlert(id, email);
+        log.info("Solicitud para eliminar alerta ID: {} por usuario: {}", id, user.getEmail());
+        manageAlertsUseCase.deleteAlert(id, user.getEmail());
         return ResponseEntity.noContent().build();
     }
 
@@ -71,9 +67,8 @@ public class AlertsController {
             @AuthenticationPrincipal User user,
             @PathVariable UUID id
     ) {
-       String email = user.getEmail();
-
-        manageAlertsUseCase.resolveAlert(id, email);
+        log.info("Solicitud para resolver alerta ID: {} por usuario: {}", id, user.getEmail());
+        manageAlertsUseCase.resolveAlert(id, user.getEmail());
         return ResponseEntity.noContent().build();
     }
 }

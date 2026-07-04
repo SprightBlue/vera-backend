@@ -28,10 +28,6 @@ public class ChatsEntity {
     @JoinColumn(name = "analysis_id")
     private AnalysisEntity analysis;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "alert_id")
-    private AlertsEntity alert;
-
     @Column(nullable = false)
     @Builder.Default
     private String title = "Consulta de Seguridad";

@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,32 +27,58 @@ public class ChatUseCaseImpl implements ChatUseCase {
 
     @Override
     @Transactional
-    public UUID createChat(String userEmail, UUID analysisId, UUID alertId) {
-        log.info("Creando nuevo chat para el usuario: {}", userEmail);
+    public UUID createChat(String userEmail, UUID analysisId) {
+        log.info("Creando nuevo chat desde el análisis: {} para el usuario: {}", analysisId, userEmail);
+
         var user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + userEmail));
 
         Chats newChat = Chats.builder()
                 .user(user)
                 .analysis(analysisId != null ? Analysis.builder().id(analysisId).build() : null)
-                .alert(alertId != null ? Alerts.builder().id(alertId).build() : null)
                 .title("Nueva consulta con VERA")
                 .build();
 
-        return chatsRepository.save(newChat).getId();
+        Chats savedChat = chatsRepository.save(newChat);
+
+        if (analysisId != null) {
+            generateInitialAiMessage(savedChat.getId());
+        }
+
+        return savedChat.getId();
+    }
+
+    private void generateInitialAiMessage(UUID chatId) {
+        Chats chatWithAnalysis = chatsRepository.findById(chatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Chat no encontrado para inicializar: " + chatId));
+
+        String systemPrompt = promptBuilder.buildChatSystemPrompt(chatWithAnalysis.getAnalysis());
+
+        String welcomeInstruction = "Generá un saludo inicial protector y directo para el usuario. " +
+                "Explicale brevemente qué encontraste en su análisis y ponete a su disposición para resolver dudas.";
+
+        String aiWelcomeResponse = aiProvider.generateChatResponse(systemPrompt, List.of(
+                ChatMessages.builder().role(ChatsRole.USER).content(welcomeInstruction).build()
+        ));
+
+        chatMessagesRepository.save(ChatMessages.builder()
+                .chat(chatWithAnalysis)
+                .role(ChatsRole.MODEL)
+                .content(aiWelcomeResponse)
+                .build());
     }
 
     @Override
     @Transactional
     public String sendMessage(UUID chatId, String userMessage) {
         log.info("Procesando mensaje en chat: {}", chatId);
+
         Chats chat = chatsRepository.findById(chatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Chat no encontrado: " + chatId));
 
         saveUserMessage(chat, userMessage);
         updateChatTitleIfNeeded(chat, userMessage);
 
-        chat.setUpdatedAt(LocalDateTime.now());
         chatsRepository.save(chat);
 
         return processAiResponse(chat);
@@ -67,17 +92,13 @@ public class ChatUseCaseImpl implements ChatUseCase {
     private void updateChatTitleIfNeeded(Chats chat, String userMessage) {
         if (!"Nueva consulta con VERA".equals(chat.getTitle())) return;
 
-        try {
-            String title = aiProvider.generateChatResponse("Sos un experto en resumen de fraudes. Respondé solo con el título (máx 5 palabras).",
-                    List.of(ChatMessages.builder().role(ChatsRole.USER).content(promptBuilder.buildTitleGenerationPrompt(userMessage)).build()));
-            chat.setTitle(title.replaceAll("[\"\n]", "").trim());
-        } catch (Exception e) {
-            log.warn("No se pudo actualizar el título del chat {}: {}", chat.getId(), e.getMessage());
-        }
+        String title = aiProvider.generateChatResponse("Sos un experto en resumen de fraudes. Respondé solo con el título (máx 5 palabras).",
+                List.of(ChatMessages.builder().role(ChatsRole.USER).content(promptBuilder.buildTitleGenerationPrompt(userMessage)).build()));
+        chat.setTitle(title.replaceAll("[\"\n]", "").trim());
     }
 
     private String processAiResponse(Chats chat) {
-        String systemPrompt = promptBuilder.buildChatSystemPrompt(chat.getAnalysis(), chat.getAlert());
+        String systemPrompt = promptBuilder.buildChatSystemPrompt(chat.getAnalysis());
         List<ChatMessages> history = chatMessagesRepository.findLastMessages(chat.getId());
 
         String aiResponse = aiProvider.generateChatResponse(systemPrompt, history);

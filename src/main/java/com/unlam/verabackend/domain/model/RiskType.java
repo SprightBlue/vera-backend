@@ -1,5 +1,8 @@
 package com.unlam.verabackend.domain.model;
 
+import lombok.Getter;
+
+@Getter
 public enum RiskType {
     // Interacciones Técnicas
     CLICKED_SUSPICIOUS_LINK("Enlace sospechoso"),
@@ -18,13 +21,10 @@ public enum RiskType {
     SUSPICIOUS_COMMUNICATION("Patrones de comunicación inusuales"),
     NONE("Ninguno");
 
-    private final String description;
+    private final String displayName;
 
-    RiskType(String description) {
-        this.description = description;
+    RiskType(String displayName) {
+        this.displayName = displayName;
     }
 
-    public String getSpanish() {
-        return description;
-    }
 }
