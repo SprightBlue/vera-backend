@@ -36,7 +36,7 @@ public class AlertsDetailResponse {
                 .createdAt(DateFormatter.formatRelativeDate(alert.getCreatedAt()))
                 .protectedFullName(fullName)
                 .title(alert.getTitle())
-                .source(alert.getSource() != null ? alert.getSource().name() : null)
+                .source(alert.getSource() != null ? alert.getSource().getDisplayName() : null)
                 .contentSummary(alert.getContentSummary())
                 .riskType(alert.getRiskType() != null ? alert.getRiskType().name() : null)
                 .riskLevel(alert.getRiskLevel() != null ? alert.getRiskLevel().name() : null)
