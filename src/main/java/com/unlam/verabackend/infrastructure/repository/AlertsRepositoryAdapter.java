@@ -1,14 +1,18 @@
 package com.unlam.verabackend.infrastructure.repository;
 
 import com.unlam.verabackend.domain.model.Alerts;
+import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.out.AlertsRepository;
 import com.unlam.verabackend.infrastructure.entity.AlertsEntity;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.mapper.AlertsMapper;
+import com.unlam.verabackend.infrastructure.repository.specification.AlertsSpecification;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -29,9 +33,7 @@ public class AlertsRepositoryAdapter implements AlertsRepository {
         TrustContact trustContactProxy = entityManager.getReference(TrustContact.class, trustContactId);
         AlertsEntity entity = mapper.toEntity(alert, trustContactProxy);
         AlertsEntity savedEntity = jpaRepository.save(entity);
-
         entityManager.flush();
-
         return mapper.toDomain(savedEntity);
     }
 
@@ -49,28 +51,20 @@ public class AlertsRepositoryAdapter implements AlertsRepository {
     }
 
     @Override
-    public Page<Alerts> findByTrustContactIdsCreatedAtDesc(List<Long> trustContactIds, Pageable pageable) {
-        return jpaRepository.findByTrustContactIdIn(trustContactIds, pageable)
-                .map(mapper::toDomain);
-    }
-
-    @Override
-    public Page<Alerts> findByTrustContactIdsAndIsResolvedCreatedAtDesc(List<Long> trustContactIds, boolean isResolved, Pageable pageable) {
-        return jpaRepository.findByTrustContactIdInAndIsResolved(trustContactIds, isResolved, pageable)
-                .map(mapper::toDomain);
-    }
-
-    @Override
-    public void resolveAlertDirectly(UUID id, LocalDateTime resolvedAt) {
+    public void resolveAlert(UUID id, LocalDateTime resolvedAt) {
         AlertsEntity entity = jpaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Alerta no encontrada con ID: " + id));
-
         entity.setResolved(true);
-
         if (resolvedAt != null) {
             entity.setResolvedAt(resolvedAt);
         }
-
         jpaRepository.save(entity);
+    }
+
+    @Override
+    public Page<Alerts> findByCriteria(List<Long> trustContactIds, Boolean isResolved, RiskLevel riskLevel, String search, int page) {
+        Pageable pageable = PageRequest.of(page, 10);
+        Specification<AlertsEntity> spec = AlertsSpecification.filterAlerts(trustContactIds, isResolved, riskLevel, search);
+        return jpaRepository.findAll(spec, pageable).map(mapper::toDomain);
     }
 }

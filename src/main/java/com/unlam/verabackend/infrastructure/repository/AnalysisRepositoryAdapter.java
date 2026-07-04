@@ -6,10 +6,13 @@ import com.unlam.verabackend.domain.port.out.AnalysisRepository;
 import com.unlam.verabackend.infrastructure.entity.AnalysisEntity;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.mapper.AnalysisMapper;
+import com.unlam.verabackend.infrastructure.repository.specification.AnalysisSpecification;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -25,14 +28,12 @@ public class AnalysisRepositoryAdapter implements AnalysisRepository {
 
     @Override
     public Analysis save(Analysis analysis) {
-        String emailFromDomain = analysis.getUser().getEmail();
+        User userProxy = entityManager.getReference(User.class, analysis.getUser().getId());
 
-        User realUser = entityManager.createQuery("SELECT u FROM User u WHERE u.email = :email", User.class)
-                .setParameter("email", emailFromDomain)
-                .getSingleResult();
-
-        AnalysisEntity entity = mapper.toEntity(analysis, realUser);
+        AnalysisEntity entity = mapper.toEntity(analysis, userProxy);
         AnalysisEntity savedEntity = jpaRepository.save(entity);
+
+        entityManager.flush();
 
         return mapper.toDomain(savedEntity);
     }
@@ -51,14 +52,9 @@ public class AnalysisRepositoryAdapter implements AnalysisRepository {
     }
 
     @Override
-    public Page<Analysis> findByUserEmailOrderByCreatedAtDesc(String email, Pageable pageable) {
-        return jpaRepository.findByUserEmail(email, pageable)
-                .map(mapper::toDomain);
-    }
-
-    @Override
-    public Page<Analysis> findByUserEmailAndRiskLevelOrderByCreatedAtDesc(String email, RiskLevel riskLevel, Pageable pageable) {
-        return jpaRepository.findByUserEmailAndRiskLevel(email, riskLevel, pageable)
-                .map(mapper::toDomain);
+    public Page<Analysis> findByCriteria(String email, RiskLevel riskLevel, String search, int page) {
+        Pageable pageable = PageRequest.of(page, 10);
+        Specification<AnalysisEntity> spec = AnalysisSpecification.filterAnalysis(email, riskLevel, search);
+        return jpaRepository.findAll(spec, pageable).map(mapper::toDomain);
     }
 }

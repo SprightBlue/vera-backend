@@ -4,14 +4,16 @@ import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Alerts;
 import com.unlam.verabackend.domain.model.NotificationsType;
+import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.in.ManageAlertsUseCase;
 import com.unlam.verabackend.domain.port.out.AlertsRepository;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
@@ -32,7 +35,10 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
 
     private List<Long> getTrustContactIdsByEmail(String carerEmail) {
         var user = userRepository.findByEmail(carerEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + carerEmail));
+                .orElseThrow(() -> {
+                    log.error("Fallo al buscar contactos de confianza: Email {} no registrado.", carerEmail);
+                    return new ResourceNotFoundException("Usuario no encontrado con email: " + carerEmail);
+                });
 
         List<TrustContact> contacts = trustContactRepository.findByCarerId(user.getId());
         return contacts.stream().map(TrustContact::getId).toList();
@@ -40,29 +46,26 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Alerts> getHistoryByCarerEmail(String email, Pageable pageable) {
-        List<Long> contactIds = getTrustContactIdsByEmail(email);
-        if (contactIds.isEmpty()) return Page.empty(pageable);
-
-        return alertsRepository.findByTrustContactIdsCreatedAtDesc(contactIds, pageable);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<Alerts> getHistoryByCarerEmailAndIsResolved(String email, boolean isResolved, Pageable pageable) {
-        List<Long> contactIds = getTrustContactIdsByEmail(email);
-        if (contactIds.isEmpty()) return Page.empty(pageable);
-
-        return alertsRepository.findByTrustContactIdsAndIsResolvedCreatedAtDesc(contactIds, isResolved, pageable);
+    public Page<Alerts> getAlertsHistory(String carerEmail, Boolean isResolved, RiskLevel riskLevel, String search, int page) {
+        List<Long> contactIds = getTrustContactIdsByEmail(carerEmail);
+        if (contactIds.isEmpty()) {
+            log.warn("El cuidador {} no posee ningún contacto de confianza asignado.", carerEmail);
+            return Page.empty(PageRequest.of(page, 10));
+        }
+        return alertsRepository.findByCriteria(contactIds, isResolved, riskLevel, search, page);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Alerts getAlertDetail(UUID id, String carerEmail) {
         Alerts alert = alertsRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("La alerta solicitada no existe."));
+                .orElseThrow(() -> {
+                    log.warn("Alerta no encontrada con ID: {}", id);
+                    return new ResourceNotFoundException("La alerta solicitada no existe.");
+                });
 
         if (!alert.getTrustContact().getCarer().getEmail().equals(carerEmail)) {
+            log.error("VIOLACIÓN DE SEGURIDAD: El usuario {} intentó acceder a la alerta {} sin pertenecer a sus contactos.", carerEmail, id);
             throw new AccessDeniedException("No tenés permisos para ver esta alerta.");
         }
         return alert;
@@ -73,22 +76,23 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
     public void deleteAlert(UUID id, String carerEmail) {
         Alerts alert = getAlertDetail(id, carerEmail);
         alertsRepository.deleteById(alert.getId());
+        log.info("Alerta ID: {} eliminada correctamente por cuidador: {}", id, carerEmail);
     }
 
     @Override
     @Transactional
     public void resolveAlert(UUID id, String carerEmail) {
         Alerts alert = getAlertDetail(id, carerEmail);
-
-        alertsRepository.resolveAlertDirectly(alert.getId(), LocalDateTime.now());
+        alertsRepository.resolveAlert(alert.getId(), LocalDateTime.now());
+        log.info("Alerta ID: {} marcada como RESUELTA por el cuidador: {}", id, carerEmail);
 
         Map<String, Object> payload = Map.of("alertId", alert.getId().toString());
-
         sseService.createAndSendNotification(
                 alert.getTrustContact().getProtectedUser(),
                 NotificationsType.ALERT_SOLVED,
                 alert.getTrustContact().getCarer().getFullName(),
                 payload
         );
+        log.info("Notificación SSE enviada al usuario protegido con motivo de resolución de alerta.");
     }
 }

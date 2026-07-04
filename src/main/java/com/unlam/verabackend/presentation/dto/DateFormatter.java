@@ -9,9 +9,20 @@ public class DateFormatter {
         if (date == null) return null;
 
         LocalDateTime now = LocalDateTime.now();
-        long days = ChronoUnit.DAYS.between(date, now);
 
-        if (days == 0) return "Hoy";
+        long minutes = ChronoUnit.MINUTES.between(date, now);
+        if (minutes < 1) return "Recién ahora";
+        if (minutes < 60) return "Hace " + minutes + " min";
+
+        long hours = ChronoUnit.HOURS.between(date, now);
+        if (hours < 24 && date.getDayOfYear() == now.getDayOfYear()) {
+            return "Hace " + hours + (hours == 1 ? " hora" : " horas");
+        }
+
+        long days = ChronoUnit.DAYS.between(date, now);
+        if (days == 0 || (days == 1 && date.getDayOfYear() != now.getDayOfYear())) {
+            return "Ayer";
+        }
         if (days < 7) return "Hace " + days + " día" + (days == 1 ? "" : "s");
 
         long weeks = ChronoUnit.WEEKS.between(date, now);

@@ -4,26 +4,29 @@ import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Alerts;
 import com.unlam.verabackend.domain.model.NotificationsType;
+import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.out.AlertsRepository;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,20 +36,18 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ManageAlertsUseCaseImplTest {
 
-    @Mock
-    private AlertsRepository alertsRepository;
-    @Mock
-    private TrustContactRepository trustContactRepository;
-    @Mock
-    private UserRepository userRepository;
-    @Mock
-    private SseService sseService;
+    @Mock private AlertsRepository alertsRepository;
+    @Mock private TrustContactRepository trustContactRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private SseService sseService;
+
+    @Captor
+    private ArgumentCaptor<Map<String, Object>> payloadCaptor;
 
     @InjectMocks
     private ManageAlertsUseCaseImpl manageAlertsUseCase;
 
     private String carerEmail;
-    private Pageable pageable;
     private User mockCarer;
     private TrustContact mockTrustContact;
     private Alerts mockAlert;
@@ -55,7 +56,6 @@ class ManageAlertsUseCaseImplTest {
     @BeforeEach
     void setUp() {
         carerEmail = "carlos.cuidador@ejemplo.com";
-        pageable = PageRequest.of(0, 10);
         alertId = UUID.randomUUID();
 
         mockCarer = new User();
@@ -65,6 +65,7 @@ class ManageAlertsUseCaseImplTest {
 
         User protectedUser = new User();
         protectedUser.setId(202L);
+        protectedUser.setFullName("Abuela Ana");
         protectedUser.setEmail("ana.protegida@ejemplo.com");
 
         mockTrustContact = new TrustContact();
@@ -77,172 +78,107 @@ class ManageAlertsUseCaseImplTest {
         lenient().when(mockAlert.getTrustContact()).thenReturn(mockTrustContact);
     }
 
-    // ==========================================
-    // TESTS: Métodos Auxiliares / Casos Comunes
-    // ==========================================
-
     @Test
-    void getTrustContactIdsByEmail_UserNotFound_ThrowsResourceNotFoundException() {
-        // Arrange
+    @DisplayName("Debe lanzar ResourceNotFoundException cuando el email del cuidador no está registrado")
+    void getAlertsHistory_UserNotFound_ThrowsResourceNotFoundException() {
         when(userRepository.findByEmail(carerEmail)).thenReturn(Optional.empty());
 
-        // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> manageAlertsUseCase.getHistoryByCarerEmail(carerEmail, pageable));
+        assertThrows(ResourceNotFoundException.class, () ->
+                manageAlertsUseCase.getAlertsHistory(carerEmail, true, RiskLevel.HIGH, "búsqueda", 0)
+        );
         verify(userRepository).findByEmail(carerEmail);
         verifyNoInteractions(trustContactRepository, alertsRepository);
     }
 
-    // ==========================================
-    // TESTS: getHistoryByCarerEmail
-    // ==========================================
-
     @Test
-    void getHistoryByCarerEmail_NoContacts_ReturnsEmptyPage() {
-        // Arrange
+    @DisplayName("Debe retornar una página vacía de forma directa si el cuidador no tiene ningún contacto asignado")
+    void getAlertsHistory_NoContacts_ReturnsEmptyPage() {
         when(userRepository.findByEmail(carerEmail)).thenReturn(Optional.of(mockCarer));
         when(trustContactRepository.findByCarerId(mockCarer.getId())).thenReturn(Collections.emptyList());
 
-        // Act
-        Page<Alerts> result = manageAlertsUseCase.getHistoryByCarerEmail(carerEmail, pageable);
+        Page<Alerts> result = manageAlertsUseCase.getAlertsHistory(carerEmail, true, RiskLevel.HIGH, "test", 0);
 
-        // Assert
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(alertsRepository, never()).findByTrustContactIdsCreatedAtDesc(any(), any());
+        verify(alertsRepository, never()).findByCriteria(any(), any(), any(), any(), anyInt());
     }
 
     @Test
-    void getHistoryByCarerEmail_WithContacts_ReturnsPageWithAlerts() {
-        // Arrange
+    @DisplayName("Debe retornar la página de alertas invocando al repositorio con la lista de IDs de contactos y criterios")
+    void getAlertsHistory_WithContacts_ReturnsPageWithAlerts() {
         List<TrustContact> contacts = List.of(mockTrustContact);
         Page<Alerts> expectedPage = new PageImpl<>(List.of(mockAlert));
 
         when(userRepository.findByEmail(carerEmail)).thenReturn(Optional.of(mockCarer));
         when(trustContactRepository.findByCarerId(mockCarer.getId())).thenReturn(contacts);
-        when(alertsRepository.findByTrustContactIdsCreatedAtDesc(List.of(55L), pageable)).thenReturn(expectedPage);
+        when(alertsRepository.findByCriteria(List.of(55L), true, RiskLevel.HIGH, "test", 0)).thenReturn(expectedPage);
 
-        // Act
-        Page<Alerts> result = manageAlertsUseCase.getHistoryByCarerEmail(carerEmail, pageable);
+        Page<Alerts> result = manageAlertsUseCase.getAlertsHistory(carerEmail, true, RiskLevel.HIGH, "test", 0);
 
-        // Assert
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
-        verify(alertsRepository).findByTrustContactIdsCreatedAtDesc(List.of(55L), pageable);
-    }
-
-    // ==========================================
-    // TESTS: getHistoryByCarerEmailAndIsResolved
-    // ==========================================
-
-    @Test
-    void getHistoryByCarerEmailAndIsResolved_NoContacts_ReturnsEmptyPage() {
-        // Arrange
-        when(userRepository.findByEmail(carerEmail)).thenReturn(Optional.of(mockCarer));
-        when(trustContactRepository.findByCarerId(mockCarer.getId())).thenReturn(Collections.emptyList());
-
-        // Act
-        Page<Alerts> result = manageAlertsUseCase.getHistoryByCarerEmailAndIsResolved(carerEmail, true, pageable);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-        verify(alertsRepository, never()).findByTrustContactIdsAndIsResolvedCreatedAtDesc(any(), anyBoolean(), any());
+        verify(alertsRepository).findByCriteria(List.of(55L), true, RiskLevel.HIGH, "test", 0);
     }
 
     @Test
-    void getHistoryByCarerEmailAndIsResolved_WithContacts_ReturnsPageWithAlerts() {
-        // Arrange
-        List<TrustContact> contacts = List.of(mockTrustContact);
-        Page<Alerts> expectedPage = new PageImpl<>(List.of(mockAlert));
-
-        when(userRepository.findByEmail(carerEmail)).thenReturn(Optional.of(mockCarer));
-        when(trustContactRepository.findByCarerId(mockCarer.getId())).thenReturn(contacts);
-        when(alertsRepository.findByTrustContactIdsAndIsResolvedCreatedAtDesc(List.of(55L), true, pageable)).thenReturn(expectedPage);
-
-        // Act
-        Page<Alerts> result = manageAlertsUseCase.getHistoryByCarerEmailAndIsResolved(carerEmail, true, pageable);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1, result.getTotalElements());
-        verify(alertsRepository).findByTrustContactIdsAndIsResolvedCreatedAtDesc(List.of(55L), true, pageable);
-    }
-
-    // ==========================================
-    // TESTS: getAlertDetail
-    // ==========================================
-
-    @Test
+    @DisplayName("Debe lanzar ResourceNotFoundException si la alerta no existe en la base de datos")
     void getAlertDetail_AlertNotFound_ThrowsResourceNotFoundException() {
-        // Arrange
         when(alertsRepository.findById(alertId)).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> manageAlertsUseCase.getAlertDetail(alertId, carerEmail));
     }
 
     @Test
+    @DisplayName("Debe lanzar AccessDeniedException (403) si el cuidador intenta husmear una alerta que no es de su protegido")
     void getAlertDetail_AccessDenied_ThrowsAccessDeniedException() {
-        // Arrange
         User wrongCarer = new User();
         wrongCarer.setEmail("otro.cuidador@ejemplo.com");
         mockTrustContact.setCarer(wrongCarer);
 
         when(alertsRepository.findById(alertId)).thenReturn(Optional.of(mockAlert));
 
-        // Act & Assert
         assertThrows(AccessDeniedException.class, () -> manageAlertsUseCase.getAlertDetail(alertId, carerEmail));
     }
 
     @Test
+    @DisplayName("Debe retornar la alerta si el id existe y pertenece a uno de sus contactos asignados")
     void getAlertDetail_Success_ReturnsAlert() {
-        // Arrange
         when(alertsRepository.findById(alertId)).thenReturn(Optional.of(mockAlert));
 
-        // Act
         Alerts result = manageAlertsUseCase.getAlertDetail(alertId, carerEmail);
 
-        // Assert
         assertNotNull(result);
         assertEquals(alertId, result.getId());
     }
 
-    // ==========================================
-    // TESTS: deleteAlert
-    // ==========================================
-
     @Test
+    @DisplayName("Debe eliminar la alerta llamando al repositorio si el solicitante es el dueño de la relación")
     void deleteAlert_Success() {
-        // Arrange
         when(alertsRepository.findById(alertId)).thenReturn(Optional.of(mockAlert));
 
-        // Act
-        manageAlertsUseCase.deleteAlert(alertId, carerEmail);
+        assertDoesNotThrow(() -> manageAlertsUseCase.deleteAlert(alertId, carerEmail));
 
-        // Assert
         verify(alertsRepository).deleteById(alertId);
     }
 
-    // ==========================================
-    // TESTS: resolveAlert
-    // ==========================================
-
     @Test
+    @DisplayName("Debe marcar la alerta como resuelta enviando los datos correspondientes en el evento SSE al usuario protegido")
     void resolveAlert_Success_ResolvesAndSendsNotification() {
-        // Arrange
         when(alertsRepository.findById(alertId)).thenReturn(Optional.of(mockAlert));
 
-        // Act
         manageAlertsUseCase.resolveAlert(alertId, carerEmail);
 
-        // Assert
-        verify(alertsRepository).resolveAlertDirectly(eq(alertId), any(LocalDateTime.class));
+        verify(alertsRepository).resolveAlert(eq(alertId), any(LocalDateTime.class));
 
         verify(sseService).createAndSendNotification(
                 eq(mockTrustContact.getProtectedUser()),
                 eq(NotificationsType.ALERT_SOLVED),
                 eq("Carlos Gómez"),
-                anyMap()
+                payloadCaptor.capture()
         );
+
+        Map<String, Object> capturedPayload = payloadCaptor.getValue();
+        assertNotNull(capturedPayload);
+        assertEquals(alertId.toString(), capturedPayload.get("alertId"));
     }
 }
