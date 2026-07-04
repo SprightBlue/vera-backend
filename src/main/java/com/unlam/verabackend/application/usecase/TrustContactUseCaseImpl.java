@@ -115,6 +115,10 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                 carer.getId(), InvitationStatus.PENDING);
 
         for (TrustInvitation inv : pendingInvitations) {
+            if (inv.getProtectedPerson() != null) {
+                continue;
+            }
+
             responseList.add(ProtectedPersonResponse.builder()
                     .id(inv.getId())
                     .fullName(inv.getFullName())

@@ -84,9 +84,9 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
                 .carer(contactUser)
                 .protectedUser(protectedUser)
                 .relationship(request.relationship())
-                .sensitivityLevel(SensitivityLevel.MEDIO)
-                .notifyHighRisk(request.emergencyContact())
-                .receiveAlertSummaries(false)
+                .sensitivityLevel(request.sensitivityLevel() != null ? request.sensitivityLevel() : SensitivityLevel.MEDIO)
+                .notifyHighRisk(request.notifyHighRisk())
+                .receiveAlertSummaries(request.receiveAlertSummaries())
                 .build();
 
         return ContactResponse.fromActive(trustContactRepository.save(contact));
@@ -113,9 +113,9 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
                 .contactNumber(request.contactPhone())
                 .email(request.contactEmail())
                 .relationship(request.relationship())
-                .sensitivityLevel(SensitivityLevel.MEDIO)
-                .notifyHighRisk(request.emergencyContact())
-                .receiveAlertSummaries(false)
+                .sensitivityLevel(request.sensitivityLevel() != null ? request.sensitivityLevel() : SensitivityLevel.MEDIO)
+                .notifyHighRisk(request.notifyHighRisk())
+                .receiveAlertSummaries(request.receiveAlertSummaries())
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .status(InvitationStatus.PENDING)
                 .build();
@@ -144,13 +144,22 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
 
     @Override
     @Transactional
-    public void updateContact(Long contactId, String caregiverEmail, boolean emergencyContact) {
+    public void updateContact(Long contactId, String caregiverEmail, String sensitivityLevel, Boolean notifyHighRisk, Boolean receiveAlertSummaries) {
         TrustContact contact = trustContactRepository.findById(contactId)
                 .orElseThrow(() -> new IllegalArgumentException("Contacto no encontrado"));
 
         verifyCaregiverAccess(contact.getProtectedUser().getId(), caregiverEmail);
 
-        contact.setNotifyHighRisk(emergencyContact);
+        if (sensitivityLevel != null) {
+            contact.setSensitivityLevel(SensitivityLevel.valueOf(sensitivityLevel.toUpperCase()));
+        }
+        if (notifyHighRisk != null) {
+            contact.setNotifyHighRisk(notifyHighRisk);
+        }
+        if (receiveAlertSummaries != null) {
+            contact.setReceiveAlertSummaries(receiveAlertSummaries);
+        }
+
         trustContactRepository.save(contact);
     }
 

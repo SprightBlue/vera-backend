@@ -43,8 +43,11 @@ public class ContactController {
 
     @PatchMapping("/{contactId}")
     public ResponseEntity<Void> updateContact(@PathVariable Long contactId, @RequestBody Map<String, Object> payload, Authentication authentication) {
-        boolean emergencyContact = Boolean.TRUE.equals(payload.get("emergencyContact"));
-        manageContactsUseCase.updateContact(contactId, authentication.getName(), emergencyContact);
+        String sensitivityLevel = (String) payload.get("sensitivityLevel");
+        Boolean notifyHighRisk = payload.containsKey("notifyHighRisk") ? Boolean.TRUE.equals(payload.get("notifyHighRisk")) : null;
+        Boolean receiveAlertSummaries = payload.containsKey("receiveAlertSummaries") ? Boolean.TRUE.equals(payload.get("receiveAlertSummaries")) : null;
+
+        manageContactsUseCase.updateContact(contactId, authentication.getName(), sensitivityLevel, notifyHighRisk, receiveAlertSummaries);
         return ResponseEntity.noContent().build();
     }
 
