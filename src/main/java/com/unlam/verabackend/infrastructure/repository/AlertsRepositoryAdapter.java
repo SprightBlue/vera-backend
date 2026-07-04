@@ -6,13 +6,9 @@ import com.unlam.verabackend.domain.port.out.AlertsRepository;
 import com.unlam.verabackend.infrastructure.entity.AlertsEntity;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.mapper.AlertsMapper;
-import com.unlam.verabackend.infrastructure.repository.specification.AlertsSpecification;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -63,8 +59,11 @@ public class AlertsRepositoryAdapter implements AlertsRepository {
 
     @Override
     public Page<Alerts> findByCriteria(List<Long> trustContactIds, Boolean isResolved, RiskLevel riskLevel, String search, int page) {
-        Pageable pageable = PageRequest.of(page, 10);
-        Specification<AlertsEntity> spec = AlertsSpecification.filterAlerts(trustContactIds, isResolved, riskLevel, search);
-        return jpaRepository.findAll(spec, pageable).map(mapper::toDomain);
+        Pageable pageable = PageRequest.of(page, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+
+        return jpaRepository.filterAlerts(trustContactIds, isResolved, riskLevel, cleanSearch, pageable)
+                .map(mapper::toDomain);
     }
 }

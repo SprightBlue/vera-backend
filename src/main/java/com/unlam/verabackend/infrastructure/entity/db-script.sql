@@ -57,7 +57,6 @@ CREATE TABLE chats (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id BIGINT NOT NULL,
     analysis_id UUID,
-    alert_id UUID,
     title VARCHAR(255) NOT NULL DEFAULT 'Consulta de Seguridad',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -65,7 +64,6 @@ CREATE TABLE chats (
 
     CONSTRAINT fk_chats_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT fk_chats_analysis FOREIGN KEY (analysis_id) REFERENCES analysis (id) ON DELETE SET NULL,
-    CONSTRAINT fk_chats_alert FOREIGN KEY (alert_id) REFERENCES alerts (id) ON DELETE SET NULL
 );
 
 CREATE TABLE chat_messages (

@@ -6,13 +6,9 @@ import com.unlam.verabackend.domain.port.out.AnalysisRepository;
 import com.unlam.verabackend.infrastructure.entity.AnalysisEntity;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.mapper.AnalysisMapper;
-import com.unlam.verabackend.infrastructure.repository.specification.AnalysisSpecification;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -28,7 +24,7 @@ public class AnalysisRepositoryAdapter implements AnalysisRepository {
 
     @Override
     public Analysis save(Analysis analysis) {
-        User userProxy = entityManager.getReference(User.class, analysis.getUser().getId());
+        var userProxy = entityManager.getReference(User.class, analysis.getUser().getId());
 
         AnalysisEntity entity = mapper.toEntity(analysis, userProxy);
         AnalysisEntity savedEntity = jpaRepository.save(entity);
@@ -53,8 +49,11 @@ public class AnalysisRepositoryAdapter implements AnalysisRepository {
 
     @Override
     public Page<Analysis> findByCriteria(String email, RiskLevel riskLevel, String search, int page) {
-        Pageable pageable = PageRequest.of(page, 10);
-        Specification<AnalysisEntity> spec = AnalysisSpecification.filterAnalysis(email, riskLevel, search);
-        return jpaRepository.findAll(spec, pageable).map(mapper::toDomain);
+        Pageable pageable = PageRequest.of(page, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+
+        return jpaRepository.filterAnalysis(email, riskLevel, cleanSearch, pageable)
+                .map(mapper::toDomain);
     }
 }

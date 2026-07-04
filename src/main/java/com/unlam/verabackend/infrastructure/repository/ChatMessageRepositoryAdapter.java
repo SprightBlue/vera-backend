@@ -10,10 +10,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -26,8 +26,12 @@ public class ChatMessageRepositoryAdapter implements ChatMessagesRepository {
     @Override
     public ChatMessages save(ChatMessages message) {
         ChatsEntity chatEntity = entityManager.getReference(ChatsEntity.class, message.getChat().getId());
+
         ChatMessagesEntity entity = chatMessagesMapper.toEntity(message, chatEntity);
         ChatMessagesEntity savedEntity = jpaChatMessageRepository.save(entity);
+
+        entityManager.flush();
+
         return chatMessagesMapper.toDomain(savedEntity);
     }
 
@@ -36,7 +40,7 @@ public class ChatMessageRepositoryAdapter implements ChatMessagesRepository {
         return jpaChatMessageRepository.findByChatIdOrderByCreatedAtAsc(chatId)
                 .stream()
                 .map(chatMessagesMapper::toDomain)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -46,10 +50,11 @@ public class ChatMessageRepositoryAdapter implements ChatMessagesRepository {
                 PageRequest.of(0, 10)
         );
 
-        Collections.reverse(entities);
+        ArrayList<ChatMessagesEntity> mutableEntities = new ArrayList<>(entities);
+        Collections.reverse(mutableEntities);
 
-        return entities.stream()
+        return mutableEntities.stream()
                 .map(chatMessagesMapper::toDomain)
-                .collect(Collectors.toList());
+                .toList();
     }
 }
