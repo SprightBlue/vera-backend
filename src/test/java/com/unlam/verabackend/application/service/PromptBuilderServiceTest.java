@@ -52,16 +52,17 @@ class PromptBuilderServiceTest {
         String result = promptBuilderService.buildPrompt(Collections.emptyList(), null, null, Source.MOBILE);
 
         assertTrue(result.contains("### REGLA DE ESPACIO (ORIGEN: MOBILE):"));
-        assertTrue(result.contains("DEBEN SER MUY ACOTADAS y directas"));
+        assertTrue(result.contains("DEBEN SER MUY ACOTADAS (un enunciado breve por campo)"));
     }
 
     @Test
-    @DisplayName("Debe aplicar las reglas de espacio explicativas si el origen de la petición es WEB")
+    @DisplayName("Debe aplicar las reglas de espacio compactas para tarjetas si el origen de la petición es WEB")
     void buildPrompt_WhenSourceIsWeb_ShouldIncludeWebRules() {
         String result = promptBuilderService.buildPrompt(Collections.emptyList(), null, null, Source.WEB);
 
         assertTrue(result.contains("### REGLA DE ESPACIO (ORIGEN: WEB):"));
-        assertTrue(result.contains("Las respuestas deben ser explicativas y detailed"));
+        assertTrue(result.contains("Limitá el texto a un único párrafo corto"));
+        assertTrue(result.contains("dentro de una tarjeta (Card)"));
     }
 
     @Test
@@ -91,6 +92,7 @@ class PromptBuilderServiceTest {
         String result = promptBuilderService.buildChatSystemPrompt(null);
 
         assertTrue(result.contains("Sos VERA, un sistema experto en ciberseguridad"));
+        assertTrue(result.contains("Actuá como un médico de cabecera familiar"));
         assertTrue(result.contains("REGLAS DE CHAT:"));
         assertFalse(result.contains("### CONTEXTO DEL ANÁLISIS PREVIO PARA VERA:"));
     }
@@ -107,7 +109,7 @@ class PromptBuilderServiceTest {
     }
 
     @Test
-    @DisplayName("Debe inyectar el contexto analítico completo en el prompt si el objeto Analysis es totalmente válido")
+    @DisplayName("Debe inyectar el contexto analítico completo e incluir las reglas de respuestas fluidas de 1 o 2 oraciones")
     void buildChatSystemPrompt_WhenAnalysisIsProvided_ShouldReturnChatPromptWithAnalysisContext() {
         Analysis analysis = Analysis.builder()
                 .riskType(RiskType.TRANSFERRED_MONEY)
@@ -121,6 +123,7 @@ class PromptBuilderServiceTest {
         assertTrue(result.contains("- Tipo de Riesgo Detectado: TRANSFERRED_MONEY"));
         assertTrue(result.contains("- Patrones sospechosos: Pedido de transferencia inmediata"));
         assertTrue(result.contains("- Resumen de la situación: El atacante finge ser el hijo de la víctima"));
+        assertTrue(result.contains("Limitá la longitud de tu respuesta a un máximo de 1 o 2 oraciones"));
     }
 
     @Test
