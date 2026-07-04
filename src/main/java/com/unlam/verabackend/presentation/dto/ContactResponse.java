@@ -9,9 +9,11 @@ public record ContactResponse(
         String email,
         String phone,
         String relationship,
-        boolean emergencyContact,
+        String sensitivityLevel,
+        boolean notifyHighRisk,
+        boolean receiveAlertSummaries,
         String status
-)  {
+) {
     public static ContactResponse fromActive(TrustContact contact) {
         return new ContactResponse(
                 contact.getId(),
@@ -19,10 +21,13 @@ public record ContactResponse(
                 contact.getCarer().getEmail(),
                 null,
                 contact.getRelationship(),
+                contact.getSensitivityLevel() != null ? contact.getSensitivityLevel().name() : "MEDIO",
                 contact.isNotifyHighRisk(),
+                contact.isReceiveAlertSummaries(),
                 "ACTIVE"
         );
     }
+
     public static ContactResponse fromPending(TrustInvitation invitation) {
         return new ContactResponse(
                 invitation.getId(),
@@ -30,7 +35,9 @@ public record ContactResponse(
                 invitation.getEmail(),
                 invitation.getContactNumber(),
                 invitation.getRelationship(),
+                invitation.getSensitivityLevel() != null ? invitation.getSensitivityLevel().name() : "MEDIO",
                 invitation.isNotifyHighRisk(),
+                invitation.isReceiveAlertSummaries(),
                 "PENDING"
         );
     }

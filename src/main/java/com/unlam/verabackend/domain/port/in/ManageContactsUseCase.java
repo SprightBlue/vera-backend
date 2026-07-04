@@ -13,7 +13,7 @@ public interface ManageContactsUseCase {
 
     GenerateInvitationResponse inviteContact(Long protectedPersonId, String caregiverEmail, AddContactRequest request);
 
-    void updateContact(Long contactId, String caregiverEmail, boolean emergencyContact);
+    void updateContact(Long contactId, String caregiverEmail, String sensitivityLevel, Boolean notifyHighRisk, Boolean receiveAlertSummaries);
 
     void deleteContact(Long contactId, String caregiverEmail);
 }
