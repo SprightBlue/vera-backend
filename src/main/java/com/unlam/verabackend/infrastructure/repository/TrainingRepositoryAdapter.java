@@ -52,8 +52,8 @@ public class TrainingRepositoryAdapter implements TrainingRepository {
                 .user(session.getUser())
                 .scenario(scenarioEntity)
                 .selectedOption(optionEntity)
-                .correct(session.isCorrect())
-                .completedAt(session.getCompletedAt() != null ? session.getCompletedAt() : LocalDateTime.now())
+                .correct(session.getCompletedAt() != null ? session.isCorrect() : null)
+                .completedAt(session.getCompletedAt())
                 .assignedBy(session.getAssignedBy())
                 .build();
 
@@ -79,4 +79,27 @@ public class TrainingRepositoryAdapter implements TrainingRepository {
     public long countCorrectByUserId(Long userId) {
         return sessionJpa.countByUserIdAndCorrectTrue(userId);
     }
+    @Override
+    public Optional<TrainingSession> findPendingSession(Long userId, UUID scenarioId) {
+        return sessionJpa
+                .findFirstByUserIdAndScenarioIdAndCompletedAtIsNull(userId, scenarioId)
+                .map(mapper::toDomain);
+    }
+
+    @Override
+    public TrainingSession completeSession(UUID sessionId, UUID selectedOptionId, boolean correct) {
+        TrainingSessionEntity entity = sessionJpa.findById(sessionId).orElseThrow();
+
+        ScenarioOptionEntity option = entity.getScenario().getOptions().stream()
+                .filter(o -> o.getId().equals(selectedOptionId))
+                .findFirst()
+                .orElseThrow();
+
+        entity.setSelectedOption(option);
+        entity.setCorrect(correct);
+        entity.setCompletedAt(LocalDateTime.now());
+
+        return mapper.toDomain(sessionJpa.save(entity));
+    }
+
 }
