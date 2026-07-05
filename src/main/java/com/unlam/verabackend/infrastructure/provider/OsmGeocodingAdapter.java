@@ -13,9 +13,9 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.util.Map;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class OsmGeocodingAdapter implements GeocodingProvider {
 
     private final RestTemplate restTemplate;
