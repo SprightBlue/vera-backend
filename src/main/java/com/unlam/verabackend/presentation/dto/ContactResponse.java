@@ -12,7 +12,8 @@ public record ContactResponse(
         String sensitivityLevel,
         boolean notifyHighRisk,
         boolean receiveAlertSummaries,
-        String status
+        String status,
+        String image
 ) {
     public static ContactResponse fromActive(TrustContact contact) {
         return new ContactResponse(
@@ -24,7 +25,8 @@ public record ContactResponse(
                 contact.getSensitivityLevel() != null ? contact.getSensitivityLevel().name() : "MEDIO",
                 contact.isNotifyHighRisk(),
                 contact.isReceiveAlertSummaries(),
-                "ACTIVE"
+                "ACTIVE",
+                contact.getCarer().getImage()
         );
     }
 
@@ -38,7 +40,8 @@ public record ContactResponse(
                 invitation.getSensitivityLevel() != null ? invitation.getSensitivityLevel().name() : "MEDIO",
                 invitation.isNotifyHighRisk(),
                 invitation.isReceiveAlertSummaries(),
-                "PENDING"
+                "PENDING",
+                invitation.getImage()
         );
     }
 }
