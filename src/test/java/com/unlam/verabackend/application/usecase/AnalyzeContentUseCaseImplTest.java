@@ -110,6 +110,20 @@ class AnalyzeContentUseCaseImplTest {
     }
 
     @Test
+    @DisplayName("Debe lanzar IllegalArgumentException si la IA responde con strings que no coinciden con los Enums")
+    void execute_WhenAiResultEnumsAreCorrupt_ShouldThrowIllegalArgumentException() {
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
+
+        // "RIESGO_INVENTADO" no existe en RiskLevel, se propaga directo al handler
+        AiResult corruptAiResult = new AiResult("Titulo", "Resumen", "RIESGO_INVENTADO", "NONE", 10, "Patrones", "Recomendacion");
+        when(aiProvider.analyzeContent(any(), any())).thenReturn(corruptAiResult);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                analyzeContentUseCase.execute(userEmail, "Texto", null, "WEB")
+        );
+    }
+
+    @Test
     @DisplayName("Debe extraer texto y URLs exitosamente cuando se adjunta un archivo clasificado como documento")
     void execute_WhenFileIsDocumentWithUrls_ShouldExtractTextAndUrlsSuccessfully() {
         String rawText = "Texto manual";
@@ -229,12 +243,16 @@ class AnalyzeContentUseCaseImplTest {
     void execute_WhenRiskLevelIsNull_ShouldNotTriggerAlerts() {
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
 
-        Analysis analysisWithoutRisk = Analysis.builder()
-                .title("Sin Riesgo")
-                .riskLevel(null)
-                .riskType(RiskType.NONE)
-                .build();
-        when(analysisRepository.save(any(Analysis.class))).thenReturn(analysisWithoutRisk);
+        // CORRECCIÓN: Quitamos el mockeo manual con riskLevel nulo ya que buildAnalysis lanzaría excepción
+        // con un string inválido en AiResult. En su lugar, hacemos que el save() directamente devuelva una entidad mutada.
+        when(analysisRepository.save(any(Analysis.class))).thenAnswer(i -> {
+            Analysis a = i.getArgument(0);
+            return Analysis.builder()
+                    .title(a.getTitle())
+                    .riskLevel(null) // Simulamos que por reglas internas se anula el nivel de riesgo antes de alertas
+                    .riskType(a.getRiskType())
+                    .build();
+        });
 
         AiResult mockAiResult = new AiResult("Titulo", "Resumen", "LOW", "NONE", 0, "Patrones", "Recomendacion");
         when(aiProvider.analyzeContent(any(), any())).thenReturn(mockAiResult);
