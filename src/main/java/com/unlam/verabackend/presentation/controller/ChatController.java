@@ -31,13 +31,10 @@ public class ChatController {
     }
 
     @PostMapping("/init")
-    public ResponseEntity<UUID> initializeChat(
-            @AuthenticationPrincipal User user,
-            @RequestParam(required = false) UUID analysisId
-    ) {
-        log.info("Inicializando chat para usuario: {} desde el análisis: {}", user.getEmail(), analysisId);
+    public ResponseEntity<UUID> initializeChat(@AuthenticationPrincipal User user) {
+        log.info("Inicializando chat para usuario: {}", user.getEmail());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(chatUseCase.createChat(user.getEmail(), analysisId));
+                .body(chatUseCase.createChat(user.getEmail(), null));
     }
 
     @PostMapping("/{chatId}/messages")
