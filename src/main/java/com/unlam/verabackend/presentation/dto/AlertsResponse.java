@@ -18,6 +18,7 @@ public class AlertsResponse {
 
     @JsonProperty("isResolved")
     private boolean isResolved;
+    private String riskLevel;
 
     public static AlertsResponse fromDomain(Alerts domain) {
         if (domain == null) return null;
@@ -32,6 +33,7 @@ public class AlertsResponse {
                 .title(domain.getTitle())
                 .contentSummary(domain.getContentSummary())
                 .isResolved(domain.isResolved())
+                .riskLevel(domain.getRiskLevel() != null ? domain.getRiskLevel().name() : null)
                 .build();
     }
 }
