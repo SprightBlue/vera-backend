@@ -3,6 +3,7 @@ package com.unlam.verabackend.presentation.controller;
 import com.unlam.verabackend.domain.model.Analysis;
 import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.in.AnalyzeContentUseCase;
+import com.unlam.verabackend.domain.port.in.ChatUseCase;
 import com.unlam.verabackend.domain.port.in.ManageAnalysisUseCase;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.presentation.dto.PagedResponse;
@@ -27,6 +28,7 @@ public class AnalysisController {
 
     private final AnalyzeContentUseCase analyzeContentUseCase;
     private final ManageAnalysisUseCase manageAnalysisUseCase;
+    private final ChatUseCase chatUseCase;
 
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<AnalysisDetailResponse> analyze(
@@ -50,6 +52,19 @@ public class AnalysisController {
             log.warn("Solicitud de análisis rechazada: cuerpo de mensaje y adjuntos vacíos.");
             throw new IllegalArgumentException("Debe proporcionar al menos un texto o un archivo para analizar.");
         }
+    }
+
+    @PostMapping("/chat/{analysisId}")
+    public ResponseEntity<UUID> initializeChatFromAnalysis(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID analysisId
+    ) {
+        log.info("Usuario {} solicita iniciar un chat exclusivo desde el análisis: {}", user.getEmail(), analysisId);
+
+        UUID newChatId = chatUseCase.createChat(user.getEmail(), analysisId);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(newChatId);
     }
 
     @GetMapping

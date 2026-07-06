@@ -57,6 +57,11 @@ public class ManageTrainingUseCaseImpl implements ManageTrainingUseCase {
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Opción no encontrada: " + selectedOptionId));
 
+        Optional<TrainingSession> pending = trainingRepository.findPendingSession(user.getId(), scenarioId);
+        if (pending.isPresent()) {
+            return trainingRepository.completeSession(pending.get().getId(), selectedOptionId, selected.isCorrect());
+        }
+
         TrainingSession session = TrainingSession.builder()
                 .user(user)
                 .scenario(scenario)

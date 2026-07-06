@@ -4,12 +4,15 @@ import com.unlam.verabackend.domain.exception.InvalidFileException;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+import java.util.Map;
 
 @Slf4j
 @RestControllerAdvice
@@ -75,5 +78,11 @@ public class GlobalExceptionHandler {
         log.error("Circuit Breaker abierto: Gemini está sobrecargado.");
         String message = "El servicio está temporalmente sobrecargado. Por favor, inténtelo de nuevo más tarde.";
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(message);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleIntegrityViolation(DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("message", "No pudimos eliminar tu cuenta porque todavía tiene información asociada."));
     }
 }

@@ -16,4 +16,6 @@ public interface TrainingRepository {
     List<TrainingSession> findCompletedSessionsByUserId(Long userId);
     long countCompletedByUserId(Long userId);
     long countCorrectByUserId(Long userId);
+    Optional<TrainingSession> findPendingSession(Long userId, UUID scenarioId);
+    TrainingSession completeSession(UUID sessionId, UUID selectedOptionId, boolean correct);
 }

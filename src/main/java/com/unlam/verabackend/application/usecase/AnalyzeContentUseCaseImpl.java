@@ -39,48 +39,69 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
     @Override
     @Transactional
     public Analysis execute(String userEmail, String rawText, MultipartFile file, String sourceStr) {
-        log.info("Iniciando análisis de contenido para usuario: {}", userEmail);
+        log.info("Iniciando flujo de análisis de contenido solicitado por el usuario: {}", userEmail);
 
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + userEmail));
+                .orElseThrow(() -> {
+                    log.error("Fallo de análisis: Usuario no registrado con el email: {}", userEmail);
+                    return new ResourceNotFoundException("Usuario no encontrado: " + userEmail);
+                });
 
         Source source = parseSource(sourceStr);
         ContentProcessResult content = processContent(rawText, file);
 
+        log.info("Ejecutando chequeo preventivo de URLs extraídas. Cantidad detectada: {}", content.urls().size());
         List<String> safeBrowsingReport = checkUrlProvider.checkUrls(content.urls());
+
         String prompt = promptBuilder.buildPrompt(safeBrowsingReport, rawText, content.fileText(), source);
 
+        log.info("Enviando payload al proveedor de IA para análisis heurístico de fraude.");
         AiResult aiResult = aiProvider.analyzeContent(prompt, content.fileToAnalyze());
         if (aiResult == null) {
+            log.error("Fallo crítico del motor de IA: El proveedor devolvió una respuesta nula.");
             throw new IllegalStateException("Error crítico: Respuesta nula del motor de IA.");
         }
 
+        return saveAnalysisAndHandleAlerts(aiResult, user, source);
+    }
+
+    private Analysis saveAnalysisAndHandleAlerts(AiResult aiResult, User user, Source source) {
+        log.info("Persistiendo resultados del análisis heurístico en base de datos.");
+
         Analysis analysis = analysisRepository.save(buildAnalysis(aiResult, user, source));
+        log.info("Análisis guardado exitosamente. ID asignado: {} | Nivel de Riesgo: {}", analysis.getId(), analysis.getRiskLevel());
 
         handleRiskAlerts(analysis, user);
 
-        log.info("Análisis finalizado exitosamente. ID: {}", analysis.getId());
         return analysis;
     }
 
     private Source parseSource(String sourceStr) {
-        if (sourceStr == null || sourceStr.isBlank()) throw new IllegalArgumentException("Origen (source) obligatorio.");
+        if (sourceStr == null || sourceStr.isBlank()) {
+            log.warn("Fallo de validación: El origen de los datos (source) es obligatorio.");
+            throw new IllegalArgumentException("Origen (source) obligatorio.");
+        }
         return Source.valueOf(sourceStr.toUpperCase().strip());
     }
 
     private ContentProcessResult processContent(String rawText, MultipartFile file) {
         List<String> urls = new ArrayList<>();
-        if (rawText != null) urls.addAll(urlExtractor.findUrls(rawText));
+        if (rawText != null && !rawText.isBlank()) {
+            urls.addAll(urlExtractor.findUrls(rawText));
+        }
 
         String fileText = "";
         MultipartFile fileForAi = null;
 
         if (file != null && !file.isEmpty()) {
+            String filename = file.getOriginalFilename();
+            log.debug("Procesando archivo adjunto recibido: {}", filename);
             fileValidator.validate(file);
-            if (fileValidator.isDocument(file.getOriginalFilename())) {
+
+            if (fileValidator.isDocument(filename)) {
                 fileText = urlExtractor.convertDocumentToText(file);
                 urls.addAll(urlExtractor.findUrls(fileText));
-            } else if (fileValidator.isMultimedia(file.getOriginalFilename())) {
+            } else if (fileValidator.isMultimedia(filename)) {
                 fileForAi = file;
             }
         }
@@ -90,8 +111,10 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
     private void handleRiskAlerts(Analysis analysis, User user) {
         if (analysis.getRiskLevel() == null) return;
 
-        trustContactRepository.findByProtectedUserId(user.getId())
-                .stream()
+        List<TrustContact> contacts = trustContactRepository.findByProtectedUserId(user.getId());
+        log.debug("Evaluando alertas de riesgo para {} contactos de confianza registrados.", contacts.size());
+
+        contacts.stream()
                 .filter(contact -> shouldNotify(contact.getSensitivityLevel(), analysis.getRiskLevel()))
                 .forEach(contact -> triggerAlert(analysis, user, contact));
     }
@@ -106,7 +129,7 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
 
     private void triggerAlert(Analysis analysis, User user, TrustContact contact) {
         Alerts alert = alertsRepository.save(buildAlert(analysis), contact.getId());
-        log.info("Enviando alerta a contacto: {} por riesgo: {}", contact.getCarer().getEmail(), analysis.getRiskLevel());
+        log.info("Contacto de confianza notificado. Alerta ID: {} enviada al cuidador: {}", alert.getId(), contact.getCarer().getEmail());
 
         sseService.createAndSendNotification(
                 contact.getCarer(),

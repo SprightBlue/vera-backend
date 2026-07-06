@@ -66,7 +66,6 @@ class ChatUseCaseImplTest {
         assertNotNull(result);
         assertEquals(chatId, result);
         verify(chatsRepository, times(1)).save(any(Chats.class));
-        verify(chatsRepository, never()).findById(any());
         verify(chatMessagesRepository, never()).save(any());
     }
 
@@ -81,10 +80,8 @@ class ChatUseCaseImplTest {
         });
 
         Analysis analysis = Analysis.builder().id(analysisId).riskType(RiskType.CLICKED_SUSPICIOUS_LINK).build();
-        Chats hydratedChat = Chats.builder().id(chatId).analysis(analysis).title("Nueva consulta con VERA").build();
 
-        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(hydratedChat));
-        when(promptBuilder.buildChatSystemPrompt(analysis)).thenReturn("Prompt de Sistema");
+        when(promptBuilder.buildChatSystemPrompt(any())).thenReturn("Prompt de Sistema");
         when(aiProvider.generateChatResponse(eq("Prompt de Sistema"), anyList())).thenReturn("Hola, vi tu análisis...");
 
         UUID result = chatUseCase.createChat(sampleUser.getEmail(), analysisId);
@@ -93,22 +90,6 @@ class ChatUseCaseImplTest {
         verify(chatMessagesRepository, times(1)).save(argThat(msg ->
                 msg.getRole() == ChatsRole.MODEL && "Hola, vi tu análisis...".equals(msg.getContent())
         ));
-    }
-
-    @Test
-    @DisplayName("Debe lanzar ResourceNotFoundException si el chat guardado no se encuentra al intentar inicializar el saludo")
-    void createChat_HydrationFails_ThrowsResourceNotFoundException() {
-        when(userRepository.findByEmail(sampleUser.getEmail())).thenReturn(Optional.of(sampleUser));
-        when(chatsRepository.save(any(Chats.class))).thenAnswer(i -> {
-            Chats c = i.getArgument(0);
-            c.setId(chatId);
-            return c;
-        });
-        when(chatsRepository.findById(chatId)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class, () ->
-                chatUseCase.createChat(sampleUser.getEmail(), analysisId)
-        );
     }
 
     @Test
@@ -134,7 +115,6 @@ class ChatUseCaseImplTest {
         assertEquals("Respuesta IA", response);
         verify(promptBuilder, never()).buildTitleGenerationPrompt(anyString());
         verify(aiProvider, never()).generateChatResponse(eq(titleSystemPrompt), anyList());
-        verify(chatsRepository, times(1)).save(chat);
     }
 
     @Test
@@ -155,6 +135,7 @@ class ChatUseCaseImplTest {
         assertEquals("Nuevo Titulo", chat.getTitle());
         verify(chatMessagesRepository, times(1)).save(argThat(msg -> msg.getRole() == ChatsRole.USER && "Ayuda".equals(msg.getContent())));
         verify(chatMessagesRepository, times(1)).save(argThat(msg -> msg.getRole() == ChatsRole.MODEL && "Respuesta Core IA".equals(msg.getContent())));
+        verify(chatsRepository, times(1)).save(chat); // Valida la persistencia del cambio de título
     }
 
     @Test
@@ -168,11 +149,18 @@ class ChatUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar IllegalArgumentException al intentar eliminar un chat inexistente")
-    void deleteChat_ChatDoesNotExist_ThrowsIllegalArgumentException() {
+    @DisplayName("Debe lanzar IllegalArgumentException al intentar enviar un mensaje vacío o nulo")
+    void sendMessage_EmptyMessage_ThrowsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () -> chatUseCase.sendMessage(chatId, "   "));
+        assertThrows(IllegalArgumentException.class, () -> chatUseCase.sendMessage(chatId, null));
+    }
+
+    @Test
+    @DisplayName("Debe lanzar ResourceNotFoundException al intentar eliminar un chat inexistente")
+    void deleteChat_ChatDoesNotExist_ThrowsResourceNotFoundException() {
         when(chatsRepository.findById(chatId)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> chatUseCase.deleteChat(chatId));
+        assertThrows(ResourceNotFoundException.class, () -> chatUseCase.deleteChat(chatId));
     }
 
     @Test
@@ -186,14 +174,23 @@ class ChatUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debe retornar la lista de mensajes asociados al ID del chat")
-    void getChatHistory_ReturnsList() {
+    @DisplayName("Debe retornar la lista de mensajes asociados al ID del chat si este existe")
+    void getChatHistory_ChatExists_ReturnsList() {
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(Chats.builder().id(chatId).build()));
         when(chatMessagesRepository.findByChatId(chatId)).thenReturn(Collections.emptyList());
 
         List<ChatMessages> result = chatUseCase.getChatHistory(chatId);
 
         assertNotNull(result);
         verify(chatMessagesRepository, times(1)).findByChatId(chatId);
+    }
+
+    @Test
+    @DisplayName("Debe lanzar ResourceNotFoundException al pedir el historial de un chat inexistente")
+    void getChatHistory_ChatDoesNotExist_ThrowsResourceNotFoundException() {
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> chatUseCase.getChatHistory(chatId));
     }
 
     @Test
