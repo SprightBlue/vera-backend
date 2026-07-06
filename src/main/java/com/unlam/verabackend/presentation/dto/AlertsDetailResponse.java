@@ -38,7 +38,7 @@ public class AlertsDetailResponse {
                 .title(alert.getTitle())
                 .source(alert.getSource() != null ? alert.getSource().getDisplayName() : null)
                 .contentSummary(alert.getContentSummary())
-                .riskType(alert.getRiskType() != null ? alert.getRiskType().name() : null)
+                .riskType(alert.getRiskType() != null ? alert.getRiskType().getDisplayName() : null)
                 .riskLevel(alert.getRiskLevel() != null ? alert.getRiskLevel().name() : null)
                 .riskPercentage(alert.getRiskPercentage())
                 .suspiciousPatterns(alert.getSuspiciousPatterns())
