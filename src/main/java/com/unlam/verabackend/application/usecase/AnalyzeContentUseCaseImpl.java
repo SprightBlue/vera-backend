@@ -111,6 +111,11 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
     private void handleRiskAlerts(Analysis analysis, User user) {
         if (analysis.getRiskLevel() == null) return;
 
+        if (user.getRole() == Role.CARER) {
+            log.info("Análisis realizado por un cuidador. Se omite el envío de alertas de riesgo.");
+            return;
+        }
+
         List<TrustContact> contacts = trustContactRepository.findByProtectedUserId(user.getId());
         log.debug("Evaluando alertas de riesgo para {} contactos de confianza registrados.", contacts.size());
 
