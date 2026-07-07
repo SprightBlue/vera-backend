@@ -17,6 +17,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.unlam.verabackend.domain.model.Role;
+import com.unlam.verabackend.infrastructure.entity.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,20 +35,32 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
     private final UserRepository userRepository;
     private final SseService sseService;
 
-    private List<Long> getTrustContactIdsByEmail(String carerEmail) {
-        var user = userRepository.findByEmail(carerEmail)
-                .orElseThrow(() -> {
-                    log.error("Fallo al buscar contactos de confianza: Email {} no registrado.", carerEmail);
-                    return new ResourceNotFoundException("Usuario no encontrado con email: " + carerEmail);
-                });
+    private List<Long> getTrustContactIdsByEmail(String email) {
 
-        List<TrustContact> contacts = trustContactRepository.findByCarerId(user.getId());
-        return contacts.stream().map(TrustContact::getId).toList();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        List<TrustContact> contacts;
+
+        if (user.getRole() == Role.CARER) {
+
+            contacts = trustContactRepository.findByCarerId(user.getId());
+
+        } else {
+
+            contacts = trustContactRepository.findByProtectedUserId(user.getId());
+
+        }
+
+        return contacts.stream()
+                .map(TrustContact::getId)
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Alerts> getAlertsHistory(String carerEmail, Boolean isResolved, RiskLevel riskLevel, String search, int page) {
+    public Page<Alerts> getAlertsHistory(String carerEmail, Boolean isResolved, RiskLevel riskLevel, String search,
+            int page) {
         List<Long> contactIds = getTrustContactIdsByEmail(carerEmail);
         if (contactIds.isEmpty()) {
             log.warn("El cuidador {} no posee ningún contacto de confianza asignado.", carerEmail);
@@ -64,25 +78,63 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
                     return new ResourceNotFoundException("La alerta solicitada no existe.");
                 });
 
-        if (!alert.getTrustContact().getCarer().getEmail().equals(carerEmail)) {
-            log.error("VIOLACIÓN DE SEGURIDAD: El usuario {} intentó acceder a la alerta {} sin pertenecer a sus contactos.", carerEmail, id);
-            throw new AccessDeniedException("No tenés permisos para ver esta alerta.");
+        String carer = alert.getTrustContact().getCarer().getEmail();
+
+        String protectedUser = alert.getTrustContact()
+                .getProtectedUser()
+                .getEmail();
+
+        if (!carerEmail.equals(carer) && !carerEmail.equals(protectedUser)) {
+
+            log.error(
+                    "VIOLACIÓN DE SEGURIDAD: El usuario {} intentó acceder a la alerta {} sin permisos.",
+                    carerEmail,
+                    id);
+
+            throw new AccessDeniedException(
+                    "No tenés permisos para ver esta alerta.");
         }
+
         return alert;
     }
 
     @Override
-    @Transactional
-    public void deleteAlert(UUID id, String carerEmail) {
-        Alerts alert = getAlertDetail(id, carerEmail);
-        alertsRepository.deleteById(alert.getId());
-        log.info("Alerta ID: {} eliminada correctamente por cuidador: {}", id, carerEmail);
+@Transactional
+public void deleteAlert(UUID id, String carerEmail) {
+
+    Alerts alert = getAlertDetail(id, carerEmail);
+
+    if (!alert.getTrustContact()
+            .getCarer()
+            .getEmail()
+            .equals(carerEmail)) {
+
+        throw new AccessDeniedException(
+                "Solo el cuidador puede eliminar una alerta."
+        );
     }
+
+    alertsRepository.deleteById(alert.getId());
+
+    log.info(
+            "Alerta ID: {} eliminada correctamente por cuidador: {}",
+            id,
+            carerEmail
+    );
+}
 
     @Override
     @Transactional
     public void resolveAlert(UUID id, String carerEmail) {
         Alerts alert = getAlertDetail(id, carerEmail);
+        if (!alert.getTrustContact()
+                .getCarer()
+                .getEmail()
+                .equals(carerEmail)) {
+
+            throw new AccessDeniedException(
+                    "Solo el cuidador puede resolver una alerta.");
+        }
         alertsRepository.resolveAlert(alert.getId(), LocalDateTime.now());
         log.info("Alerta ID: {} marcada como RESUELTA por el cuidador: {}", id, carerEmail);
 
@@ -91,8 +143,7 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
                 alert.getTrustContact().getProtectedUser(),
                 NotificationsType.ALERT_SOLVED,
                 alert.getTrustContact().getCarer().getFullName(),
-                payload
-        );
+                payload);
         log.info("Notificación SSE enviada al usuario protegido con motivo de resolución de alerta.");
     }
 }
