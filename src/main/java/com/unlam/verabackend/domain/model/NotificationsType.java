@@ -6,5 +6,4 @@ public enum NotificationsType {
     INVITATION,
     INVITATION_ACCEPTED,
     INVITATION_REJECTED
-    // Agrega o modifica los tipos de notificación según sea necesario
 }

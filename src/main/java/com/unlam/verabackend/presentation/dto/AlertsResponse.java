@@ -2,6 +2,7 @@ package com.unlam.verabackend.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.unlam.verabackend.domain.model.Alerts;
+import com.unlam.verabackend.presentation.utils.DateFormatter;
 import lombok.Builder;
 import lombok.Data;
 

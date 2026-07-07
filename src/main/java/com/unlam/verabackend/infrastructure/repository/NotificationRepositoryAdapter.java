@@ -8,7 +8,9 @@ import com.unlam.verabackend.infrastructure.mapper.NotificationMapper;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,18 +28,23 @@ public class NotificationRepositoryAdapter implements NotificationsRepository {
 
     @Override
     public Page<Notifications> findByUserEmailCreatedAtDesc(String email, Pageable pageable) {
-        return jpaRepository.findByUserEmail(email, pageable)
+        Pageable customPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                5,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return jpaRepository.findByUserEmail(email, customPageable)
                 .map(mapper::toDomain);
     }
 
     @Override
+    @Transactional
     public Notifications save(Notifications notification) {
-        User userEntity = entityManager.createQuery("SELECT u FROM User u WHERE u.email = :email", User.class)
-                .setParameter("email", notification.getUser().getEmail())
-                .getSingleResult();
-
-        NotificationsEntity entity = mapper.toEntity(notification, userEntity);
-        return mapper.toDomain(jpaRepository.save(entity));
+        User userProxy = entityManager.getReference(User.class, notification.getUser().getId());
+        NotificationsEntity entity = mapper.toEntity(notification, userProxy);
+        NotificationsEntity savedEntity = jpaRepository.saveAndFlush(entity);
+        return mapper.toDomain(savedEntity);
     }
 
     @Override
@@ -47,6 +54,7 @@ public class NotificationRepositoryAdapter implements NotificationsRepository {
     }
 
     @Override
+    @Transactional
     public void deleteById(UUID id) {
         if (!jpaRepository.existsById(id)) {
             throw new IllegalArgumentException("No se puede eliminar. Notificación no encontrada con ID: " + id);
@@ -66,9 +74,7 @@ public class NotificationRepositoryAdapter implements NotificationsRepository {
     @Transactional
     public void markAllAsReadByUserEmail(String email) {
         List<NotificationsEntity> unreadNotifications = jpaRepository.findByUserEmailAndIsReadFalse(email);
-
         unreadNotifications.forEach(notification -> notification.setRead(true));
-
-        jpaRepository.saveAll(unreadNotifications);
+        jpaRepository.saveAllAndFlush(unreadNotifications);
     }
 }

@@ -1,4 +1,4 @@
-package com.unlam.verabackend.presentation.dto;
+package com.unlam.verabackend.presentation.utils;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;

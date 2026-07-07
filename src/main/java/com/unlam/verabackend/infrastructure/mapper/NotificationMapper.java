@@ -8,21 +8,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class NotificationMapper {
 
-    public Notifications toDomain(NotificationsEntity entity) {
-        if (entity == null) return null;
-
-        return Notifications.builder()
-                .id(entity.getId())
-                .user(entity.getUser())
-                .type(entity.getType())
-                .title(entity.getTitle())
-                .message(entity.getMessage())
-                .payload(entity.getPayload())
-                .isRead(entity.isRead())
-                .createdAt(entity.getCreatedAt())
-                .build();
-    }
-
     public NotificationsEntity toEntity(Notifications domain, User userEntity) {
         if (domain == null) return null;
 
@@ -35,6 +20,23 @@ public class NotificationMapper {
                 .payload(domain.getPayload())
                 .isRead(domain.isRead())
                 .createdAt(domain.getCreatedAt())
+                .readAt(domain.getReadAt())
+                .build();
+    }
+
+    public Notifications toDomain(NotificationsEntity entity) {
+        if (entity == null) return null;
+
+        return Notifications.builder()
+                .id(entity.getId())
+                .user(entity.getUser())
+                .type(entity.getType())
+                .title(entity.getTitle())
+                .message(entity.getMessage())
+                .payload(entity.getPayload())
+                .isRead(entity.isRead())
+                .createdAt(entity.getCreatedAt())
+                .readAt(entity.getReadAt())
                 .build();
     }
 }

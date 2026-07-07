@@ -45,11 +45,21 @@ public class NotificationsEntity {
     @Builder.Default
     private boolean isRead = false;
 
+    @Column(name = "read_at")
+    private LocalDateTime readAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        if (this.isRead && this.readAt == null) {
+            this.readAt = LocalDateTime.now();
+        }
     }
 }

@@ -27,7 +27,6 @@ class GetUserLocationUseCaseImplTest {
     @Test
     @DisplayName("Debe retornar la ubicación cuando el cuidador es el asignado (Camino Feliz)")
     void execute_WhenCarerIsValid_ShouldReturnUserLocation() {
-        // Arrange
         Long trustContactId = 1L;
         String carerEmail = "cuidador@gmail.com";
 
@@ -35,10 +34,8 @@ class GetUserLocationUseCaseImplTest {
         when(locationRepository.findByTrustContactId(trustContactId)).thenReturn(Optional.of(locationSpy));
         when(locationSpy.getTrustContact().getCarer().getEmail()).thenReturn(carerEmail);
 
-        // Act
         UserLocation result = getUserLocationUseCase.execute(trustContactId, carerEmail);
 
-        // Assert
         assertNotNull(result);
         assertEquals(locationSpy, result);
         verify(locationRepository, times(1)).findByTrustContactId(trustContactId);
@@ -47,12 +44,10 @@ class GetUserLocationUseCaseImplTest {
     @Test
     @DisplayName("Debe lanzar ResourceNotFoundException si la relación no existe")
     void execute_WhenLocationNotFound_ShouldThrowResourceNotFoundException() {
-        // Arrange
         Long trustContactId = 99L;
         String carerEmail = "cuidador@gmail.com";
         when(locationRepository.findByTrustContactId(trustContactId)).thenReturn(Optional.empty());
 
-        // Act & Assert
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () ->
                 getUserLocationUseCase.execute(trustContactId, carerEmail)
         );
@@ -64,7 +59,6 @@ class GetUserLocationUseCaseImplTest {
     @Test
     @DisplayName("Debe lanzar SecurityException si el email no pertenece al cuidador asignado")
     void execute_WhenCarerIsInvalid_ShouldThrowSecurityException() {
-        // Arrange
         Long trustContactId = 1L;
         String fraudulentCarerEmail = "hacker@gmail.com";
         String realCarerEmail = "cuidador_real@gmail.com";
@@ -73,7 +67,6 @@ class GetUserLocationUseCaseImplTest {
         when(locationRepository.findByTrustContactId(trustContactId)).thenReturn(Optional.of(locationSpy));
         when(locationSpy.getTrustContact().getCarer().getEmail()).thenReturn(realCarerEmail);
 
-        // Act & Assert
         SecurityException exception = assertThrows(SecurityException.class, () ->
                 getUserLocationUseCase.execute(trustContactId, fraudulentCarerEmail)
         );
