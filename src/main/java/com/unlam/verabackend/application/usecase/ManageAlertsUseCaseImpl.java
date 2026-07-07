@@ -36,20 +36,15 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
     private final SseService sseService;
 
     private List<Long> getTrustContactIdsByEmail(String email) {
-
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
         List<TrustContact> contacts;
 
         if (user.getRole() == Role.CARER) {
-
             contacts = trustContactRepository.findByCarerId(user.getId());
-
         } else {
-
             contacts = trustContactRepository.findByProtectedUserId(user.getId());
-
         }
 
         return contacts.stream()
@@ -59,8 +54,7 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Alerts> getAlertsHistory(String carerEmail, Boolean isResolved, RiskLevel riskLevel, String search,
-            int page) {
+    public Page<Alerts> getAlertsHistory(String carerEmail, Boolean isResolved, RiskLevel riskLevel, String search, int page) {
         List<Long> contactIds = getTrustContactIdsByEmail(carerEmail);
         if (contactIds.isEmpty()) {
             log.warn("El cuidador {} no posee ningún contacto de confianza asignado.", carerEmail);
@@ -79,62 +73,40 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
                 });
 
         String carer = alert.getTrustContact().getCarer().getEmail();
-
-        String protectedUser = alert.getTrustContact()
-                .getProtectedUser()
-                .getEmail();
+        String protectedUser = alert.getTrustContact().getProtectedUser().getEmail();
 
         if (!carerEmail.equals(carer) && !carerEmail.equals(protectedUser)) {
-
-            log.error(
-                    "VIOLACIÓN DE SEGURIDAD: El usuario {} intentó acceder a la alerta {} sin permisos.",
-                    carerEmail,
-                    id);
-
-            throw new AccessDeniedException(
-                    "No tenés permisos para ver esta alerta.");
+            log.error("VIOLACIÓN DE SEGURIDAD: El usuario {} intentó acceder a la alerta {} sin permisos.", carerEmail, id);
+            throw new AccessDeniedException("No tenés permisos para ver esta alerta.");
         }
 
         return alert;
     }
 
     @Override
-@Transactional
-public void deleteAlert(UUID id, String carerEmail) {
+    @Transactional
+    public void deleteAlert(UUID id, String carerEmail) {
+        Alerts alert = getAlertDetail(id, carerEmail);
 
-    Alerts alert = getAlertDetail(id, carerEmail);
+        if (!alert.getTrustContact().getCarer().getEmail().equals(carerEmail)) {
+            log.warn("ACCESO DENEGADO: El usuario {} intentó eliminar la alerta {} pero no es el cuidador asignado.", carerEmail, id);
+            throw new AccessDeniedException("Solo el cuidador puede eliminar una alerta.");
+        }
 
-    if (!alert.getTrustContact()
-            .getCarer()
-            .getEmail()
-            .equals(carerEmail)) {
-
-        throw new AccessDeniedException(
-                "Solo el cuidador puede eliminar una alerta."
-        );
+        alertsRepository.deleteById(alert.getId());
+        log.info("Alerta ID: {} eliminada correctamente por cuidador: {}", id, carerEmail);
     }
-
-    alertsRepository.deleteById(alert.getId());
-
-    log.info(
-            "Alerta ID: {} eliminada correctamente por cuidador: {}",
-            id,
-            carerEmail
-    );
-}
 
     @Override
     @Transactional
     public void resolveAlert(UUID id, String carerEmail) {
         Alerts alert = getAlertDetail(id, carerEmail);
-        if (!alert.getTrustContact()
-                .getCarer()
-                .getEmail()
-                .equals(carerEmail)) {
 
-            throw new AccessDeniedException(
-                    "Solo el cuidador puede resolver una alerta.");
+        if (!alert.getTrustContact().getCarer().getEmail().equals(carerEmail)) {
+            log.warn("ACCESO DENEGADO: El usuario {} intentó resolver la alerta {} pero no es el cuidador asignado.", carerEmail, id);
+            throw new AccessDeniedException("Solo el cuidador puede resolver una alerta.");
         }
+
         alertsRepository.resolveAlert(alert.getId(), LocalDateTime.now());
         log.info("Alerta ID: {} marcada como RESUELTA por el cuidador: {}", id, carerEmail);
 
