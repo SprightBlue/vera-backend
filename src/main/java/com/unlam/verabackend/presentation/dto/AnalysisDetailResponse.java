@@ -1,6 +1,7 @@
 package com.unlam.verabackend.presentation.dto;
 
 import com.unlam.verabackend.domain.model.Analysis;
+import com.unlam.verabackend.presentation.utils.DateFormatter;
 import lombok.Builder;
 import lombok.Data;
 import java.util.UUID;

@@ -7,10 +7,9 @@ import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.presentation.dto.PagedResponse;
 import com.unlam.verabackend.presentation.dto.NotificationsResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +18,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
@@ -32,15 +32,17 @@ public class NotificationsController {
             @AuthenticationPrincipal User user
     ) {
         String email = user.getEmail();
+        log.info("[HTTP GET] Solicitando apertura de canal SSE para el usuario: {}", email);
         return sseService.createEmitter(email);
     }
 
     @GetMapping
     public ResponseEntity<PagedResponse<NotificationsResponse>> getMyNotifications(
             @AuthenticationPrincipal User user,
-            @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            Pageable pageable
     ) {
         String email = user.getEmail();
+        log.info("[HTTP GET] Solicitando listado de notificaciones para: {}. Página solicitada: {}", email, pageable.getPageNumber());
 
         Page<Notifications> page = useCase.getMyNotifications(email, pageable);
 
@@ -49,6 +51,7 @@ public class NotificationsController {
                 NotificationsResponse::fromDomain
         );
 
+        log.debug("Retornando {} notificaciones de la página {} para el usuario: {}", page.getNumberOfElements(), page.getNumber(), email);
         return ResponseEntity.ok(response);
     }
 
@@ -57,8 +60,11 @@ public class NotificationsController {
             @AuthenticationPrincipal User user
     ) {
         String email = user.getEmail();
+        log.info("[HTTP PATCH] Solicitud para marcar todas las notificaciones como leídas de: {}", email);
 
         useCase.markAllMyNotificationsAsRead(email);
+
+        log.info("Todas las notificaciones de {} fueron marcadas como leídas con éxito.", email);
         return ResponseEntity.noContent().build();
     }
 
@@ -68,8 +74,11 @@ public class NotificationsController {
             @PathVariable UUID id
     ) {
         String email = user.getEmail();
+        log.info("[HTTP DELETE] Solicitud para eliminar notificación ID: {} por el usuario: {}", id, email);
 
         useCase.deleteNotification(id, email);
+
+        log.info("Notificación ID: {} eliminada correctamente vía endpoint.", id);
         return ResponseEntity.noContent().build();
     }
 }

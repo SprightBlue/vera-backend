@@ -40,20 +40,41 @@ public class SseService {
 
     public void sendDeleteEvent(String email, UUID notificationId) {
         log.debug("Preparando evento NOTIFICATION_DELETED para el usuario: {}, ID de notificación: {}", email, notificationId);
-        sendEventToUser(email, "NOTIFICATION_DELETED", Map.of("id", notificationId));
+
+        int unreadCount = repository.findUnreadByUserEmail(email).size();
+
+        sendEventToUser(email, "NOTIFICATION_DELETED", Map.of(
+                "id", notificationId,
+                "unreadCount", unreadCount,
+                "hasUnread", unreadCount > 0
+        ));
+    }
+
+    public void sendUnreadCountUpdate(String email) {
+        log.debug("Enviando actualización forzada del contador de no leídas para: {}", email);
+        int unreadCount = repository.findUnreadByUserEmail(email).size();
+        sendEventToUser(email, "UNREAD_COUNT_UPDATE", Map.of(
+                "unreadCount", unreadCount,
+                "hasUnread", unreadCount > 0
+        ));
     }
 
     @Transactional
-    public Notifications createAndSendNotification(User targetUser, NotificationsType type, String triggeringUserFullName, Map<String, Object> payload) {
+    public void createAndSendNotification(User targetUser, NotificationsType type, String triggeringUserFullName, Map<String, Object> payload) {
         log.info("Generando notificación de tipo {} para el usuario: {}", type, targetUser.getEmail());
 
         Notifications notification = buildNotification(targetUser, type, triggeringUserFullName, payload);
         Notifications saved = repository.save(notification);
 
-        sendEventToUser(targetUser.getEmail(), "NEW_NOTIFICATION", saved);
-        sendAlertEmailIfNeeded(targetUser, type, triggeringUserFullName, payload);
+        int unreadCount = repository.findUnreadByUserEmail(targetUser.getEmail()).size();
 
-        return saved;
+        sendEventToUser(targetUser.getEmail(), "NEW_NOTIFICATION", Map.of(
+                "notification", saved,
+                "unreadCount", unreadCount,
+                "hasUnread", true
+        ));
+
+        sendAlertEmailIfNeeded(targetUser, type, triggeringUserFullName, payload);
     }
 
     private void setupEmitterCallbacks(String email, SseEmitter emitter) {
@@ -76,8 +97,13 @@ public class SseService {
 
     private void sendInitEvent(String email, SseEmitter emitter) {
         try {
-            emitter.send(SseEmitter.event().name("INIT").data("Conectado al canal de notificaciones"));
-            log.debug("Evento INIT enviado exitosamente a {}", email);
+            int unreadCount = repository.findUnreadByUserEmail(email).size();
+            emitter.send(SseEmitter.event().name("INIT").data(Map.of(
+                    "message", "Conectado al canal de notificaciones",
+                    "unreadCount", unreadCount,
+                    "hasUnread", unreadCount > 0
+            )));
+            log.debug("Evento INIT enviado exitosamente a {} con {} pendientes.", email, unreadCount);
         } catch (IOException e) {
             log.warn("Fallo al enviar evento INIT a {}. Eliminando canal. Razón: {}", email, e.getMessage());
             userEmitters.remove(email);

@@ -19,4 +19,5 @@ public class Notifications {
     private Map<String, Object> payload;
     private boolean isRead;
     private LocalDateTime createdAt;
+    private LocalDateTime readAt;
 }

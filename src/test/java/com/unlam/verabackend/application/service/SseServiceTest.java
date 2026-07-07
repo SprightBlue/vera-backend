@@ -18,7 +18,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,6 +57,8 @@ class SseServiceTest {
 
         when(repository.save(any(Notifications.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
+        when(repository.findUnreadByUserEmail(userEmail)).thenReturn(Collections.emptyList());
+
         sseService.createAndSendNotification(sampleUser, type, triggeringUser, payload);
 
         ArgumentCaptor<Notifications> notificationCaptor = ArgumentCaptor.forClass(Notifications.class);
@@ -64,6 +68,7 @@ class SseServiceTest {
         assertEquals(sampleUser, captured.getUser());
         assertEquals(type, captured.getType());
         assertFalse(captured.isRead());
+        assertNull(captured.getReadAt());
         assertNotNull(captured.getCreatedAt());
 
         if (type == NotificationsType.ALERT) {
@@ -100,6 +105,7 @@ class SseServiceTest {
     @DisplayName("Debe despachar el correo de alerta con un mensaje predeterminado si el payload no contiene detalles específicos")
     void createAndSendNotification_WhenAlertPayloadLacksDetailsKey_ShouldUseDefaultTextMessage() {
         when(repository.save(any(Notifications.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(repository.findUnreadByUserEmail(userEmail)).thenReturn(Collections.emptyList());
 
         sseService.createAndSendNotification(sampleUser, NotificationsType.ALERT, "Test User", Collections.emptyMap());
 
@@ -108,5 +114,16 @@ class SseServiceTest {
                 eq("Test User"),
                 eq("Se detectó actividad sospechosa que requiere tu revisión inmediata.")
         );
+    }
+
+    @Test
+    @DisplayName("Debe consultar al repositorio por el total de remanentes al disparar un evento de eliminación")
+    void sendDeleteEvent_ShouldQueryUnreadCountAndExecuteWithoutNetworkInterference() {
+        UUID mockId = UUID.randomUUID();
+
+        when(repository.findUnreadByUserEmail(userEmail)).thenReturn(List.of(new Notifications(), new Notifications()));
+
+        assertDoesNotThrow(() -> sseService.sendDeleteEvent(userEmail, mockId));
+        verify(repository, times(1)).findUnreadByUserEmail(userEmail);
     }
 }

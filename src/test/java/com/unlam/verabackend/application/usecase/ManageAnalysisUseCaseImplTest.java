@@ -36,7 +36,6 @@ class ManageAnalysisUseCaseImplTest {
     @Test
     @DisplayName("Debe retornar la página de análisis invocando al repositorio con los filtros dinámicos")
     void getAnalysisHistory_WhenCalled_ShouldReturnPagedAnalysis() {
-        // Arrange
         RiskLevel riskLevel = RiskLevel.HIGH;
         String search = "alerta";
         int page = 0;
@@ -45,10 +44,8 @@ class ManageAnalysisUseCaseImplTest {
         when(analysisRepository.findByCriteria(userEmail, riskLevel, search, page))
                 .thenReturn(expectedPage);
 
-        // Act
         Page<Analysis> result = manageAnalysisUseCase.getAnalysisHistory(userEmail, riskLevel, search, page);
 
-        // Assert
         assertNotNull(result);
         assertEquals(expectedPage, result);
         verify(analysisRepository, times(1))
@@ -58,11 +55,9 @@ class ManageAnalysisUseCaseImplTest {
     @Test
     @DisplayName("Debe lanzar ResourceNotFoundException cuando el análisis no existe en la base de datos")
     void getAnalysisDetail_WhenAnalysisDoesNotExist_ShouldThrowResourceNotFoundException() {
-        // Arrange
         UUID id = UUID.randomUUID();
         when(analysisRepository.findById(id)).thenReturn(Optional.empty());
 
-        // Act & Assert
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () ->
                 manageAnalysisUseCase.getAnalysisDetail(id, userEmail)
         );
@@ -73,7 +68,6 @@ class ManageAnalysisUseCaseImplTest {
     @Test
     @DisplayName("Debe lanzar AccessDeniedException (403) cuando un usuario intenta ver un análisis de otra cuenta")
     void getAnalysisDetail_WhenUserDoesNotHavePermissions_ShouldThrowAccessDeniedException() {
-        // Arrange
         UUID id = UUID.randomUUID();
 
         User ownerUser = new User();
@@ -84,7 +78,6 @@ class ManageAnalysisUseCaseImplTest {
 
         when(analysisRepository.findById(id)).thenReturn(Optional.of(analysis));
 
-        // Act & Assert
         AccessDeniedException exception = assertThrows(AccessDeniedException.class, () ->
                 manageAnalysisUseCase.getAnalysisDetail(id, userEmail)
         );
@@ -94,7 +87,6 @@ class ManageAnalysisUseCaseImplTest {
     @Test
     @DisplayName("Debe retornar el análisis exitosamente si el usuario es el dueño legítimo")
     void getAnalysisDetail_WhenAnalysisExistsAndUserIsOwner_ShouldReturnAnalysis() {
-        // Arrange
         UUID id = UUID.randomUUID();
 
         User ownerUser = new User();
@@ -105,10 +97,8 @@ class ManageAnalysisUseCaseImplTest {
 
         when(analysisRepository.findById(id)).thenReturn(Optional.of(expectedAnalysis));
 
-        // Act
         Analysis result = manageAnalysisUseCase.getAnalysisDetail(id, userEmail);
 
-        // Assert
         assertNotNull(result);
         assertEquals(expectedAnalysis, result);
     }
@@ -116,7 +106,6 @@ class ManageAnalysisUseCaseImplTest {
     @Test
     @DisplayName("Debe eliminar el análisis físicamente si el solicitante es el dueño")
     void deleteAnalysis_WhenUserIsOwner_ShouldDeleteSuccessfully() {
-        // Arrange
         UUID id = UUID.randomUUID();
 
         User ownerUser = new User();
@@ -129,7 +118,6 @@ class ManageAnalysisUseCaseImplTest {
         when(analysisRepository.findById(id)).thenReturn(Optional.of(analysis));
         doNothing().when(analysisRepository).deleteById(id);
 
-        // Act & Assert
         assertDoesNotThrow(() -> manageAnalysisUseCase.deleteAnalysis(id, userEmail));
 
         verify(analysisRepository, times(1)).deleteById(id);
