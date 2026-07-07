@@ -54,8 +54,9 @@ public class SecurityConfig {
                         
                         .requestMatchers("/api/v1/analysis/**").hasAnyRole("CARER", "PROTECTED")
                         .requestMatchers("/api/v1/chats/**").hasAnyRole("CARER", "PROTECTED")
-                        .requestMatchers("/api/v1/alerts/**").hasAnyRole("CARER", "PROTECTED")
+                        .requestMatchers("/api/v1/alerts/**").hasAnyRole("CARER")
                         .requestMatchers("/api/v1/notifications/**").hasAnyRole("CARER", "PROTECTED")
+
                         .requestMatchers("/dashboard").hasAnyRole("CARER", "PROTECTED")
                         
                         .anyRequest().authenticated()

@@ -61,6 +61,7 @@ class AnalyzeContentUseCaseImplTest {
         protectedUser.setId(1L);
         protectedUser.setFullName("Abuelo Pepe");
         protectedUser.setEmail(userEmail);
+        protectedUser.setRole(Role.PROTECTED);
 
         mockFile = new MockMultipartFile("file", "test.pdf", "application/pdf", "bytes".getBytes());
     }
@@ -114,7 +115,6 @@ class AnalyzeContentUseCaseImplTest {
     void execute_WhenAiResultEnumsAreCorrupt_ShouldThrowIllegalArgumentException() {
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
 
-        // "RIESGO_INVENTADO" no existe en RiskLevel, se propaga directo al handler
         AiResult corruptAiResult = new AiResult("Titulo", "Resumen", "RIESGO_INVENTADO", "NONE", 10, "Patrones", "Recomendacion");
         when(aiProvider.analyzeContent(any(), any())).thenReturn(corruptAiResult);
 
@@ -243,13 +243,11 @@ class AnalyzeContentUseCaseImplTest {
     void execute_WhenRiskLevelIsNull_ShouldNotTriggerAlerts() {
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(protectedUser));
 
-        // CORRECCIÓN: Quitamos el mockeo manual con riskLevel nulo ya que buildAnalysis lanzaría excepción
-        // con un string inválido en AiResult. En su lugar, hacemos que el save() directamente devuelva una entidad mutada.
         when(analysisRepository.save(any(Analysis.class))).thenAnswer(i -> {
             Analysis a = i.getArgument(0);
             return Analysis.builder()
                     .title(a.getTitle())
-                    .riskLevel(null) // Simulamos que por reglas internas se anula el nivel de riesgo antes de alertas
+                    .riskLevel(null)
                     .riskType(a.getRiskType())
                     .build();
         });
@@ -261,6 +259,28 @@ class AnalyzeContentUseCaseImplTest {
 
         assertNotNull(result);
         verify(trustContactRepository, never()).findByProtectedUserId(any());
+    }
+
+    @Test
+    @DisplayName("Debe finalizar el flujo sin alertas si el rol del usuario que analiza es CARER")
+    void execute_WhenUserIsCarer_ShouldNotTriggerAlerts() {
+        User carerUser = new User();
+        carerUser.setId(5L);
+        carerUser.setEmail("cuidador.activo@gmail.com");
+        carerUser.setRole(Role.CARER);
+
+        when(userRepository.findByEmail("cuidador.activo@gmail.com")).thenReturn(Optional.of(carerUser));
+
+        AiResult mockAiResult = new AiResult("Titulo", "Resumen", "HIGH", "IDENTITY_THEFT_OR_IMPERSONATION", 80, "Patrones", "Recomendacion");
+        when(aiProvider.analyzeContent(any(), any())).thenReturn(mockAiResult);
+        when(analysisRepository.save(any(Analysis.class))).thenAnswer(i -> i.getArgument(0));
+
+        Analysis result = analyzeContentUseCase.execute("cuidador.activo@gmail.com", "Mensaje", null, "WEB");
+
+        assertNotNull(result);
+        verify(trustContactRepository, never()).findByProtectedUserId(any());
+        verify(alertsRepository, never()).save(any(), anyLong());
+        verify(sseService, never()).createAndSendNotification(any(), any(), any(), any());
     }
 
     @Test
