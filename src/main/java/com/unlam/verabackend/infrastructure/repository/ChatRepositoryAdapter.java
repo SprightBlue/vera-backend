@@ -52,4 +52,9 @@ public class ChatRepositoryAdapter implements ChatsRepository {
     public void deleteById(UUID id) {
         jpaChatsRepository.deleteById(id);
     }
+
+    @Override
+    public boolean existsById(UUID chatId) {
+        return jpaChatsRepository.existsById(chatId);
+    }
 }

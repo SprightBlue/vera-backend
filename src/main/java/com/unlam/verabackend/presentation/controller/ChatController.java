@@ -24,17 +24,21 @@ public class ChatController {
 
     @GetMapping
     public ResponseEntity<List<ChatSessionResponse>> getUserChats(@AuthenticationPrincipal User user) {
-        log.info("Usuario {} solicitando su lista de chats", user.getEmail());
-        return ResponseEntity.ok(chatUseCase.getChatsByEmail(user.getEmail()).stream()
+        log.info("REST Request: GET - Recopilando canales de chat activos para el operador [{}]", user.getEmail());
+
+        List<ChatSessionResponse> activeChats = chatUseCase.getChatsByEmail(user.getEmail()).stream()
                 .map(ChatSessionResponse::fromDomain)
-                .toList());
+                .toList();
+
+        return ResponseEntity.ok(activeChats);
     }
 
     @PostMapping("/init")
     public ResponseEntity<UUID> initializeChat(@AuthenticationPrincipal User user) {
-        log.info("Inicializando chat para usuario: {}", user.getEmail());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(chatUseCase.createChat(user.getEmail(), null));
+        log.info("REST Request: POST - Inicializando nueva sesión de chat en blanco para [{}]", user.getEmail());
+
+        UUID newChatId = chatUseCase.createChat(user.getEmail(), null);
+        return ResponseEntity.status(HttpStatus.CREATED).body(newChatId);
     }
 
     @PostMapping("/{chatId}/messages")
@@ -43,9 +47,11 @@ public class ChatController {
             @PathVariable UUID chatId,
             @RequestBody String message
     ) {
-        validateMessage(message);
-        log.info("Usuario {} enviando mensaje en el chat: {}", user.getEmail(), chatId);
-        return ResponseEntity.ok(chatUseCase.sendMessage(chatId, message));
+        log.info("REST Request: POST - Transmitiendo mensaje entrante en chat ID [{}] por [{}]", chatId, user.getEmail());
+        validateIncomingMessage(message);
+
+        String responseMessage = chatUseCase.sendMessage(chatId, message);
+        return ResponseEntity.ok(responseMessage);
     }
 
     @GetMapping("/{chatId}/messages")
@@ -53,24 +59,26 @@ public class ChatController {
             @AuthenticationPrincipal User user,
             @PathVariable UUID chatId
     ) {
-        log.info("Usuario {} solicitando historial del chat: {}", user.getEmail(), chatId);
-        return ResponseEntity.ok(chatUseCase.getChatHistory(chatId).stream()
+        log.info("REST Request: GET - Recuperando secuencia de mensajes para el chat ID [{}] solicitado por [{}]", chatId, user.getEmail());
+
+        List<ChatMessagesResponse> history = chatUseCase.getChatHistory(chatId).stream()
                 .map(ChatMessagesResponse::fromDomain)
-                .toList());
+                .toList();
+
+        return ResponseEntity.ok(history);
     }
 
     @DeleteMapping("/{chatId}")
-    public ResponseEntity<Void> deleteChat(
-            @AuthenticationPrincipal User user,
-            @PathVariable UUID chatId
-    ) {
-        log.info("Usuario {} eliminando el chat: {}", user.getEmail(), chatId);
+    public ResponseEntity<Void> deleteChat(@AuthenticationPrincipal User user, @PathVariable UUID chatId) {
+        log.info("REST Request: DELETE - Solicitando remoción completa del chat ID [{}] por el operador [{}]", chatId, user.getEmail());
+
         chatUseCase.deleteChat(chatId);
         return ResponseEntity.noContent().build();
     }
 
-    private void validateMessage(String message) {
+    private void validateIncomingMessage(String message) {
         if (message == null || message.isBlank()) {
+            log.warn("Payload Validation Exception: Rechazado intento de envío de mensaje con cuerpo vacío.");
             throw new IllegalArgumentException("El contenido del mensaje no puede estar vacío.");
         }
     }

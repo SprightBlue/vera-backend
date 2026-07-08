@@ -3,7 +3,7 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.domain.port.out.AiProvider;
 import com.unlam.verabackend.application.service.ExtractorService;
 import com.unlam.verabackend.application.service.PromptBuilderService;
-import com.unlam.verabackend.application.service.SseService;
+import com.unlam.verabackend.application.service.NotificationService;
 import com.unlam.verabackend.application.service.ValidatorService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.*;
@@ -43,7 +43,7 @@ class AnalyzeContentUseCaseImplTest {
     @Mock private AnalysisRepository analysisRepository;
     @Mock private AlertsRepository alertsRepository;
     @Mock private TrustContactRepository trustContactRepository;
-    @Mock private SseService sseService;
+    @Mock private NotificationService notificationService;
 
     @Captor
     private ArgumentCaptor<Map<String, Object>> payloadCaptor;
@@ -231,10 +231,10 @@ class AnalyzeContentUseCaseImplTest {
 
         if (expectedNotify) {
             verify(alertsRepository, times(1)).save(any(Alerts.class), eq(99L));
-            verify(sseService, times(1)).createAndSendNotification(eq(carerUser), eq(NotificationsType.ALERT), eq("Abuelo Pepe"), any());
+            verify(notificationService, times(1)).createAndSendNotification(eq(carerUser), eq(NotificationsType.ALERT), eq("Abuelo Pepe"), any());
         } else {
             verify(alertsRepository, never()).save(any(Alerts.class), any());
-            verify(sseService, never()).createAndSendNotification(any(), any(), any(), any());
+            verify(notificationService, never()).createAndSendNotification(any(), any(), any(), any());
         }
     }
 
@@ -280,7 +280,7 @@ class AnalyzeContentUseCaseImplTest {
         assertNotNull(result);
         verify(trustContactRepository, never()).findByProtectedUserId(any());
         verify(alertsRepository, never()).save(any(), anyLong());
-        verify(sseService, never()).createAndSendNotification(any(), any(), any(), any());
+        verify(notificationService, never()).createAndSendNotification(any(), any(), any(), any());
     }
 
     @Test
@@ -312,7 +312,7 @@ class AnalyzeContentUseCaseImplTest {
 
         analyzeContentUseCase.execute(userEmail, "Alerta máxima", null, "WEB");
 
-        verify(sseService).createAndSendNotification(
+        verify(notificationService).createAndSendNotification(
                 eq(carerUser),
                 eq(NotificationsType.ALERT),
                 eq("Abuelo Pepe"),

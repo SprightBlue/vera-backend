@@ -36,66 +36,68 @@ public class ExtractorService {
 
     public List<String> findUrls(String text) {
         List<String> urls = new ArrayList<>();
-        if (text == null || text.isEmpty()) return urls;
+        if (text == null || text.isBlank()) return urls;
 
         Matcher matcher = URL_PATTERN.matcher(text);
-        while (matcher.find()) urls.add(matcher.group().trim());
+        while (matcher.find()) {
+            urls.add(matcher.group().trim());
+        }
 
-        log.debug("Se encontraron {} URLs en el texto proporcionado.", urls.size());
+        log.debug("DomainService: Capturadas {} URLs candidatas dentro de la cadena de texto analizada.", urls.size());
         return urls;
     }
 
     public String convertDocumentToText(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            log.debug("El archivo proporcionado para extracción de texto es nulo o está vacío.");
+            log.debug("DomainService: Ignorando conversión. El MultipartFile provisto está vacío.");
             return "";
         }
 
         String filename = file.getOriginalFilename();
         if (filename == null || !filename.contains(".")) {
-            log.warn("El archivo no tiene nombre o no posee una extensión válida.");
+            log.warn("DomainService Error: No se puede procesar el documento. Nombre o extensión ausentes.");
             return "";
         }
 
-        String extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
-        log.info("Iniciando extracción de texto para el archivo: {} (Extensión: {})", filename, extension);
+        String extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase().trim();
+        log.info("DomainService: Extrayendo streams de texto crudo para [{}] (Filtro: {})", filename, extension);
 
         try (InputStream inputStream = file.getInputStream()) {
             return extractTextByExtension(extension, inputStream);
         } catch (Exception e) {
-            log.error("Error en la lectura del documento '{}' para la extracción de texto.", filename, e);
+            log.error("DomainService Exception: Falla crítica de descompresión/lectura en el archivo legal [{}]", filename, e);
             throw new IllegalStateException("Error en la lectura del documento para la extracción de texto: " + filename, e);
         }
     }
 
     private String extractTextByExtension(String extension, InputStream inputStream) throws Exception {
         return switch (extension) {
-            case "txt" -> extractFromTxt(inputStream);
-            case "rtf" -> extractFromRtf(inputStream);
-            case "pdf" -> extractFromPdf(inputStream);
-            case "docx" -> extractFromDocx(inputStream);
-            case "xlsx" -> extractFromXlsx(inputStream);
-            case "pptx" -> extractFromPptx(inputStream);
+            case "txt"  -> parseTxtStream(inputStream);
+            case "rtf"  -> parseRtfStream(inputStream);
+            case "pdf"  -> parsePdfStream(inputStream);
+            case "docx" -> parseDocxStream(inputStream);
+            case "xlsx" -> parseXlsxStream(inputStream);
+            case "pptx" -> parsePptxStream(inputStream);
             default -> {
-                log.debug("La extensión '{}' no requiere o no soporta extracción de texto enriquecido.", extension);
+                log.debug("DomainService: La extensión [{}] no califica para el pipeline de raspado de texto.", extension);
                 yield "";
             }
         };
     }
 
-    private String extractFromTxt(InputStream inputStream) {
+    private String parseTxtStream(InputStream inputStream) {
         return new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
                 .lines().collect(Collectors.joining("\n"));
     }
 
-    private String extractFromRtf(InputStream inputStream) throws Exception {
+    private String parseRtfStream(InputStream inputStream) throws Exception {
         RTFEditorKit rtfKit = new RTFEditorKit();
         DefaultStyledDocument doc = new DefaultStyledDocument();
         rtfKit.read(inputStream, doc, 0);
         return doc.getText(0, doc.getLength());
     }
 
-    private String extractFromPdf(InputStream inputStream) throws Exception {
+    private String parsePdfStream(InputStream inputStream) throws Exception {
         try (PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(inputStream))) {
             PDFTextStripper stripper = new PDFTextStripper();
             stripper.setSortByPosition(false);
@@ -103,26 +105,26 @@ public class ExtractorService {
         }
     }
 
-    private String extractFromDocx(InputStream inputStream) throws Exception {
+    private String parseDocxStream(InputStream inputStream) throws Exception {
         try (XWPFDocument doc = new XWPFDocument(inputStream);
              XWPFWordExtractor extractor = new XWPFWordExtractor(doc)) {
-                return extractor.getText();
+            return extractor.getText();
         }
     }
 
-    private String extractFromXlsx(InputStream inputStream) throws Exception {
+    private String parseXlsxStream(InputStream inputStream) throws Exception {
         try (XSSFWorkbook workbook = new XSSFWorkbook(inputStream);
              XSSFExcelExtractor extractor = new XSSFExcelExtractor(workbook)) {
-                extractor.setIncludeSheetNames(false);
-                extractor.setFormulasNotResults(false);
-                return extractor.getText();
+            extractor.setIncludeSheetNames(false);
+            extractor.setFormulasNotResults(false);
+            return extractor.getText();
         }
     }
 
-    private String extractFromPptx(InputStream inputStream) throws Exception {
+    private String parsePptxStream(InputStream inputStream) throws Exception {
         try (XMLSlideShow ppt = new XMLSlideShow(inputStream);
              SlideShowExtractor<?, ?> extractor = new SlideShowExtractor<>(ppt)) {
-                return extractor.getText();
+            return extractor.getText();
         }
     }
 }

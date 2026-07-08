@@ -1,6 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.SseService;
+import com.unlam.verabackend.application.service.NotificationService;
 import com.unlam.verabackend.domain.model.InvitationStatus;
 import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.domain.model.SensitivityLevel;
@@ -31,16 +31,16 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
     private final TrustContactRepository trustContactRepository;
     private final TrustInvitationRepository trustInvitationRepository;
     private final UserRepository userRepository;
-    private final SseService sseService;
+    private final NotificationService notificationService;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
 
-    public ManageContactsUseCaseImpl(TrustContactRepository trustContactRepository, TrustInvitationRepository trustInvitationRepository, UserRepository userRepository, SseService sseService) {
+    public ManageContactsUseCaseImpl(TrustContactRepository trustContactRepository, TrustInvitationRepository trustInvitationRepository, UserRepository userRepository, NotificationService notificationService) {
         this.trustContactRepository = trustContactRepository;
         this.trustInvitationRepository = trustInvitationRepository;
         this.userRepository = userRepository;
-        this.sseService = sseService;
+        this.notificationService = notificationService;
     }
 
 
@@ -122,7 +122,6 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
 
         TrustInvitation saved = trustInvitationRepository.save(invitation);
 
-        // Si el contacto ya tiene cuenta, le enviamos notificación SSE
         userRepository.findByEmail(request.contactEmail()).ifPresent(invitedUser -> {
             Map<String, Object> payload = Map.of(
                     "id", saved.getId(),
@@ -130,7 +129,7 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
                     "caregiverName", caregiver.getFullName(),
                     "relationship", saved.getRelationship()
             );
-            sseService.createAndSendNotification(
+            notificationService.createAndDispatch(
                     invitedUser,
                     NotificationsType.INVITATION,
                     caregiver.getFullName(),

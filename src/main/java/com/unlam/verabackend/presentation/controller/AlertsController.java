@@ -32,43 +32,39 @@ public class AlertsController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "page", defaultValue = "0") int page
     ) {
-        log.info("Buscando historial de alertas para el cuidador: {} - Filtros [resolved: {}, riskLevel: {}, search: {}, page: {}]",
-                user.getEmail(), resolved, riskLevel, search, page);
+        log.info("REST Request: GET - Consultando bitácora de alertas para el cuidador: [{}] con filtros activos", user.getEmail());
 
-        Page<Alerts> alertsPage = manageAlertsUseCase.getAlertsHistory(
-                user.getEmail(), resolved, riskLevel, search, page
-        );
+        Page<Alerts> alertsPage = manageAlertsUseCase.getAlertsHistory(user.getEmail(), resolved, riskLevel, search, page);
 
-        return ResponseEntity.ok(PagedResponse.fromPage(alertsPage, AlertsResponse::fromDomain));
+        return ResponseEntity.ok(convertToPagedAlertsResponse(alertsPage));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AlertsDetailResponse> getAlertDetail(
-            @AuthenticationPrincipal User user,
-            @PathVariable UUID id
-    ) {
-        log.info("Solicitando detalle de alerta ID: {} por usuario: {}", id, user.getEmail());
+    public ResponseEntity<AlertsDetailResponse> getAlertDetail(@AuthenticationPrincipal User user, @PathVariable UUID id) {
+        log.info("REST Request: GET - Solicitando informe técnico de la alerta ID [{}] por el operador [{}]", id, user.getEmail());
+
         Alerts alert = manageAlertsUseCase.getAlertDetail(id, user.getEmail());
         return ResponseEntity.ok(AlertsDetailResponse.fromDomain(alert));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAlert(
-            @AuthenticationPrincipal User user,
-            @PathVariable UUID id
-    ) {
-        log.info("Solicitud para eliminar alerta ID: {} por usuario: {}", id, user.getEmail());
+    public ResponseEntity<Void> deleteAlert(@AuthenticationPrincipal User user, @PathVariable UUID id) {
+        log.info("REST Request: DELETE - Solicitando descarte definitivo de la alerta ID [{}] por el operador [{}]", id, user.getEmail());
+
         manageAlertsUseCase.deleteAlert(id, user.getEmail());
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/resolve")
-    public ResponseEntity<Void> resolveAlert(
-            @AuthenticationPrincipal User user,
-            @PathVariable UUID id
-    ) {
-        log.info("Solicitud para resolver alerta ID: {} por usuario: {}", id, user.getEmail());
+    public ResponseEntity<Void> resolveAlert(@AuthenticationPrincipal User user, @PathVariable UUID id) {
+        log.info("REST Request: PATCH - Solicitando cierre y resolución de la alerta ID [{}] por el operador [{}]", id, user.getEmail());
+
         manageAlertsUseCase.resolveAlert(id, user.getEmail());
         return ResponseEntity.noContent().build();
+    }
+
+    private PagedResponse<AlertsResponse> convertToPagedAlertsResponse(Page<Alerts> alertsPage) {
+        log.debug("REST Response: Convirtiendo {} alertas encontradas hacia el DTO adaptado de la UI.", alertsPage.getNumberOfElements());
+        return PagedResponse.fromPage(alertsPage, AlertsResponse::fromDomain);
     }
 }

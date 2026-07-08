@@ -1,6 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.SseService;
+import com.unlam.verabackend.application.service.NotificationService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
@@ -32,7 +32,7 @@ class ManageNotificationsUseCaseImplTest {
     private NotificationsRepository repository;
 
     @Mock
-    private SseService sseService;
+    private NotificationService notificationService;
 
     @InjectMocks
     private ManageNotificationsUseCaseImpl useCase;
@@ -73,12 +73,12 @@ class ManageNotificationsUseCaseImplTest {
     @DisplayName("Debe delegar el marcado masivo al repositorio y despachar la sincronización de la campana vía SSE")
     void markAllMyNotificationsAsRead_Success() {
         doNothing().when(repository).markAllAsReadByUserEmail(userEmail);
-        doNothing().when(sseService).sendUnreadCountUpdate(userEmail);
+        doNothing().when(notificationService).sendUnreadCountUpdate(userEmail);
 
         useCase.markAllMyNotificationsAsRead(userEmail);
 
         verify(repository, times(1)).markAllAsReadByUserEmail(userEmail);
-        verify(sseService, times(1)).sendUnreadCountUpdate(userEmail); // Verifica la sincronización en tiempo real
+        verify(notificationService, times(1)).sendUnreadCountUpdate(userEmail); // Verifica la sincronización en tiempo real
     }
 
     @Test
@@ -86,13 +86,13 @@ class ManageNotificationsUseCaseImplTest {
     void deleteNotification_Success() {
         when(repository.findById(notificationId)).thenReturn(Optional.of(mockNotification));
         doNothing().when(repository).deleteById(notificationId);
-        doNothing().when(sseService).sendDeleteEvent(userEmail, notificationId);
+        doNothing().when(notificationService).sendDeleteEvent(userEmail, notificationId);
 
         useCase.deleteNotification(notificationId, userEmail);
 
         verify(repository, times(1)).findById(notificationId);
         verify(repository, times(1)).deleteById(notificationId);
-        verify(sseService, times(1)).sendDeleteEvent(userEmail, notificationId);
+        verify(notificationService, times(1)).sendDeleteEvent(userEmail, notificationId);
     }
 
     @Test
@@ -104,7 +104,7 @@ class ManageNotificationsUseCaseImplTest {
                 useCase.deleteNotification(notificationId, userEmail));
 
         verify(repository, never()).deleteById(any(UUID.class));
-        verify(sseService, never()).sendDeleteEvent(anyString(), any(UUID.class));
+        verify(notificationService, never()).sendDeleteEvent(anyString(), any(UUID.class));
     }
 
     @Test
@@ -123,6 +123,6 @@ class ManageNotificationsUseCaseImplTest {
                 useCase.deleteNotification(notificationId, userEmail));
 
         verify(repository, never()).deleteById(any(UUID.class));
-        verify(sseService, never()).sendDeleteEvent(anyString(), any(UUID.class));
+        verify(notificationService, never()).sendDeleteEvent(anyString(), any(UUID.class));
     }
 }
