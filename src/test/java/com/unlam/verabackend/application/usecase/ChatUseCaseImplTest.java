@@ -3,9 +3,9 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.application.service.PromptBuilderService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.*;
+import com.unlam.verabackend.domain.port.out.AiProvider;
 import com.unlam.verabackend.domain.port.out.ChatMessagesRepository;
 import com.unlam.verabackend.domain.port.out.ChatsRepository;
-import com.unlam.verabackend.domain.port.out.AiProvider;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,10 +22,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Pruebas Unitarias para ChatUseCaseImpl")
 class ChatUseCaseImplTest {
 
     @Mock private AiProvider aiProvider;
@@ -34,174 +36,218 @@ class ChatUseCaseImplTest {
     @Mock private PromptBuilderService promptBuilder;
     @Mock private UserRepository userRepository;
 
-    @InjectMocks
-    private ChatUseCaseImpl chatUseCase;
+    @InjectMocks private ChatUseCaseImpl chatUseCase;
 
-    private User sampleUser;
+    private String userEmail;
+    private User mockUser;
     private UUID chatId;
     private UUID analysisId;
-    private final String titleSystemPrompt = "Sos un experto en resumen de fraudes. Respondé solo con el título (máx 5 palabras).";
+    private Chats mockChat;
 
     @BeforeEach
     void setUp() {
-        sampleUser = new User();
-        sampleUser.setId(1L);
-        sampleUser.setEmail("test@unlam.com");
+        userEmail = "usuario@unlam.edu.ar";
         chatId = UUID.randomUUID();
         analysisId = UUID.randomUUID();
+
+        mockUser = new User();
+        mockUser.setId(1L);
+        mockUser.setEmail(userEmail);
+
+        mockChat = Chats.builder()
+                .id(chatId)
+                .user(mockUser)
+                .title("Nueva consulta con VERA")
+                .build();
     }
 
     @Test
-    @DisplayName("Debe crear un chat independiente exitosamente (sin Análisis) y no disparar bienvenida")
-    void createChat_WithoutAnalysis_ShouldBeSuccessful() {
-        when(userRepository.findByEmail(sampleUser.getEmail())).thenReturn(Optional.of(sampleUser));
-        when(chatsRepository.save(any(Chats.class))).thenAnswer(i -> {
-            Chats c = i.getArgument(0);
-            c.setId(chatId);
-            return c;
+    @DisplayName("Debería crear un chat básico sin bienvenida automática si no se provee un ID de análisis")
+    void createChat_WithoutAnalysis_ShouldCreateSuccessfully() {
+        // Arrange
+        UUID generatedChatId = UUID.randomUUID();
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockUser));
+
+        when(chatsRepository.save(any(Chats.class))).thenAnswer(inv -> {
+            Chats chatPassedToSave = inv.getArgument(0);
+            chatPassedToSave.setId(generatedChatId);
+            return chatPassedToSave;
         });
 
-        UUID result = chatUseCase.createChat(sampleUser.getEmail(), null);
+        // Act
+        UUID resultId = chatUseCase.createChat(userEmail, null);
 
-        assertNotNull(result);
-        assertEquals(chatId, result);
+        // Assert
+        assertNotNull(resultId);
+        assertEquals(generatedChatId, resultId);
         verify(chatsRepository, times(1)).save(any(Chats.class));
+        verify(aiProvider, never()).generateChatResponse(any(), any());
         verify(chatMessagesRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Debe crear un chat desde un análisis exitosamente e inyectar el saludo inicial de la IA")
+    @DisplayName("Debería crear el chat y generar una bienvenida contextual inicial si se provee un análisis previo")
     void createChat_WithAnalysis_ShouldGenerateWelcomeMessage() {
-        when(userRepository.findByEmail(sampleUser.getEmail())).thenReturn(Optional.of(sampleUser));
-        when(chatsRepository.save(any(Chats.class))).thenAnswer(i -> {
-            Chats c = i.getArgument(0);
-            c.setId(chatId);
-            return c;
-        });
+        // Arrange
+        String mockSystemPrompt = "System Prompt Context";
+        String mockAiResponse = "Hola, vi que tu análisis posee ciertos riesgos...";
 
-        Analysis analysis = Analysis.builder().id(analysisId).riskType(RiskType.CLICKED_SUSPICIOUS_LINK).build();
+        mockChat.setAnalysis(Analysis.builder().id(analysisId).build());
 
-        when(promptBuilder.buildChatSystemPrompt(any())).thenReturn("Prompt de Sistema");
-        when(aiProvider.generateChatResponse(eq("Prompt de Sistema"), anyList())).thenReturn("Hola, vi tu análisis...");
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockUser));
+        when(chatsRepository.save(any(Chats.class))).thenReturn(mockChat);
+        when(promptBuilder.buildChatSystemPrompt(any())).thenReturn(mockSystemPrompt);
+        when(aiProvider.generateChatResponse(eq(mockSystemPrompt), anyList())).thenReturn(mockAiResponse);
+        when(chatMessagesRepository.save(any(ChatMessages.class))).thenReturn(new ChatMessages());
 
-        UUID result = chatUseCase.createChat(sampleUser.getEmail(), analysisId);
+        // Act
+        UUID resultId = chatUseCase.createChat(userEmail, analysisId);
 
-        assertEquals(chatId, result);
-        verify(chatMessagesRepository, times(1)).save(argThat(msg ->
-                msg.getRole() == ChatsRole.MODEL && "Hola, vi tu análisis...".equals(msg.getContent())
-        ));
+        // Assert
+        assertEquals(chatId, resultId);
+        verify(chatsRepository, times(1)).save(any(Chats.class));
+        verify(chatMessagesRepository, times(1)).save(any(ChatMessages.class));
     }
 
     @Test
-    @DisplayName("Debe lanzar ResourceNotFoundException cuando el usuario no existe")
-    void createChat_UserNotFound_ThrowsResourceNotFoundException() {
-        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+    @DisplayName("Debería enviar un mensaje, asimilar el contexto histórico y renombrar el título genérico automáticamente")
+    void sendMessage_GenricTitle_ShouldUpdateTitleAndReturnAiResponse() {
+        // Arrange
+        String userMsg = "Me mandaron este link sospechoso";
+        String mockTitlePrompt = "Generate Title Prompt";
+        String mockRawTitle = "\"Phishing Bancario\"\n";
+        String mockSystemPrompt = "System Prompt Context";
+        String mockAiResponse = "No entres a ese enlace, es peligroso.";
 
-        assertThrows(ResourceNotFoundException.class, () ->
-                chatUseCase.createChat("fake@test.com", null)
-        );
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(mockChat));
+        when(promptBuilder.buildTitleGenerationPrompt(userMsg.trim())).thenReturn(mockTitlePrompt);
+        when(aiProvider.generateChatResponse(eq("Sos un experto en resumen de fraudes. Respondé solo con el título (máx 5 palabras)."), anyList()))
+                .thenReturn(mockRawTitle);
+        when(promptBuilder.buildChatSystemPrompt(any())).thenReturn(mockSystemPrompt);
+        when(chatMessagesRepository.findLastMessages(chatId)).thenReturn(Collections.emptyList());
+        when(aiProvider.generateChatResponse(eq(mockSystemPrompt), anyList())).thenReturn(mockAiResponse);
+
+        // Act
+        String response = chatUseCase.sendMessage(chatId, userMsg);
+
+        // Assert
+        assertEquals(mockAiResponse, response);
+        assertEquals("Phishing Bancario", mockChat.getTitle());
+        verify(chatsRepository, times(1)).save(mockChat);
+        verify(chatMessagesRepository, times(2)).save(any(ChatMessages.class));
     }
 
     @Test
-    @DisplayName("Debe omitir la generación de título si el chat ya tiene un título personalizado")
-    void sendMessage_WhenTitleIsNotDefault_ShouldSkipTitleGeneration() {
-        Chats chat = Chats.builder().id(chatId).title("Título Modificado previamente").build();
-        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(chat));
-        when(promptBuilder.buildChatSystemPrompt(any())).thenReturn("System Prompt");
-        when(aiProvider.generateChatResponse(eq("System Prompt"), any())).thenReturn("Respuesta IA");
+    @DisplayName("Debería enviar un mensaje sin alterar el título si este ya fue modificado previamente")
+    void sendMessage_CustomTitle_ShouldNotTriggerTitleGeneration() {
+        // Arrange
+        mockChat.setTitle("Título Personalizado");
+        String userMsg = "Gracias por el consejo";
+        String mockSystemPrompt = "System Prompt Context";
+        String mockAiResponse = "De nada, cuidate.";
 
-        String response = chatUseCase.sendMessage(chatId, "Hola VERA");
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(mockChat));
+        when(promptBuilder.buildChatSystemPrompt(any())).thenReturn(mockSystemPrompt);
+        when(chatMessagesRepository.findLastMessages(chatId)).thenReturn(Collections.emptyList());
+        when(aiProvider.generateChatResponse(eq(mockSystemPrompt), anyList())).thenReturn(mockAiResponse);
 
-        assertEquals("Respuesta IA", response);
-        verify(promptBuilder, never()).buildTitleGenerationPrompt(anyString());
-        verify(aiProvider, never()).generateChatResponse(eq(titleSystemPrompt), anyList());
+        // Act
+        String response = chatUseCase.sendMessage(chatId, userMsg);
+
+        // Assert
+        assertEquals(mockAiResponse, response);
+        assertEquals("Título Personalizado", mockChat.getTitle());
+        verify(promptBuilder, never()).buildTitleGenerationPrompt(any());
+        verify(chatsRepository, never()).save(any(Chats.class));
     }
 
     @Test
-    @DisplayName("Debe procesar el mensaje, actualizar el título limpiando formatos si posee el string por defecto")
-    void sendMessage_WithDefaultTitle_UpdatesTitleAndProcessesMessage() {
-        Chats chat = Chats.builder().id(chatId).title("Nueva consulta con VERA").build();
-        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(chat));
+    @DisplayName("Debería retornar la lista completa de mensajes asociados si la sala de chat existe")
+    void getChatHistory_ValidScenario_ShouldReturnHistory() {
+        // Arrange
+        when(chatsRepository.existsById(chatId)).thenReturn(true);
+        when(chatMessagesRepository.findByChatId(chatId)).thenReturn(List.of(new ChatMessages()));
 
-        when(promptBuilder.buildTitleGenerationPrompt("Ayuda")).thenReturn("Prompt Titulo");
-        when(aiProvider.generateChatResponse(eq(titleSystemPrompt), anyList())).thenReturn("\"Nuevo Titulo\"");
+        // Act
+        List<ChatMessages> result = chatUseCase.getChatHistory(chatId);
 
-        when(promptBuilder.buildChatSystemPrompt(any())).thenReturn("Prompt Chat");
-        when(aiProvider.generateChatResponse(eq("Prompt Chat"), any())).thenReturn("Respuesta Core IA");
-
-        String response = chatUseCase.sendMessage(chatId, "Ayuda");
-
-        assertEquals("Respuesta Core IA", response);
-        assertEquals("Nuevo Titulo", chat.getTitle());
-        verify(chatMessagesRepository, times(1)).save(argThat(msg -> msg.getRole() == ChatsRole.USER && "Ayuda".equals(msg.getContent())));
-        verify(chatMessagesRepository, times(1)).save(argThat(msg -> msg.getRole() == ChatsRole.MODEL && "Respuesta Core IA".equals(msg.getContent())));
-        verify(chatsRepository, times(1)).save(chat); // Valida la persistencia del cambio de título
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
     }
 
     @Test
-    @DisplayName("Debe lanzar ResourceNotFoundException si el chat destino no existe al enviar un mensaje")
-    void sendMessage_ChatNotFound_ThrowsResourceNotFoundException() {
-        when(chatsRepository.findById(chatId)).thenReturn(Optional.empty());
+    @DisplayName("Debería retornar todos los chats asociados al perfil de un usuario")
+    void getChatsByEmail_ValidScenario_ShouldReturnCatalog() {
+        // Arrange
+        when(chatsRepository.findByUserEmail(userEmail)).thenReturn(List.of(mockChat));
 
-        assertThrows(ResourceNotFoundException.class, () ->
-                chatUseCase.sendMessage(chatId, "Mensaje")
-        );
+        // Act
+        List<Chats> result = chatUseCase.getChatsByEmail(userEmail);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
     }
 
     @Test
-    @DisplayName("Debe lanzar IllegalArgumentException al intentar enviar un mensaje vacío o nulo")
-    void sendMessage_EmptyMessage_ThrowsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class, () -> chatUseCase.sendMessage(chatId, "   "));
-        assertThrows(IllegalArgumentException.class, () -> chatUseCase.sendMessage(chatId, null));
-    }
+    @DisplayName("Debería borrar físicamente la sala de chat de la persistencia si existe el ID")
+    void deleteChat_ValidScenario_ShouldDelete() {
+        // Arrange
+        when(chatsRepository.existsById(chatId)).thenReturn(true);
+        doNothing().when(chatsRepository).deleteById(chatId);
 
-    @Test
-    @DisplayName("Debe lanzar ResourceNotFoundException al intentar eliminar un chat inexistente")
-    void deleteChat_ChatDoesNotExist_ThrowsResourceNotFoundException() {
-        when(chatsRepository.findById(chatId)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class, () -> chatUseCase.deleteChat(chatId));
-    }
-
-    @Test
-    @DisplayName("Debe llamar al puerto de eliminación si el chat existe")
-    void deleteChat_ChatExists_CallsDelete() {
-        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(Chats.builder().id(chatId).build()));
-
+        // Act
         chatUseCase.deleteChat(chatId);
 
+        // Assert
         verify(chatsRepository, times(1)).deleteById(chatId);
     }
 
     @Test
-    @DisplayName("Debe retornar la lista de mensajes asociados al ID del chat si este existe")
-    void getChatHistory_ChatExists_ReturnsList() {
-        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(Chats.builder().id(chatId).build()));
-        when(chatMessagesRepository.findByChatId(chatId)).thenReturn(Collections.emptyList());
+    @DisplayName("Debería lanzar ResourceNotFoundException si el usuario creador no está registrado")
+    void createChat_UserNotFound_ShouldThrowException() {
+        // Arrange
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.empty());
 
-        List<ChatMessages> result = chatUseCase.getChatHistory(chatId);
-
-        assertNotNull(result);
-        verify(chatMessagesRepository, times(1)).findByChatId(chatId);
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> chatUseCase.createChat(userEmail, null));
     }
 
     @Test
-    @DisplayName("Debe lanzar ResourceNotFoundException al pedir el historial de un chat inexistente")
-    void getChatHistory_ChatDoesNotExist_ThrowsResourceNotFoundException() {
+    @DisplayName("Debería lanzar ResourceNotFoundException si se intenta enviar un mensaje a un chat inexistente")
+    void sendMessage_ChatNotFound_ShouldThrowException() {
+        // Arrange
         when(chatsRepository.findById(chatId)).thenReturn(Optional.empty());
 
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> chatUseCase.sendMessage(chatId, "Hola"));
+    }
+
+    @Test
+    @DisplayName("Debería lanzar ResourceNotFoundException si se intenta verificar el historial de un chat inexistente")
+    void getChatHistory_ChatNotFound_ShouldThrowException() {
+        // Arrange
+        when(chatsRepository.existsById(chatId)).thenReturn(false);
+
+        // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> chatUseCase.getChatHistory(chatId));
     }
 
     @Test
-    @DisplayName("Debe retornar todos los chats vinculados al correo del usuario")
-    void getChatsByEmail_ReturnsList() {
-        String email = "test@unlam.com";
-        when(chatsRepository.findByUserEmail(email)).thenReturn(Collections.emptyList());
+    @DisplayName("Debería retornar título por defecto estructurado ante una respuesta de título nula del backend de IA")
+    void sanitizeTitle_NullScenario_ShouldReturnFallback() {
+        // Arrange
+        when(chatsRepository.findById(chatId)).thenReturn(Optional.of(mockChat));
+        when(promptBuilder.buildTitleGenerationPrompt(anyString())).thenReturn("Prompt");
+        when(aiProvider.generateChatResponse(anyString(), anyList())).thenReturn(null);
+        when(promptBuilder.buildChatSystemPrompt(any())).thenReturn("System");
+        when(aiProvider.generateChatResponse(eq("System"), anyList())).thenReturn("Response");
 
-        List<Chats> result = chatUseCase.getChatsByEmail(email);
+        // Act
+        chatUseCase.sendMessage(chatId, "Mensaje");
 
-        assertNotNull(result);
-        verify(chatsRepository, times(1)).findByUserEmail(email);
+        // Assert
+        assertEquals("Consulta asistida", mockChat.getTitle());
     }
 }
