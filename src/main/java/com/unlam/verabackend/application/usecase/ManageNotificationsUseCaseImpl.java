@@ -25,9 +25,9 @@ public class ManageNotificationsUseCaseImpl implements ManageNotificationsUseCas
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Notifications> getMyNotifications(String email, Pageable pageable) {
-        log.info("UseCase: Solicitando página de notificaciones indexadas para el usuario: [{}]", email);
-        return repository.findByUserEmailCreatedAtDesc(email, pageable);
+    public Page<Notifications> getMyNotifications(String email, int page) {
+        log.info("UseCase: Solicitando página [{}] de notificaciones indexadas para el usuario: [{}]", page, email);
+        return repository.findByUserEmailCreatedAtDesc(email, page); // <-- Pasa el int
     }
 
     @Override

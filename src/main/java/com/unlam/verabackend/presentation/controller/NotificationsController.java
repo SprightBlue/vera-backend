@@ -8,7 +8,6 @@ import com.unlam.verabackend.presentation.dto.NotificationsResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -26,20 +25,18 @@ public class NotificationsController {
     @GetMapping
     public ResponseEntity<PagedResponse<NotificationsResponse>> getMyNotifications(
             @AuthenticationPrincipal User user,
-            Pageable pageable
+            @RequestParam(value = "page", defaultValue = "0") int page
     ) {
-        log.info("REST Request: GET - Consultando catálogo de notificaciones paginadas para el usuario [{}]", user.getEmail());
+        log.info("REST Request: GET - Consultando catálogo de notificaciones paginadas para el usuario [{}] - Página: [{}]", user.getEmail(), page);
 
-        Page<Notifications> page = useCase.getMyNotifications(user.getEmail(), pageable);
+        Page<Notifications> notificationsPage = useCase.getMyNotifications(user.getEmail(), page);
 
-        log.debug("REST Response: Retornando {} elementos mapeados a la UI.", page.getNumberOfElements());
-        return ResponseEntity.ok(convertToPagedResponse(page));
+        return ResponseEntity.ok(convertToPagedResponse(notificationsPage));
     }
 
     @PatchMapping("/read-all")
     public ResponseEntity<Void> markAllAsRead(@AuthenticationPrincipal User user) {
         log.info("REST Request: PATCH - Solicitando marcado de lectura masivo para [{}]", user.getEmail());
-
         useCase.markAllMyNotificationsAsRead(user.getEmail());
         return ResponseEntity.noContent().build();
     }
@@ -47,7 +44,6 @@ public class NotificationsController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNotification(@AuthenticationPrincipal User user, @PathVariable UUID id) {
         log.info("REST Request: DELETE - Solicitando remoción de notificación ID [{}] por el operador [{}]", id, user.getEmail());
-
         useCase.deleteNotification(id, user.getEmail());
         return ResponseEntity.noContent().build();
     }

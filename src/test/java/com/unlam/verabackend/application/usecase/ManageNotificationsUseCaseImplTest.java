@@ -14,8 +14,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.util.Collections;
@@ -50,20 +48,20 @@ class ManageNotificationsUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería retornar una página de notificaciones filtradas por el email del usuario")
+    @DisplayName("Debería retornar una página de notificaciones delegando el entero de la página al repositorio")
     void getMyNotifications_ValidScenario_ShouldReturnPage() {
         // Arrange
-        Pageable pageable = PageRequest.of(0, 10);
+        int page = 0;
         Page<Notifications> expectedPage = new PageImpl<>(Collections.emptyList());
 
-        when(repository.findByUserEmailCreatedAtDesc(userEmail, pageable)).thenReturn(expectedPage);
+        when(repository.findByUserEmailCreatedAtDesc(userEmail, page)).thenReturn(expectedPage);
 
         // Act
-        Page<Notifications> result = manageNotificationsUseCase.getMyNotifications(userEmail, pageable);
+        Page<Notifications> result = manageNotificationsUseCase.getMyNotifications(userEmail, page);
 
         // Assert
         assertNotNull(result);
-        verify(repository, times(1)).findByUserEmailCreatedAtDesc(userEmail, pageable);
+        verify(repository, times(1)).findByUserEmailCreatedAtDesc(userEmail, page);
     }
 
     @Test

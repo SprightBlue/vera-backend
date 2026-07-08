@@ -27,9 +27,9 @@ public class NotificationRepositoryAdapter implements NotificationsRepository {
     private final EntityManager entityManager;
 
     @Override
-    public Page<Notifications> findByUserEmailCreatedAtDesc(String email, Pageable pageable) {
+    public Page<Notifications> findByUserEmailCreatedAtDesc(String email, int page) {
         Pageable customPageable = PageRequest.of(
-                pageable.getPageNumber(),
+                page,
                 5,
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
