@@ -365,25 +365,23 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     @Override
     @Transactional(readOnly = true)
     public ProtectedPersonResponse getProtectedPersonById(Long id) {
-        TrustContact relation = trustContactRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Relación de contacto de confianza no encontrada"));
-
-        User protectedPerson = relation.getProtectedUser();
+        TrustInvitation person = trustInvitationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Protegido no encontrado"));
 
         return ProtectedPersonResponse.builder()
-                .id(relation.getId())
-                .fullName(protectedPerson.getFullName())
-                .email(protectedPerson.getEmail())
-                .contactNumber(protectedPerson.getPhone())
-                .relationship(relation.getRelationship())
+                .id(person.getId())
+                .fullName(person.getFullName())
+                .email(person.getEmail())
+                .contactNumber(person.getContactNumber())
+                .relationship(person.getRelationship())
                 .sensitivityLevel(
-                        relation.getSensitivityLevel() != null
-                                ? relation.getSensitivityLevel().name()
+                        person.getSensitivityLevel() != null
+                                ? person.getSensitivityLevel().name()
                                 : null
                 )
-                .notifyHighRisk(relation.isNotifyHighRisk())
-                .status("ACCEPTED")
-                .image(protectedPerson.getImage())
+                .notifyHighRisk(person.isNotifyHighRisk())
+                .status(person.getStatus().name())
+                .image(person.getImage())
                 .build();
     }
 
