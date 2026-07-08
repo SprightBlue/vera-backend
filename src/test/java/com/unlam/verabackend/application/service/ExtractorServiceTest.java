@@ -2,6 +2,9 @@ package com.unlam.verabackend.application.service;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -16,223 +19,197 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Pruebas Unitarias para ExtractorService")
 class ExtractorServiceTest {
-
-    @Mock
-    private MultipartFile file;
 
     @InjectMocks
     private ExtractorService extractorService;
 
-    @Test
-    @DisplayName("Debe retornar una lista vacía si el texto provisto es nulo")
-    void findUrls_WhenTextIsNull_ShouldReturnEmptyList() {
-        List<String> result = extractorService.findUrls(null);
-        assertTrue(result.isEmpty());
-    }
+    @Mock
+    private MultipartFile mockFile;
 
     @Test
-    @DisplayName("Debe retornar una lista vacía si el texto provisto no contiene caracteres")
-    void findUrls_WhenTextIsEmpty_ShouldReturnEmptyList() {
-        List<String> result = extractorService.findUrls("");
-        assertTrue(result.isEmpty());
-    }
+    @DisplayName("Debería extraer múltiples URLs válidas ignorando texto basura circundante")
+    void findUrls_ValidText_ShouldExtractUrls() {
+        // Arrange
+        String text = "Hola, ingresá acá: http://google.com o revisá https://www.unlam.edu.ar/inicio?user=1 para más datos.";
 
-    @Test
-    @DisplayName("Debe capturar y listar correctamente todas las URLs presentes en el texto")
-    void findUrls_WhenTextContainsUrls_ShouldReturnListWithUrls() {
-        String text = "Visitá https://www.google.com o http://unlam.edu.ar para más info.";
-
+        // Act
         List<String> result = extractorService.findUrls(text);
 
+        // Assert
         assertEquals(2, result.size());
-        assertEquals("https://www.google.com", result.get(0));
-        assertEquals("http://unlam.edu.ar", result.get(1));
+        assertTrue(result.contains("http://google.com"));
+        assertTrue(result.contains("https://www.unlam.edu.ar/inicio?user=1"));
     }
 
     @Test
-    @DisplayName("Debe retornar un String vacío si el archivo es nulo")
-    void convertDocumentToText_WhenFileIsNull_ShouldReturnEmptyString() {
-        String result = extractorService.convertDocumentToText(null);
-        assertEquals("", result);
+    @DisplayName("Debería devolver lista vacía si el texto de entrada es nulo o está en blanco")
+    void findUrls_NullOrBlankText_ShouldReturnEmptyList() {
+        assertTrue(extractorService.findUrls(null).isEmpty());
+        assertTrue(extractorService.findUrls("   ").isEmpty());
     }
 
     @Test
-    @DisplayName("Debe retornar un String vacío si el archivo multipart está vacío")
-    void convertDocumentToText_WhenFileIsEmpty_ShouldReturnEmptyString() {
-        when(file.isEmpty()).thenReturn(true);
+    @DisplayName("Debería retornar string vacío si el MultipartFile provisto está vacío o es nulo")
+    void convertDocumentToText_NullOrEmptyFile_ShouldReturnEmptyString() {
+        assertEquals("", extractorService.convertDocumentToText(null));
 
+        when(mockFile.isEmpty()).thenReturn(true);
+        assertEquals("", extractorService.convertDocumentToText(mockFile));
+    }
+
+    @Test
+    @DisplayName("Debería retornar string vacío si el nombre de archivo no posee extensión o es nulo")
+    void convertDocumentToText_FilenameWithoutExtension_ShouldReturnEmptyString() {
+        when(mockFile.isEmpty()).thenReturn(false);
+        when(mockFile.getOriginalFilename()).thenReturn("archivo_sin_punto");
+        assertEquals("", extractorService.convertDocumentToText(mockFile));
+
+        when(mockFile.getOriginalFilename()).thenReturn(null);
+        assertEquals("", extractorService.convertDocumentToText(mockFile));
+    }
+
+    @Test
+    @DisplayName("Debería lanzar IllegalStateException si ocurre un fallo crítico al abrir el inputStream")
+    void convertDocumentToText_InputStreamThrowsException_ShouldThrowIllegalStateException() throws IOException {
+        // Arrange
+        when(mockFile.isEmpty()).thenReturn(false);
+        when(mockFile.getOriginalFilename()).thenReturn("documento.txt");
+        when(mockFile.getInputStream()).thenThrow(new IOException("Simulated disk error"));
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, () -> extractorService.convertDocumentToText(mockFile));
+    }
+
+    @Test
+    @DisplayName("Debería retornar string vacío si la extensión no califica para el raspado (Caso default)")
+    void convertDocumentToText_UnsupportedExtension_ShouldReturnEmptyString() {
+        // Arrange
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "documento.xyz", "application/octet-stream", "datos crudos".getBytes()
+        );
+
+        // Act
         String result = extractorService.convertDocumentToText(file);
 
+        // Assert
         assertEquals("", result);
     }
 
     @Test
-    @DisplayName("Debe retornar un String vacío si el nombre original del archivo es nulo")
-    void convertDocumentToText_WhenFilenameIsNull_ShouldReturnEmptyString() {
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn(null);
+    @DisplayName("Debería procesar correctamente archivos estructurados en texto plano (.txt)")
+    void convertDocumentToText_TxtFile_ShouldParseCorrectly() {
+        String content = "Línea 1\nLínea 2 con enlace http://vera.com";
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test.txt", "text/plain", content.getBytes(StandardCharsets.UTF_8)
+        );
 
         String result = extractorService.convertDocumentToText(file);
-
-        assertEquals("", result);
+        assertEquals(content, result.trim());
     }
 
     @Test
-    @DisplayName("Debe retornar un String vacío si el nombre del archivo carece de extensión")
-    void convertDocumentToText_WhenFilenameHasNoExtension_ShouldReturnEmptyString() {
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn("archivoSinExtension");
+    @DisplayName("Debería procesar correctamente archivos en formato de texto enriquecido (.rtf)")
+    void convertDocumentToText_RtfFile_ShouldParseCorrectly() {
+        String rtfContent = """
+                {\\rtf1\\ansi\\deff0{\\fonttbl{\\f0\\fnil\\fcharset0 Arial;}}
+                \\viewkind4\\uc1\\pard\\lang11274\\f0\\fs20 Contenido RTF de prueba\\par
+                }""";
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "documento.rtf", "application/rtf", rtfContent.getBytes(StandardCharsets.UTF_8)
+        );
 
         String result = extractorService.convertDocumentToText(file);
-
-        assertEquals("", result);
+        assertTrue(result.contains("Contenido RTF de prueba"));
     }
 
     @Test
-    @DisplayName("Debe retornar un String vacío al procesar una extensión no soportada por el switch")
-    void convertDocumentToText_WhenExtensionNotSupported_ShouldReturnEmptyString() {
-        MockMultipartFile unsupportedFile = new MockMultipartFile(
-                "file", "documento.exe", "application/octet-stream", "bytes".getBytes()
-        );
+    @DisplayName("Debería procesar correctamente archivos PDF reales usando PDFBox")
+    void convertDocumentToText_PdfFile_ShouldParseCorrectly() throws IOException {
+        byte[] pdfBytes;
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage();
+            doc.addPage(page);
+            try (PDPageContentStream contentStream = new PDPageContentStream(doc, page)) {
+                contentStream.beginText();
+                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+                contentStream.newLineAtOffset(100, 700);
+                contentStream.showText("Texto dentro del PDF seguro");
+                contentStream.endText();
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            doc.save(baos);
+            pdfBytes = baos.toByteArray();
+        }
 
-        String result = extractorService.convertDocumentToText(unsupportedFile);
+        MockMultipartFile file = new MockMultipartFile("file", "test.pdf", "application/pdf", pdfBytes);
 
-        assertEquals("", result);
+        String result = extractorService.convertDocumentToText(file);
+        assertTrue(result.contains("Texto dentro del PDF seguro"));
     }
 
     @Test
-    @DisplayName("Debe extraer el texto literal cuando se procesa un archivo TXT")
-    void convertDocumentToText_WhenTxtFile_ShouldReturnTextContent() {
-        String content = "Línea 1\nLínea 2";
-        MockMultipartFile txtFile = new MockMultipartFile(
-                "file", "test.txt", "text/plain", content.getBytes()
-        );
+    @DisplayName("Debería procesar correctamente documentos de Word (.docx) usando Apache POI")
+    void convertDocumentToText_DocxFile_ShouldParseCorrectly() throws IOException {
+        byte[] docxBytes;
+        try (XWPFDocument document = new XWPFDocument()) {
+            document.createParagraph().createRun().setText("Contenido Word OOXML");
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            document.write(baos);
+            docxBytes = baos.toByteArray();
+        }
 
-        String result = extractorService.convertDocumentToText(txtFile);
-
-        assertEquals(content, result);
-    }
-
-    @Test
-    @DisplayName("Debe interpretar y extraer el contenido legible de un archivo RTF")
-    void convertDocumentToText_WhenRtfFile_ShouldExtractText() {
-        String rtfContent = "{\\rtf1\\ansi\\deff0 Hola Mundo RTF}";
-        MockMultipartFile rtfFile = new MockMultipartFile(
-                "file", "test.rtf", "application/rtf", rtfContent.getBytes()
-        );
-
-        String result = extractorService.convertDocumentToText(rtfFile);
-
-        assertNotNull(result);
-        assertTrue(result.contains("Hola Mundo RTF"));
-    }
-
-    @Test
-    @DisplayName("Debe inicializar la API de PDFBox y extraer el texto de un PDF válido")
-    void convertDocumentToText_WhenPdfFile_ShouldCoverAllInternalLines() throws IOException {
-        byte[] pdfBytes = generateValidPdfBytes();
-        MockMultipartFile pdfFile = new MockMultipartFile(
-                "file", "test.pdf", "application/pdf", pdfBytes
-        );
-
-        String result = extractorService.convertDocumentToText(pdfFile);
-
-        assertNotNull(result);
-    }
-
-    @Test
-    @DisplayName("Debe inicializar Apache POI y extraer el contenido de un archivo DOCX de Word")
-    void convertDocumentToText_WhenDocxFile_ShouldCoverAllInternalLines() throws IOException {
-        byte[] docxBytes = generateValidDocxBytes();
-        MockMultipartFile docxFile = new MockMultipartFile(
+        MockMultipartFile file = new MockMultipartFile(
                 "file", "test.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxBytes
         );
 
-        String result = extractorService.convertDocumentToText(docxFile);
-
-        assertNotNull(result);
+        String result = extractorService.convertDocumentToText(file);
+        assertTrue(result.contains("Contenido Word OOXML"));
     }
 
     @Test
-    @DisplayName("Debe procesar e indexar las celdas de un archivo XLSX de Excel")
-    void convertDocumentToText_WhenXlsxFile_ShouldCoverAllInternalLines() throws IOException {
-        byte[] xlsxBytes = generateValidXlsxBytes();
-        MockMultipartFile xlsxFile = new MockMultipartFile(
+    @DisplayName("Debería procesar correctamente planillas de Excel (.xlsx) usando Apache POI")
+    void convertDocumentToText_XlsxFile_ShouldParseCorrectly() throws IOException {
+        byte[] xlsxBytes;
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            workbook.createSheet("VERA_Sheet").createRow(0).createCell(0).setCellValue("Dato Celda");
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            workbook.write(baos);
+            xlsxBytes = baos.toByteArray();
+        }
+
+        MockMultipartFile file = new MockMultipartFile(
                 "file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsxBytes
         );
 
-        String result = extractorService.convertDocumentToText(xlsxFile);
-
-        assertNotNull(result);
+        String result = extractorService.convertDocumentToText(file);
+        assertTrue(result.contains("Dato Celda"));
     }
 
     @Test
-    @DisplayName("Debe procesar las diapositivas de una presentación PPTX de PowerPoint")
-    void convertDocumentToText_WhenPptxFile_ShouldCoverAllInternalLines() throws IOException {
-        byte[] pptxBytes = generateValidPptxBytes();
-        MockMultipartFile pptxFile = new MockMultipartFile(
+    @DisplayName("Debería procesar correctamente presentaciones de PowerPoint (.pptx) usando Apache POI")
+    void convertDocumentToText_PptxFile_ShouldParseCorrectly() throws IOException {
+        byte[] pptxBytes;
+        try (XMLSlideShow slideshow = new XMLSlideShow()) {
+            slideshow.createSlide().createTextBox().addNewTextParagraph().addNewTextRun().setText("Texto Diapositiva");
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            slideshow.write(baos);
+            pptxBytes = baos.toByteArray();
+        }
+
+        MockMultipartFile file = new MockMultipartFile(
                 "file", "test.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation", pptxBytes
         );
 
-        String result = extractorService.convertDocumentToText(pptxFile);
-
-        assertNotNull(result);
-    }
-
-    @Test
-    @DisplayName("Debe lanzar IllegalStateException cuando falle la apertura del stream de datos")
-    void convertDocumentToText_WhenInputStreamThrowsException_ShouldThrowIllegalStateException() throws IOException {
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn("test.txt");
-        when(file.getInputStream()).thenThrow(new IOException("Stream caído"));
-
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
-                extractorService.convertDocumentToText(file)
-        );
-
-        assertTrue(exception.getMessage().contains("Error en la lectura del documento para la extracción de texto: test.txt"));
-    }
-
-    private byte[] generateValidPdfBytes() throws IOException {
-        try (PDDocument document = new PDDocument();
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            document.addPage(new PDPage());
-            document.save(bos);
-            return bos.toByteArray();
-        }
-    }
-
-    private byte[] generateValidDocxBytes() throws IOException {
-        try (XWPFDocument doc = new XWPFDocument();
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            doc.createParagraph().createRun().setText("Texto Docx");
-            doc.write(bos);
-            return bos.toByteArray();
-        }
-    }
-
-    private byte[] generateValidXlsxBytes() throws IOException {
-        try (XSSFWorkbook workbook = new XSSFWorkbook();
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            workbook.createSheet("Hoja1").createRow(0).createCell(0).setCellValue("Texto Excel");
-            workbook.write(bos);
-            return bos.toByteArray();
-        }
-    }
-
-    private byte[] generateValidPptxBytes() throws IOException {
-        try (XMLSlideShow ppt = new XMLSlideShow();
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            ppt.createSlide();
-            ppt.write(bos);
-            return bos.toByteArray();
-        }
+        String result = extractorService.convertDocumentToText(file);
+        assertTrue(result.contains("Texto Diapositiva"));
     }
 }

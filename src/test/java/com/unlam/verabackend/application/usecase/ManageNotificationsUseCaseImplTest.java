@@ -1,9 +1,9 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.SseService;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Notifications;
 import com.unlam.verabackend.domain.port.out.NotificationsRepository;
+import com.unlam.verabackend.domain.port.out.RtcProvider;
 import com.unlam.verabackend.infrastructure.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,103 +27,125 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Pruebas Unitarias para ManageNotificationsUseCaseImpl")
 class ManageNotificationsUseCaseImplTest {
 
     @Mock
     private NotificationsRepository repository;
 
     @Mock
-    private SseService sseService;
+    private RtcProvider rtcProvider;
 
     @InjectMocks
-    private ManageNotificationsUseCaseImpl useCase;
+    private ManageNotificationsUseCaseImpl manageNotificationsUseCase;
 
     private String userEmail;
-    private UUID notificationId;
-    private Notifications mockNotification;
+    private User validUser;
 
     @BeforeEach
     void setUp() {
-        userEmail = "usuario.test@ejemplo.com";
-        notificationId = UUID.randomUUID();
-
-        User user = new User();
-        user.setEmail(userEmail);
-
-        mockNotification = Notifications.builder()
-                .id(notificationId)
-                .user(user)
-                .build();
+        userEmail = "usuario@unlam.edu.ar";
+        validUser = new User();
+        validUser.setEmail(userEmail);
     }
 
     @Test
-    @DisplayName("Debe retornar la página de notificaciones ordenada de forma descendente para el usuario solicitado")
-    void getMyNotifications_Success() {
-        Pageable pageable = PageRequest.of(0, 5);
-        Page<Notifications> expectedPage = new PageImpl<>(List.of(mockNotification));
+    @DisplayName("Debería retornar una página de notificaciones filtradas por el email del usuario")
+    void getMyNotifications_ValidScenario_ShouldReturnPage() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Notifications> expectedPage = new PageImpl<>(Collections.emptyList());
+
         when(repository.findByUserEmailCreatedAtDesc(userEmail, pageable)).thenReturn(expectedPage);
 
-        Page<Notifications> result = useCase.getMyNotifications(userEmail, pageable);
+        // Act
+        Page<Notifications> result = manageNotificationsUseCase.getMyNotifications(userEmail, pageable);
 
+        // Assert
         assertNotNull(result);
-        assertEquals(1, result.getTotalElements());
         verify(repository, times(1)).findByUserEmailCreatedAtDesc(userEmail, pageable);
     }
 
     @Test
-    @DisplayName("Debe delegar el marcado masivo al repositorio y despachar la sincronización de la campana vía SSE")
-    void markAllMyNotificationsAsRead_Success() {
+    @DisplayName("Debería marcar todas las notificaciones como leídas y publicar el conteo actualizado por RTC")
+    void markAllMyNotificationsAsRead_ValidScenario_ShouldUpdateAndPublish() {
+        // Arrange
+        List<Notifications> mockUnreadList = Collections.emptyList();
+
         doNothing().when(repository).markAllAsReadByUserEmail(userEmail);
-        doNothing().when(sseService).sendUnreadCountUpdate(userEmail);
+        when(repository.findUnreadByUserEmail(userEmail)).thenReturn(mockUnreadList);
+        doNothing().when(rtcProvider).publishUnreadCountUpdate(userEmail, 0);
 
-        useCase.markAllMyNotificationsAsRead(userEmail);
+        // Act
+        manageNotificationsUseCase.markAllMyNotificationsAsRead(userEmail);
 
+        // Assert
         verify(repository, times(1)).markAllAsReadByUserEmail(userEmail);
-        verify(sseService, times(1)).sendUnreadCountUpdate(userEmail); // Verifica la sincronización en tiempo real
+        verify(repository, times(1)).findUnreadByUserEmail(userEmail);
+        verify(rtcProvider, times(1)).publishUnreadCountUpdate(userEmail, 0);
     }
 
     @Test
-    @DisplayName("Debe eliminar la notificación del repositorio y emitir el evento NOTIFICATION_DELETED si el usuario es el propietario")
-    void deleteNotification_Success() {
+    @DisplayName("Debería eliminar la notificación exitosamente si el usuario es el propietario y notificar vía RTC")
+    void deleteNotification_OwnerScenario_ShouldDeleteAndPublish() {
+        // Arrange
+        UUID notificationId = UUID.randomUUID();
+        Notifications mockNotification = new Notifications();
+        mockNotification.setId(notificationId);
+        mockNotification.setUser(validUser);
+
         when(repository.findById(notificationId)).thenReturn(Optional.of(mockNotification));
         doNothing().when(repository).deleteById(notificationId);
-        doNothing().when(sseService).sendDeleteEvent(userEmail, notificationId);
+        when(repository.findUnreadByUserEmail(userEmail)).thenReturn(List.of(new Notifications(), new Notifications(), new Notifications()));
+        doNothing().when(rtcProvider).publishNotificationDeleted(userEmail, notificationId, 3);
 
-        useCase.deleteNotification(notificationId, userEmail);
+        // Act
+        manageNotificationsUseCase.deleteNotification(notificationId, userEmail);
 
+        // Assert
         verify(repository, times(1)).findById(notificationId);
         verify(repository, times(1)).deleteById(notificationId);
-        verify(sseService, times(1)).sendDeleteEvent(userEmail, notificationId);
+        verify(rtcProvider, times(1)).publishNotificationDeleted(userEmail, notificationId, 3);
     }
 
     @Test
-    @DisplayName("Debe lanzar ResourceNotFoundException si la notificación no existe en el sistema al intentar eliminarla")
-    void deleteNotification_NotFound_ThrowsException() {
+    @DisplayName("Debería lanzar ResourceNotFoundException si se intenta borrar una notificación inexistente")
+    void deleteNotification_NotFound_ShouldThrowResourceNotFoundException() {
+        // Arrange
+        UUID notificationId = UUID.randomUUID();
         when(repository.findById(notificationId)).thenReturn(Optional.empty());
 
+        // Act & Assert
         assertThrows(ResourceNotFoundException.class, () ->
-                useCase.deleteNotification(notificationId, userEmail));
+                manageNotificationsUseCase.deleteNotification(notificationId, userEmail)
+        );
 
-        verify(repository, never()).deleteById(any(UUID.class));
-        verify(sseService, never()).sendDeleteEvent(anyString(), any(UUID.class));
+        verify(repository, never()).deleteById(any());
+        verify(rtcProvider, never()).publishNotificationDeleted(anyString(), any(), anyInt());
     }
 
     @Test
-    @DisplayName("Debe lanzar AccessDeniedException si un usuario malicioso intenta eliminar una notificación que pertenece a otra cuenta")
-    void deleteNotification_AccessDenied_ThrowsException() {
-        User wrongUser = new User();
-        wrongUser.setEmail("otro@ejemplo.com");
-        Notifications unauthorizedNotification = Notifications.builder()
-                .id(notificationId)
-                .user(wrongUser)
-                .build();
+    @DisplayName("Debería lanzar AccessDeniedException si un usuario intenta eliminar una notificación ajena")
+    void deleteNotification_NotOwner_ShouldThrowAccessDeniedException() {
+        // Arrange
+        UUID notificationId = UUID.randomUUID();
 
-        when(repository.findById(notificationId)).thenReturn(Optional.of(unauthorizedNotification));
+        User strangerUser = new User();
+        strangerUser.setEmail("intruso@unlam.edu.ar");
 
-        assertThrows(AccessDeniedException.class, () ->
-                useCase.deleteNotification(notificationId, userEmail));
+        Notifications alienNotification = new Notifications();
+        alienNotification.setId(notificationId);
+        alienNotification.setUser(strangerUser);
 
-        verify(repository, never()).deleteById(any(UUID.class));
-        verify(sseService, never()).sendDeleteEvent(anyString(), any(UUID.class));
+        when(repository.findById(notificationId)).thenReturn(Optional.of(alienNotification));
+
+        // Act & Assert
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class, () ->
+                manageNotificationsUseCase.deleteNotification(notificationId, userEmail)
+        );
+
+        assertEquals("No tenés permisos para interactuar con esta notificación.", exception.getMessage());
+        verify(repository, never()).deleteById(any());
+        verify(rtcProvider, never()).publishNotificationDeleted(anyString(), any(), anyInt());
     }
 }

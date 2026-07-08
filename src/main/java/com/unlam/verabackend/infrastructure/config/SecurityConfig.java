@@ -45,20 +45,20 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/trust/invite/**").permitAll()
                         .requestMatchers("/error").permitAll()
 
-                        .requestMatchers("/ws-location/**").permitAll()
+                        .requestMatchers("/ws-vera/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/trust/invite/**").hasRole("CARER")
                         .requestMatchers("/api/v1/trust/protected-people/**").hasRole("CARER")
-                        
+
                         .requestMatchers("/api/v1/trust/my-carers/**").hasRole("PROTECTED")
-                        
+
                         .requestMatchers("/api/v1/analysis/**").hasAnyRole("CARER", "PROTECTED")
                         .requestMatchers("/api/v1/chats/**").hasAnyRole("CARER", "PROTECTED")
                         .requestMatchers("/api/v1/alerts/**").hasAnyRole("CARER")
                         .requestMatchers("/api/v1/notifications/**").hasAnyRole("CARER", "PROTECTED")
 
                         .requestMatchers("/dashboard").hasAnyRole("CARER", "PROTECTED")
-                        
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

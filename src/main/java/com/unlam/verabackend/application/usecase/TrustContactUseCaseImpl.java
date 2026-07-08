@@ -12,7 +12,7 @@ import com.unlam.verabackend.presentation.dto.*;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.TrustInvitationRepository;
-import com.unlam.verabackend.application.service.SseService;
+import com.unlam.verabackend.application.service.NotificationService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,7 +35,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     private final TrustContactRepository trustContactRepository;
     private final UserRepository userRepository;
     private final TrustInvitationRepository trustInvitationRepository;
-    private final SseService sseService;
+    private final NotificationService notificationService;
     private final CloudinaryService cloudinaryService;
 
     @Value("${app.frontend.url:http://localhost:5173}")
@@ -77,7 +77,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                     "relationship", savedInvitation.getRelationship()
             );
 
-            sseService.createAndSendNotification(
+            notificationService.createAndDispatch(
                     invitedUser,
                     NotificationsType.INVITATION,
                     carer.getFullName(),
@@ -210,8 +210,6 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         trustInvitationRepository.save(invitation);
     }
 
-    // --- M��TODOS DE BANDEJA OPERADOS POR EL EMAIL DEL PROTEGIDO (AUTH) ---
-
     @Override
     @Transactional(readOnly = true)
     public List<InvitationDetailsResponse> getPendingInvitationsForMe(String myEmail) {
@@ -275,7 +273,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         invitation.setStatus(InvitationStatus.ACCEPTED);
         trustInvitationRepository.save(invitation);
 
-        sseService.createAndSendNotification(
+        notificationService.createAndDispatch(
                 invitation.getCarer(),
                 NotificationsType.INVITATION_ACCEPTED,
                 protectedUser.getFullName(),
@@ -300,7 +298,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
         invitation.setStatus(InvitationStatus.REJECTED);
         trustInvitationRepository.save(invitation);
 
-        sseService.createAndSendNotification(
+        notificationService.createAndDispatch(
                 invitation.getCarer(),
                 NotificationsType.INVITATION_REJECTED,
                 protectedUserEmail,
@@ -365,26 +363,27 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public ProtectedPersonResponse getProtectedPersonById(Long id) {
+        TrustContact relation = trustContactRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Relación de contacto de confianza no encontrada"));
 
-        TrustInvitation person = trustInvitationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Protegido no encontrado"));
+        User protectedPerson = relation.getProtectedUser();
 
         return ProtectedPersonResponse.builder()
-                .id(person.getId())
-                .fullName(person.getFullName())
-                .email(person.getEmail())
-                .contactNumber(person.getContactNumber())
-                .relationship(person.getRelationship())
+                .id(relation.getId())
+                .fullName(protectedPerson.getFullName())
+                .email(protectedPerson.getEmail())
+                .contactNumber(protectedPerson.getPhone())
+                .relationship(relation.getRelationship())
                 .sensitivityLevel(
-                        person.getSensitivityLevel() != null
-                                ? person.getSensitivityLevel().name()
+                        relation.getSensitivityLevel() != null
+                                ? relation.getSensitivityLevel().name()
                                 : null
                 )
-                .notifyHighRisk(person.isNotifyHighRisk())
-                .status(person.getStatus().name())
-                .image(person.getImage())
+                .notifyHighRisk(relation.isNotifyHighRisk())
+                .status("ACCEPTED")
+                .image(protectedPerson.getImage())
                 .build();
     }
 

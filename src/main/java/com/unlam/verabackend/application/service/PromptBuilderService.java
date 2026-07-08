@@ -3,12 +3,12 @@ package com.unlam.verabackend.application.service;
 import com.unlam.verabackend.domain.model.Analysis;
 import com.unlam.verabackend.domain.model.Source;
 import com.unlam.verabackend.domain.model.RiskType;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Service
+@Component
 public class PromptBuilderService {
 
     private String getRiskTypes() {

@@ -1,11 +1,15 @@
 package com.unlam.verabackend.application.usecase;
 
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
+import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.domain.model.UserLocation;
 import com.unlam.verabackend.domain.port.out.GeocodingProvider;
 import com.unlam.verabackend.domain.port.out.UserLocationRepository;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
+import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
+import com.unlam.verabackend.infrastructure.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,13 +21,17 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Pruebas Unitarias para UpdateUserLocationUseCaseImpl")
 class UpdateUserLocationUseCaseImplTest {
 
     @Mock
     private UserLocationRepository locationRepository;
+    @Mock
+    private UserRepository userRepository;
     @Mock
     private TrustContactRepository trustContactRepository;
     @Mock
@@ -32,129 +40,193 @@ class UpdateUserLocationUseCaseImplTest {
     @InjectMocks
     private UpdateUserLocationUseCaseImpl updateUserLocationUseCase;
 
-    @Test
-    @DisplayName("Debe crear una nueva ubicación consultando OSM si es la primera vez que se registra")
-    void execute_WhenNoPreviousLocation_ShouldConsultOSMAndSave() {
-        String email = "test@unlam.com";
-        BigDecimal lat = new BigDecimal("-34.670000");
-        BigDecimal lng = new BigDecimal("-58.560000");
+    private String protectedEmail;
+    private BigDecimal defaultLat;
+    private BigDecimal defaultLng;
+    private User validProtectedUser;
 
-        when(locationRepository.findByProtectedUserEmail(email)).thenReturn(Optional.empty());
-        when(trustContactRepository.findByProtectedUser_Email(email)).thenReturn(Optional.of(new TrustContact()));
-        when(geocodingProvider.getAddressFromCoordinates(lat, lng)).thenReturn("San Justo, Buenos Aires");
-        when(locationRepository.save(any(UserLocation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    @BeforeEach
+    void setUp() {
+        protectedEmail = "protegido@unlam.edu.ar";
 
-        UserLocation result = updateUserLocationUseCase.execute(email, lat, lng, null);
+        defaultLat = new BigDecimal("-34.6685");
+        defaultLng = new BigDecimal("-58.5633");
 
-        assertNotNull(result);
-        assertEquals("San Justo, Buenos Aires", result.getLocationText());
-        assertTrue(result.isConnected());
-        verify(geocodingProvider, times(1)).getAddressFromCoordinates(lat, lng);
+        validProtectedUser = new User();
+        validProtectedUser.setEmail(protectedEmail);
+        validProtectedUser.setRole(Role.PROTECTED);
     }
 
     @Test
-    @DisplayName("Debe lanzar ResourceNotFoundException si no hay registro previo ni relación de confianza activa")
-    void execute_WhenNoTrustContactFound_ShouldThrowException() {
-        String email = "hacker@unlam.com";
-        BigDecimal lat = new BigDecimal("-34.670000");
-        BigDecimal lng = new BigDecimal("-58.560000");
+    @DisplayName("Debería crear una nueva ubicación exitosamente cuando es la primera transmisión y se pasa texto explícito")
+    void execute_FirstTime_WithIncomingText_ShouldCreateSuccessfully() {
+        // Arrange
+        String incomingText = "Casa de la abuela";
+        TrustContact mockContact = new TrustContact();
 
-        when(locationRepository.findByProtectedUserEmail(email)).thenReturn(Optional.empty());
-        when(trustContactRepository.findByProtectedUser_Email(email)).thenReturn(Optional.empty());
+        when(userRepository.findByEmail(protectedEmail)).thenReturn(Optional.of(validProtectedUser));
+        when(locationRepository.findByProtectedUserEmail(protectedEmail)).thenReturn(Optional.empty());
+        when(trustContactRepository.findByProtectedUser_Email(protectedEmail)).thenReturn(Optional.of(mockContact));
+        when(locationRepository.save(any(UserLocation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
+        // Act
+        UserLocation result = updateUserLocationUseCase.execute(protectedEmail, defaultLat, defaultLng, incomingText);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(incomingText, result.getLocationText());
+        assertEquals(defaultLat, result.getLatitude());
+        assertEquals(defaultLng, result.getLongitude());
+        assertTrue(result.isConnected());
+        assertEquals(mockContact, result.getTrustContact());
+
+        verify(geocodingProvider, never()).getAddressFromCoordinates(any(), any());
+        verify(locationRepository, times(1)).save(any(UserLocation.class));
+    }
+
+    @Test
+    @DisplayName("Debería llamar al GeocodingProvider por primera vez si no se provee texto explícito")
+    void execute_FirstTime_WithoutIncomingText_ShouldTriggerGeocoding() {
+        // Arrange
+        String mockResolvedAddress = "Calle Falsa 123, San Justo";
+        TrustContact mockContact = new TrustContact();
+
+        when(userRepository.findByEmail(protectedEmail)).thenReturn(Optional.of(validProtectedUser));
+        when(locationRepository.findByProtectedUserEmail(protectedEmail)).thenReturn(Optional.empty());
+        when(trustContactRepository.findByProtectedUser_Email(protectedEmail)).thenReturn(Optional.of(mockContact));
+        when(geocodingProvider.getAddressFromCoordinates(defaultLat, defaultLng)).thenReturn(mockResolvedAddress);
+        when(locationRepository.save(any(UserLocation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        UserLocation result = updateUserLocationUseCase.execute(protectedEmail, defaultLat, defaultLng, null);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(mockResolvedAddress, result.getLocationText());
+        verify(geocodingProvider, times(1)).getAddressFromCoordinates(defaultLat, defaultLng);
+    }
+
+    @Test
+    @DisplayName("Debería reutilizar el texto anterior de ubicación si el usuario se movió menos de 30 metros")
+    void execute_ExistingLocation_InsideThreshold_ShouldReusePreviousText() {
+        // Arrange
+        String previousText = "Estación San Justo";
+        UserLocation existingLocation = UserLocation.builder()
+                .latitude(defaultLat)
+                .longitude(defaultLng)
+                .locationText(previousText)
+                .build();
+
+        BigDecimal subtleNewLat = defaultLat.add(new BigDecimal("0.00001"));
+        BigDecimal subtleNewLng = defaultLng.add(new BigDecimal("0.00001"));
+
+        when(userRepository.findByEmail(protectedEmail)).thenReturn(Optional.of(validProtectedUser));
+        when(locationRepository.findByProtectedUserEmail(protectedEmail)).thenReturn(Optional.of(existingLocation));
+        when(locationRepository.save(any(UserLocation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        UserLocation result = updateUserLocationUseCase.execute(protectedEmail, subtleNewLat, subtleNewLng, "");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(previousText, result.getLocationText());
+        assertEquals(subtleNewLat, result.getLatitude());
+        assertEquals(subtleNewLng, result.getLongitude());
+        verify(geocodingProvider, never()).getAddressFromCoordinates(any(), any());
+    }
+
+    @Test
+    @DisplayName("Debería retornar un texto por defecto si no se movió, no hay texto entrante y el previo era nulo")
+    void execute_ExistingLocation_InsideThreshold_PreviousTextNull_ShouldReturnDefaultFallback() {
+        // Arrange
+        UserLocation existingLocation = UserLocation.builder()
+                .latitude(defaultLat)
+                .longitude(defaultLng)
+                .locationText(null)
+                .build();
+
+        when(userRepository.findByEmail(protectedEmail)).thenReturn(Optional.of(validProtectedUser));
+        when(locationRepository.findByProtectedUserEmail(protectedEmail)).thenReturn(Optional.of(existingLocation));
+        when(locationRepository.save(any(UserLocation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        UserLocation result = updateUserLocationUseCase.execute(protectedEmail, defaultLat, defaultLng, null);
+
+        // Assert
+        assertEquals("Ubicación en tiempo real", result.getLocationText());
+    }
+
+    @Test
+    @DisplayName("Debería disparar geocodificación inversa si el usuario se movió significativamente (> 30 metros)")
+    void execute_ExistingLocation_OutsideThreshold_ShouldCallGeocoding() {
+        // Arrange
+        UserLocation existingLocation = UserLocation.builder()
+                .latitude(defaultLat)
+                .longitude(defaultLng)
+                .locationText("Ubicación Antigua")
+                .build();
+
+        BigDecimal distantNewLat = new BigDecimal("-34.7500");
+        BigDecimal distantNewLng = new BigDecimal("-58.6500");
+        String distantAddress = "Nueva Dirección Remota";
+
+        when(userRepository.findByEmail(protectedEmail)).thenReturn(Optional.of(validProtectedUser));
+        when(locationRepository.findByProtectedUserEmail(protectedEmail)).thenReturn(Optional.of(existingLocation));
+        when(geocodingProvider.getAddressFromCoordinates(distantNewLat, distantNewLng)).thenReturn(distantAddress);
+        when(locationRepository.save(any(UserLocation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        UserLocation result = updateUserLocationUseCase.execute(protectedEmail, distantNewLat, distantNewLng, null);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(distantAddress, result.getLocationText());
+        verify(geocodingProvider, times(1)).getAddressFromCoordinates(distantNewLat, distantNewLng);
+    }
+
+    @Test
+    @DisplayName("Debería lanzar ResourceNotFoundException si el email emisor no está registrado en la base de datos")
+    void execute_UserNotFound_ShouldThrowResourceNotFoundException() {
+        // Arrange
+        when(userRepository.findByEmail(protectedEmail)).thenReturn(Optional.empty());
+
+        // Act & Assert
         assertThrows(ResourceNotFoundException.class, () ->
-                updateUserLocationUseCase.execute(email, lat, lng, "")
+                updateUserLocationUseCase.execute(protectedEmail, defaultLat, defaultLng, null)
         );
         verify(locationRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Debe actualizar usando el texto provisto directamente sin consultar OSM")
-    void execute_WhenLocationTextIsProvided_ShouldUseItDirectly() {
-        String email = "test@unlam.com";
-        BigDecimal lat = new BigDecimal("-34.670000");
-        BigDecimal lng = new BigDecimal("-58.560000");
-        UserLocation existingLocation = UserLocation.builder().latitude(lat).longitude(lng).build();
+    @DisplayName("Debería lanzar SecurityException si el usuario existe pero no posee el rol PROTECTED")
+    void execute_InvalidRole_ShouldThrowSecurityException() {
+        // Arrange
+        User badRoleUser = new User();
+        badRoleUser.setEmail(protectedEmail);
+        badRoleUser.setRole(Role.CARER);
 
-        when(locationRepository.findByProtectedUserEmail(email)).thenReturn(Optional.of(existingLocation));
-        when(locationRepository.save(any(UserLocation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.findByEmail(protectedEmail)).thenReturn(Optional.of(badRoleUser));
 
-        UserLocation result = updateUserLocationUseCase.execute(email, lat, lng, "Ubicación Manual");
-
-        assertEquals("Ubicación Manual", result.getLocationText());
-        verify(geocodingProvider, never()).getAddressFromCoordinates(any(), any());
+        // Act & Assert
+        SecurityException exception = assertThrows(SecurityException.class, () ->
+                updateUserLocationUseCase.execute(protectedEmail, defaultLat, defaultLng, null)
+        );
+        assertEquals("Acceso denegado: Solo los usuarios protegidos pueden emitir su ubicación.", exception.getMessage());
+        verify(locationRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Debe consultar OSM si el usuario se movió significativamente (más de 30 metros)")
-    void execute_WhenUserMovedSignificantly_ShouldQueryOSM() {
-        String email = "test@unlam.com";
+    @DisplayName("Debería lanzar ResourceNotFoundException si es la primera vez que transmite pero no posee ningún contacto de confianza en el sistema")
+    void execute_FirstTime_NoTrustContactAssigned_ShouldThrowResourceNotFoundException() {
+        // Arrange
+        when(userRepository.findByEmail(protectedEmail)).thenReturn(Optional.of(validProtectedUser));
+        when(locationRepository.findByProtectedUserEmail(protectedEmail)).thenReturn(Optional.empty());
+        when(trustContactRepository.findByProtectedUser_Email(protectedEmail)).thenReturn(Optional.empty());
 
-        BigDecimal oldLat = new BigDecimal("-34.603738");
-        BigDecimal oldLng = new BigDecimal("-58.381570");
-
-        BigDecimal newLat = new BigDecimal("-34.608300");
-        BigDecimal newLng = new BigDecimal("-58.373100");
-
-        UserLocation existingLocation = UserLocation.builder()
-                .latitude(oldLat)
-                .longitude(oldLng)
-                .locationText("Cerca del Obelisco")
-                .build();
-
-        when(locationRepository.findByProtectedUserEmail(email)).thenReturn(Optional.of(existingLocation));
-        when(geocodingProvider.getAddressFromCoordinates(newLat, newLng)).thenReturn("Plaza de Mayo");
-        when(locationRepository.save(any(UserLocation.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        UserLocation result = updateUserLocationUseCase.execute(email, newLat, newLng, null);
-
-        assertEquals("Plaza de Mayo", result.getLocationText());
-        verify(geocodingProvider, times(1)).getAddressFromCoordinates(newLat, newLng);
-    }
-
-    @Test
-    @DisplayName("Debe omitir OSM y mantener el texto si el movimiento es insignificante")
-    void execute_WhenUserMovementIsMinimal_ShouldReuseAddress() {
-        String email = "test@unlam.com";
-
-        BigDecimal oldLat = new BigDecimal("-34.670000");
-        BigDecimal oldLng = new BigDecimal("-58.560000");
-        BigDecimal newLat = new BigDecimal("-34.670001");
-        BigDecimal newLng = new BigDecimal("-58.560001");
-
-        UserLocation existingLocation = UserLocation.builder()
-                .latitude(oldLat)
-                .longitude(oldLng)
-                .locationText("Dirección Anterior Guardada")
-                .build();
-
-        when(locationRepository.findByProtectedUserEmail(email)).thenReturn(Optional.of(existingLocation));
-        when(locationRepository.save(any(UserLocation.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        UserLocation result = updateUserLocationUseCase.execute(email, newLat, newLng, null);
-
-        assertEquals("Dirección Anterior Guardada", result.getLocationText());
-        verify(geocodingProvider, never()).getAddressFromCoordinates(any(), any());
-    }
-
-    @Test
-    @DisplayName("Debe setear texto por defecto si el movimiento es mínimo pero no poseía texto previo")
-    void execute_WhenMovementIsMinimalButNoTextExists_ShouldSetDefaultText() {
-        String email = "test@unlam.com";
-        BigDecimal oldLat = new BigDecimal("-34.670000");
-        BigDecimal oldLng = new BigDecimal("-58.560000");
-
-        UserLocation existingLocation = UserLocation.builder()
-                .latitude(oldLat)
-                .longitude(oldLng)
-                .locationText(null)
-                .build();
-
-        when(locationRepository.findByProtectedUserEmail(email)).thenReturn(Optional.of(existingLocation));
-        when(locationRepository.save(any(UserLocation.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        UserLocation result = updateUserLocationUseCase.execute(email, oldLat, oldLng, "");
-
-        assertEquals("Ubicación en tiempo real", result.getLocationText());
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () ->
+                updateUserLocationUseCase.execute(protectedEmail, defaultLat, defaultLng, null)
+        );
+        verify(locationRepository, never()).save(any());
     }
 }

@@ -5,6 +5,7 @@ import com.unlam.verabackend.domain.model.Analysis;
 import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.out.AnalysisRepository;
 import com.unlam.verabackend.infrastructure.entity.User;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,7 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.security.access.AccessDeniedException;
 
-import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Pruebas Unitarias para ManageAnalysisUseCaseImpl")
 class ManageAnalysisUseCaseImplTest {
 
     @Mock
@@ -31,95 +33,101 @@ class ManageAnalysisUseCaseImplTest {
     @InjectMocks
     private ManageAnalysisUseCaseImpl manageAnalysisUseCase;
 
-    private final String userEmail = "test@unlam.edu.ar";
+    private String userEmail;
+    private Analysis mockAnalysis;
+    private UUID analysisId;
+
+    @BeforeEach
+    void setUp() {
+        userEmail = "operador@unlam.edu.ar";
+        analysisId = UUID.randomUUID();
+
+        User mockUser = new User();
+        mockUser.setId(1L);
+        mockUser.setEmail(userEmail);
+
+        mockAnalysis = new Analysis();
+        mockAnalysis.setId(analysisId);
+        mockAnalysis.setUser(mockUser);
+    }
 
     @Test
-    @DisplayName("Debe retornar la página de análisis invocando al repositorio con los filtros dinámicos")
-    void getAnalysisHistory_WhenCalled_ShouldReturnPagedAnalysis() {
-        RiskLevel riskLevel = RiskLevel.HIGH;
-        String search = "alerta";
-        int page = 0;
-        Page<Analysis> expectedPage = new PageImpl<>(Collections.emptyList());
-
-        when(analysisRepository.findByCriteria(userEmail, riskLevel, search, page))
+    @DisplayName("Debería retornar una página con el historial de análisis filtrado bajo los criterios especificados")
+    void getAnalysisHistory_ValidScenario_ShouldReturnHistoryPage() {
+        // Arrange
+        Page<Analysis> expectedPage = new PageImpl<>(List.of(mockAnalysis));
+        when(analysisRepository.findByCriteria(userEmail, RiskLevel.HIGH, "patrón", 0))
                 .thenReturn(expectedPage);
 
-        Page<Analysis> result = manageAnalysisUseCase.getAnalysisHistory(userEmail, riskLevel, search, page);
+        // Act
+        Page<Analysis> result = manageAnalysisUseCase.getAnalysisHistory(userEmail, RiskLevel.HIGH, "patrón", 0);
 
+        // Assert
         assertNotNull(result);
-        assertEquals(expectedPage, result);
-        verify(analysisRepository, times(1))
-                .findByCriteria(userEmail, riskLevel, search, page);
+        assertEquals(1, result.getTotalElements());
+        verify(analysisRepository, times(1)).findByCriteria(userEmail, RiskLevel.HIGH, "patrón", 0);
     }
 
     @Test
-    @DisplayName("Debe lanzar ResourceNotFoundException cuando el análisis no existe en la base de datos")
-    void getAnalysisDetail_WhenAnalysisDoesNotExist_ShouldThrowResourceNotFoundException() {
-        UUID id = UUID.randomUUID();
-        when(analysisRepository.findById(id)).thenReturn(Optional.empty());
+    @DisplayName("Debería retornar el detalle de un análisis si el recurso existe y le pertenece al usuario")
+    void getAnalysisDetail_ValidScenario_ShouldReturnAnalysis() {
+        // Arrange
+        when(analysisRepository.findById(analysisId)).thenReturn(Optional.of(mockAnalysis));
 
-        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () ->
-                manageAnalysisUseCase.getAnalysisDetail(id, userEmail)
+        // Act
+        Analysis result = manageAnalysisUseCase.getAnalysisDetail(analysisId, userEmail);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(analysisId, result.getId());
+        assertEquals(userEmail, result.getUser().getEmail());
+    }
+
+    @Test
+    @DisplayName("Debería remover definitivamente el análisis si el recurso existe y pasa los controles de propiedad")
+    void deleteAnalysis_ValidScenario_ShouldDeleteSuccessfully() {
+        // Arrange
+        when(analysisRepository.findById(analysisId)).thenReturn(Optional.of(mockAnalysis));
+        doNothing().when(analysisRepository).deleteById(analysisId);
+
+        // Act
+        manageAnalysisUseCase.deleteAnalysis(analysisId, userEmail);
+
+        // Assert
+        verify(analysisRepository, times(1)).findById(analysisId);
+        verify(analysisRepository, times(1)).deleteById(analysisId);
+    }
+
+    @Test
+    @DisplayName("Debería lanzar ResourceNotFoundException si el ID del análisis consultado no existe en la persistencia")
+    void validateAndGetOwnedAnalysis_NotFound_ShouldThrowResourceNotFoundException() {
+        // Arrange
+        UUID nonexistentId = UUID.randomUUID();
+        when(analysisRepository.findById(nonexistentId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () ->
+                manageAnalysisUseCase.getAnalysisDetail(nonexistentId, userEmail)
         );
-        assertEquals("El análisis solicitado no existe.", exception.getMessage());
-        verify(analysisRepository, times(1)).findById(id);
+        verify(analysisRepository, never()).deleteById(any());
     }
 
     @Test
-    @DisplayName("Debe lanzar AccessDeniedException (403) cuando un usuario intenta ver un análisis de otra cuenta")
-    void getAnalysisDetail_WhenUserDoesNotHavePermissions_ShouldThrowAccessDeniedException() {
-        UUID id = UUID.randomUUID();
+    @DisplayName("Debería lanzar AccessDeniedException si un usuario malicioso intenta leer o alterar un análisis ajeno")
+    void validateAndGetOwnedAnalysis_NotOwner_ShouldThrowAccessDeniedException() {
+        // Arrange
+        User strangerUser = new User();
+        strangerUser.setEmail("stranger@unlam.edu.ar");
+        mockAnalysis.setUser(strangerUser);
 
-        User ownerUser = new User();
-        ownerUser.setEmail("otro-usuario@unlam.edu.ar");
+        when(analysisRepository.findById(analysisId)).thenReturn(Optional.of(mockAnalysis));
 
-        Analysis analysis = new Analysis();
-        analysis.setUser(ownerUser);
-
-        when(analysisRepository.findById(id)).thenReturn(Optional.of(analysis));
-
+        // Act & Assert
         AccessDeniedException exception = assertThrows(AccessDeniedException.class, () ->
-                manageAnalysisUseCase.getAnalysisDetail(id, userEmail)
+                manageAnalysisUseCase.getAnalysisDetail(analysisId, userEmail)
         );
+
         assertEquals("No tenés permisos para ver este análisis.", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("Debe retornar el análisis exitosamente si el usuario es el dueño legítimo")
-    void getAnalysisDetail_WhenAnalysisExistsAndUserIsOwner_ShouldReturnAnalysis() {
-        UUID id = UUID.randomUUID();
-
-        User ownerUser = new User();
-        ownerUser.setEmail(userEmail);
-
-        Analysis expectedAnalysis = new Analysis();
-        expectedAnalysis.setUser(ownerUser);
-
-        when(analysisRepository.findById(id)).thenReturn(Optional.of(expectedAnalysis));
-
-        Analysis result = manageAnalysisUseCase.getAnalysisDetail(id, userEmail);
-
-        assertNotNull(result);
-        assertEquals(expectedAnalysis, result);
-    }
-
-    @Test
-    @DisplayName("Debe eliminar el análisis físicamente si el solicitante es el dueño")
-    void deleteAnalysis_WhenUserIsOwner_ShouldDeleteSuccessfully() {
-        UUID id = UUID.randomUUID();
-
-        User ownerUser = new User();
-        ownerUser.setEmail(userEmail);
-
-        Analysis analysis = new Analysis();
-        analysis.setId(id);
-        analysis.setUser(ownerUser);
-
-        when(analysisRepository.findById(id)).thenReturn(Optional.of(analysis));
-        doNothing().when(analysisRepository).deleteById(id);
-
-        assertDoesNotThrow(() -> manageAnalysisUseCase.deleteAnalysis(id, userEmail));
-
-        verify(analysisRepository, times(1)).deleteById(id);
+        verify(analysisRepository, never()).deleteById(any());
     }
 }

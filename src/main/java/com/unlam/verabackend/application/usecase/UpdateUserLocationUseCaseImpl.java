@@ -5,7 +5,10 @@ import com.unlam.verabackend.domain.model.UserLocation;
 import com.unlam.verabackend.domain.port.in.UpdateUserLocationUseCase;
 import com.unlam.verabackend.domain.port.out.GeocodingProvider;
 import com.unlam.verabackend.domain.port.out.UserLocationRepository;
+import com.unlam.verabackend.infrastructure.entity.User;
+import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
+import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,63 +16,78 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class UpdateUserLocationUseCaseImpl implements UpdateUserLocationUseCase {
 
     private final UserLocationRepository locationRepository;
+    private final UserRepository userRepository;
     private final TrustContactRepository trustContactRepository;
     private final GeocodingProvider geocodingProvider;
 
     private static final double MIN_DISTANCE_METERS = 30.0;
+    private static final double EARTH_RADIUS_METERS = 6371000.0;
 
     @Override
     @Transactional
     public UserLocation execute(String protectedUserEmail, BigDecimal latitude, BigDecimal longitude, String locationText) {
-        log.info("UseCase: Solicitud de actualización de ubicación para [{}] -> Lat: {}, Lng: {}", protectedUserEmail, latitude, longitude);
+        log.info("UseCase: Guardando telemetría de ubicación para el PROTECTED [{}]", protectedUserEmail);
 
-        UserLocation userLocation = locationRepository.findByProtectedUserEmail(protectedUserEmail)
-                .orElseGet(() -> {
-                    log.info("UseCase: No se encontró registro previo de ubicación para [{}]. Creando uno nuevo.", protectedUserEmail);
-                    TrustContact contact = trustContactRepository.findByProtectedUser_Email(protectedUserEmail)
-                            .orElseThrow(() -> {
-                                log.error("UseCase Error: Relación de confianza no encontrada para el email: [{}]", protectedUserEmail);
-                                return new ResourceNotFoundException("No se encontró una relación de confianza activa para el email: " + protectedUserEmail);
-                            });
-                    return UserLocation.builder().trustContact(contact).build();
-                });
+        validateProtectedRole(protectedUserEmail);
+        UserLocation userLocation = getOrCreateUserLocation(protectedUserEmail);
 
-        if (locationText == null || locationText.isEmpty()) {
-
-            if (userLocation.getLatitude() == null || userLocation.getLongitude() == null ||
-                    hasUserMovedSignificantly(userLocation.getLatitude(), userLocation.getLongitude(), latitude, longitude)) {
-
-                log.info("UseCase [OSM]: El usuario se movió más de {} metros o es su primer registro. Consultando OpenStreetMap...", MIN_DISTANCE_METERS);
-                String address = geocodingProvider.getAddressFromCoordinates(latitude, longitude);
-                userLocation.setLocationText(address);
-            } else {
-                log.debug("UseCase [OSM]: Movimiento insignificante. Omitiendo llamada externa a OSM y reutilizando dirección.");
-                if (userLocation.getLocationText() == null) {
-                    userLocation.setLocationText("Ubicación en tiempo real");
-                }
-            }
-        } else {
-            log.info("UseCase: Se utilizará el texto de ubicación provisto explícitamente: '{}'", locationText);
-            userLocation.setLocationText(locationText);
-        }
+        String resolvedAddress = resolveAddressText(userLocation, latitude, longitude, locationText);
+        userLocation.setLocationText(resolvedAddress);
 
         userLocation.setLatitude(latitude);
         userLocation.setLongitude(longitude);
         userLocation.setConnected(true);
 
-        log.info("UseCase: Ubicación persistida de manera exitosa para [{}].", protectedUserEmail);
+        log.debug("UseCase: Persistiendo actualización de geolocalización en repositorio.");
         return locationRepository.save(userLocation);
     }
 
-    private boolean hasUserMovedSignificantly(BigDecimal oldLat, BigDecimal oldLng, BigDecimal newLat, BigDecimal newLng) {
-        double earthRadius = 6371000;
+    private void validateProtectedRole(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario emisor no encontrado."));
 
+        if (!Role.PROTECTED.equals(user.getRole())) {
+            log.error("Security Violation: Usuario sin rol PROTECTED [{}] intentó emitir coordenadas.", email);
+            throw new SecurityException("Acceso denegado: Solo los usuarios protegidos pueden emitir su ubicación.");
+        }
+    }
+
+    private UserLocation getOrCreateUserLocation(String email) {
+        return locationRepository.findByProtectedUserEmail(email)
+                .orElseGet(() -> {
+                    log.info("UseCase: Primera transmisión detectada para [{}]. Resolviendo vínculo mediante TrustContactRepository...", email);
+                    TrustContact contact = trustContactRepository.findByProtectedUser_Email(email)
+                            .orElseThrow(() -> new ResourceNotFoundException("No se encontró un vínculo de contacto asignado para este protegido: " + email));
+
+                    return UserLocation.builder().trustContact(contact).build();
+                });
+    }
+
+    private String resolveAddressText(UserLocation currentLoc, BigDecimal lat, BigDecimal lng, String incomingText) {
+        if (incomingText != null && !incomingText.isEmpty()) {
+            return incomingText;
+        }
+
+        if (isGeocodingRequired(currentLoc, lat, lng)) {
+            log.info("UseCase: Distancia significativa detectada (> 30m). Solicitando geocodificación inversa a OpenStreetMap...");
+            return geocodingProvider.getAddressFromCoordinates(lat, lng);
+        }
+
+        return currentLoc.getLocationText() != null ? currentLoc.getLocationText() : "Ubicación en tiempo real";
+    }
+
+    private boolean isGeocodingRequired(UserLocation currentLoc, BigDecimal newLat, BigDecimal newLng) {
+        return currentLoc.getLatitude() == null || currentLoc.getLongitude() == null ||
+                hasUserMovedSignificantly(currentLoc.getLatitude(), currentLoc.getLongitude(), newLat, newLng);
+    }
+
+    private boolean hasUserMovedSignificantly(BigDecimal oldLat, BigDecimal oldLng, BigDecimal newLat, BigDecimal newLng) {
         double dLat = Math.toRadians(newLat.doubleValue() - oldLat.doubleValue());
         double dLng = Math.toRadians(newLng.doubleValue() - oldLng.doubleValue());
 
@@ -77,10 +95,7 @@ public class UpdateUserLocationUseCaseImpl implements UpdateUserLocationUseCase 
                 Math.cos(Math.toRadians(oldLat.doubleValue())) * Math.cos(Math.toRadians(newLat.doubleValue())) *
                         Math.sin(dLng / 2) * Math.sin(dLng / 2);
 
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        double distance = earthRadius * c;
-
-        log.debug("UseCase [Haversine]: Distancia calculada: {} metros.", distance);
+        double distance = EARTH_RADIUS_METERS * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
         return distance >= MIN_DISTANCE_METERS;
     }
 }
