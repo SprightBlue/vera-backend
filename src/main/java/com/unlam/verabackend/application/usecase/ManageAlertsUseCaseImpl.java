@@ -33,8 +33,6 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
-    private static final int DEFAULT_PAGE_SIZE = 10;
-
     @Override
     @Transactional(readOnly = true)
     public Page<Alerts> getAlertsHistory(String carerEmail, Boolean isResolved, RiskLevel riskLevel, String search, int page) {
@@ -43,7 +41,7 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
         List<Long> contactIds = getTrustContactIdsByEmail(carerEmail);
         if (contactIds.isEmpty()) {
             log.warn("UseCase: El cuidador [{}] no registra relaciones de confianza asignadas. Retornando página vacía.", carerEmail);
-            return Page.empty(PageRequest.of(page, DEFAULT_PAGE_SIZE));
+            return Page.empty(PageRequest.of(page, 10));
         }
 
         log.debug("UseCase: Ejecutando consulta por criterios para {} IDs de contacto vinculados.", contactIds.size());
