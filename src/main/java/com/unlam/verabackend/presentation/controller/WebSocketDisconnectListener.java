@@ -39,8 +39,14 @@ public class WebSocketDisconnectListener {
         if (savedLocation.getTrustContact() != null) {
             Long trackingChannelId = savedLocation.getTrustContact().getId();
             log.debug("Presentation Listener: Sincronizando caída de conexión vía RTC al canal ID [{}]", trackingChannelId);
-
             rtcProvider.publishLocationUpdate(trackingChannelId, savedLocation);
+
+            if (savedLocation.getTrustContact().getCarer() != null) {
+                String carerEmail = savedLocation.getTrustContact().getCarer().getEmail();
+                log.info("Presentation Listener: Notificando desconexión al Dashboard global del Carer [{}]", carerEmail);
+
+                rtcProvider.publishCarerDashboardLocationUpdate(carerEmail, savedLocation);
+            }
         }
     }
 }

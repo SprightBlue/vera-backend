@@ -7,6 +7,7 @@ import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.domain.port.in.ManageAlertsUseCase;
 import com.unlam.verabackend.domain.port.out.AlertsRepository;
+import com.unlam.verabackend.domain.port.out.RtcProvider;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
@@ -18,7 +19,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +32,7 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
     private final TrustContactRepository trustContactRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final RtcProvider rtcProvider;
 
     @Override
     @Transactional(readOnly = true)
@@ -61,20 +62,37 @@ public class ManageAlertsUseCaseImpl implements ManageAlertsUseCase {
         log.info("UseCase: Solicitando remoción definitiva de la alerta ID [{}] por [{}]", id, carerEmail);
 
         Alerts alert = validateAndGetOwnedAlert(id, carerEmail);
-        alertsRepository.deleteById(alert.getId());
 
+        alertsRepository.deleteById(alert.getId());
         log.info("UseCase: Alerta ID [{}] removida correctamente de la persistencia.", id);
+
+        if (alert.getTrustContact() != null) {
+            String emailDelCarer = alert.getTrustContact().getCarer().getEmail();
+            log.info("UseCase: Sincronizando eliminación en el Dashboard del Carer [{}]", emailDelCarer);
+            rtcProvider.publishCarerDashboardAlertDeleted(emailDelCarer, alert.getId());
+
+            if (alert.getTrustContact().getProtectedUser() != null) {
+                String emailDelProtected = alert.getTrustContact().getProtectedUser().getEmail();
+                log.info("UseCase: Sincronizando eliminación en el Dashboard del Protected [{}]", emailDelProtected);
+                rtcProvider.publishProtectedDashboardAlertDeleted(emailDelProtected, alert.getId());
+            }
+        }
     }
 
     @Override
     @Transactional
     public void resolveAlert(UUID id, String carerEmail) {
         log.info("UseCase: Ejecutando transición de estado a RESUELTA para la alerta ID [{}] por [{}]", id, carerEmail);
-
         Alerts alert = validateAndGetOwnedAlert(id, carerEmail);
-        alertsRepository.resolveAlert(alert.getId(), LocalDateTime.now());
-
+        alert.setResolved(true);
+        alertsRepository.save(alert, alert.getTrustContact().getId());
         dispatchResolutionNotification(alert);
+
+        if (alert.getTrustContact() != null && alert.getTrustContact().getProtectedUser() != null) {
+            String emailDelProtected = alert.getTrustContact().getProtectedUser().getEmail();
+            log.info("UseCase: Sincronizando resolución únicamente en el Dashboard del Protected [{}]", emailDelProtected);
+            rtcProvider.publishProtectedDashboardResolvedAlertUpdate(emailDelProtected, alert);
+        }
     }
 
     private List<Long> getTrustContactIdsByEmail(String carerEmail) {

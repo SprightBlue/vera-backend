@@ -1,4 +1,4 @@
-package com.unlam.verabackend.infrastructure.repository;
+package com.unlam.verabackend.infrastructure.repository.jpa;
 
 import com.unlam.verabackend.infrastructure.entity.ChatMessagesEntity;
 import org.springframework.data.domain.Pageable;

@@ -2,7 +2,7 @@ package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.domain.model.UserLocation;
 import com.unlam.verabackend.domain.port.in.GetUserLocationUseCase;
-import com.unlam.verabackend.presentation.dto.UserLocationResponseDto;
+import com.unlam.verabackend.presentation.dto.UserLocationMapResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +20,7 @@ public class UserLocationRestController {
     private final GetUserLocationUseCase getUserLocationUseCase;
 
     @GetMapping("/{id}/location")
-    public ResponseEntity<UserLocationResponseDto> getProtectedUserLocation(@PathVariable Long id, Principal principal) {
+    public ResponseEntity<UserLocationMapResponse> getProtectedUserLocation(@PathVariable Long id, Principal principal) {
         String requesterEmail = principal.getName();
         log.info("REST Request: GET - El operador [{}] solicita la ubicación activa del vínculo ID [{}]", requesterEmail, id);
 
@@ -29,18 +29,18 @@ public class UserLocationRestController {
         return ResponseEntity.ok(processLocationResult(location, id));
     }
 
-    private UserLocationResponseDto processLocationResult(UserLocation location, Long trustContactId) {
+    private UserLocationMapResponse processLocationResult(UserLocation location, Long trustContactId) {
         if (location == null || location.getTrustContact() == null) {
             log.warn("REST Response: Se validó el acceso a la relación ID [{}], pero carece de telemetría histórica. Construyendo respuesta segura vacía.", trustContactId);
             return buildEmptyLocationResponse(trustContactId);
         }
 
         log.debug("REST Response: Transmitiendo coordenadas empaquetadas a DTO para mapa interactivo.");
-        return UserLocationResponseDto.fromDomain(location);
+        return UserLocationMapResponse.fromDomain(location);
     }
 
-    private UserLocationResponseDto buildEmptyLocationResponse(Long trustContactId) {
-        return UserLocationResponseDto.builder()
+    private UserLocationMapResponse buildEmptyLocationResponse(Long trustContactId) {
+        return UserLocationMapResponse.builder()
                 .id(null)
                 .trustContactId(trustContactId)
                 .latitude(BigDecimal.ZERO)

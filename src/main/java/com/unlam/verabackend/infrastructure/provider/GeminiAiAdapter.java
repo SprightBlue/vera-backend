@@ -21,7 +21,7 @@ import java.util.function.Function;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class GeminiAiProvider implements AiProvider {
+public class GeminiAiAdapter implements AiProvider {
 
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
