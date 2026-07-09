@@ -48,7 +48,7 @@ public class NotificationService {
     }
 
     private int getUnreadNotificationCount(String email) {
-        return notificationsRepository.findUnreadByUserEmail(email).size();
+        return (int) notificationsRepository.countUnreadByUserEmail(email);
     }
 
     private String buildTitle(NotificationsType type) {

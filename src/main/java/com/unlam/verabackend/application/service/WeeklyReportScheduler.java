@@ -2,7 +2,7 @@ package com.unlam.verabackend.application.service;
 
 import com.unlam.verabackend.infrastructure.entity.AlertsEntity;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
-import com.unlam.verabackend.infrastructure.repository.JpaAlertsRepository;
+import com.unlam.verabackend.infrastructure.repository.jpa.JpaAlertsRepository;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.provider.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;

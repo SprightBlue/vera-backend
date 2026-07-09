@@ -17,7 +17,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -68,10 +67,9 @@ class ManageNotificationsUseCaseImplTest {
     @DisplayName("Debería marcar todas las notificaciones como leídas y publicar el conteo actualizado por RTC")
     void markAllMyNotificationsAsRead_ValidScenario_ShouldUpdateAndPublish() {
         // Arrange
-        List<Notifications> mockUnreadList = Collections.emptyList();
-
         doNothing().when(repository).markAllAsReadByUserEmail(userEmail);
-        when(repository.findUnreadByUserEmail(userEmail)).thenReturn(mockUnreadList);
+
+        when(repository.countUnreadByUserEmail(userEmail)).thenReturn(0L);
         doNothing().when(rtcProvider).publishUnreadCountUpdate(userEmail, 0);
 
         // Act
@@ -79,7 +77,7 @@ class ManageNotificationsUseCaseImplTest {
 
         // Assert
         verify(repository, times(1)).markAllAsReadByUserEmail(userEmail);
-        verify(repository, times(1)).findUnreadByUserEmail(userEmail);
+        verify(repository, times(1)).countUnreadByUserEmail(userEmail); // MODIFICADO
         verify(rtcProvider, times(1)).publishUnreadCountUpdate(userEmail, 0);
     }
 
@@ -94,7 +92,8 @@ class ManageNotificationsUseCaseImplTest {
 
         when(repository.findById(notificationId)).thenReturn(Optional.of(mockNotification));
         doNothing().when(repository).deleteById(notificationId);
-        when(repository.findUnreadByUserEmail(userEmail)).thenReturn(List.of(new Notifications(), new Notifications(), new Notifications()));
+
+        when(repository.countUnreadByUserEmail(userEmail)).thenReturn(3L);
         doNothing().when(rtcProvider).publishNotificationDeleted(userEmail, notificationId, 3);
 
         // Act
@@ -103,6 +102,7 @@ class ManageNotificationsUseCaseImplTest {
         // Assert
         verify(repository, times(1)).findById(notificationId);
         verify(repository, times(1)).deleteById(notificationId);
+        verify(repository, times(1)).countUnreadByUserEmail(userEmail); // MODIFICADO
         verify(rtcProvider, times(1)).publishNotificationDeleted(userEmail, notificationId, 3);
     }
 

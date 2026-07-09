@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserLocationResponseDto {
+public class UserLocationMapResponse {
     private String id;
     private Long trustContactId;
     private BigDecimal latitude;
@@ -24,10 +24,10 @@ public class UserLocationResponseDto {
     private boolean isConnected;
     private LocalDateTime updatedAt;
 
-    public static UserLocationResponseDto fromDomain(UserLocation domain) {
+    public static UserLocationMapResponse fromDomain(UserLocation domain) {
         if (domain == null) return null;
 
-        return UserLocationResponseDto.builder()
+        return UserLocationMapResponse.builder()
                 .id(domain.getId() != null ? domain.getId().toString() : null)
                 .trustContactId(domain.getTrustContact() != null ? domain.getTrustContact().getId() : null)
                 .latitude(domain.getLatitude())

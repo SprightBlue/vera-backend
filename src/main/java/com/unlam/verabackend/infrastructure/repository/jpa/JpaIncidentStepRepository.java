@@ -1,4 +1,4 @@
-package com.unlam.verabackend.infrastructure.repository;
+package com.unlam.verabackend.infrastructure.repository.jpa;
 
 import com.unlam.verabackend.infrastructure.entity.IncidentStepEntity;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -6,6 +6,7 @@ import com.unlam.verabackend.infrastructure.entity.ChatsEntity;
 import com.unlam.verabackend.infrastructure.entity.AnalysisEntity;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.mapper.ChatsMapper;
+import com.unlam.verabackend.infrastructure.repository.jpa.JpaChatsRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

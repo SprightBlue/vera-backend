@@ -35,6 +35,7 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
     private final AlertsRepository alertsRepository;
     private final TrustContactRepository trustContactRepository;
     private final NotificationService notificationService;
+    private final RtcProvider rtcProvider;
 
     @Override
     @Transactional
@@ -159,6 +160,12 @@ public class AnalyzeContentUseCaseImpl implements AnalyzeContentUseCase {
                 protectedUser.getFullName(),
                 notificationPayload
         );
+
+        if (contact.getCarer() != null && contact.getCarer().getEmail() != null) {
+            String carerEmail = contact.getCarer().getEmail();
+            log.info("UseCase: Sincronizando nueva alerta en el Dashboard del Carer [{}] vía RTC", carerEmail);
+            rtcProvider.publishCarerDashboardAlertUpdate(carerEmail, savedAlert);
+        }
     }
 
     private Analysis buildAnalysisEntity(AiResult aiResult, User user, Source source) {
