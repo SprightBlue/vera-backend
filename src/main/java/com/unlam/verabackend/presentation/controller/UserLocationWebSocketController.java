@@ -35,15 +35,19 @@ public class UserLocationWebSocketController {
         if (savedLocation != null && savedLocation.getTrustContact() != null) {
             Long trackingChannelId = savedLocation.getTrustContact().getId();
             log.debug("STOMP Outbound: Redirigiendo actualización geográfica al canal unificado RTC ID [{}]", trackingChannelId);
-
             rtcProvider.publishLocationUpdate(trackingChannelId, savedLocation);
+
+            if (savedLocation.getTrustContact().getCarer() != null) {
+                String carerEmail = savedLocation.getTrustContact().getCarer().getEmail();
+                log.info("STOMP Outbound: Sincronizando posición en vivo hacia el Dashboard global del Carer [{}]", carerEmail);
+                rtcProvider.publishCarerDashboardLocationUpdate(carerEmail, savedLocation);
+            }
         }
     }
 
     @MessageExceptionHandler(Exception.class)
     public void handleWebSocketException(Exception ex, Principal principal) {
         String user = (principal != null) ? principal.getName() : "Desconocido";
-        log.error("STOMP Exception Handler: Error procesando payload de localización para el usuario [{}]. Detalles: {}",
-                user, ex.getMessage(), ex);
+        log.error("STOMP Exception Handler: Error procesando payload de localización para el usuario [{}]. Detalles: {}", user, ex.getMessage(), ex);
     }
 }

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import java.util.Map;
 
@@ -20,6 +21,7 @@ public class WebSocketDisconnectListener {
     private final RtcProvider rtcProvider;
 
     @EventListener
+    @Transactional
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
@@ -27,7 +29,6 @@ public class WebSocketDisconnectListener {
         if (sessionAttributes != null && sessionAttributes.containsKey("userEmail")) {
             String email = (String) sessionAttributes.get("userEmail");
             log.info("Presentation Listener: Detectada pérdida de socket o desconexión limpia para el usuario: [{}]", email);
-
             locationRepository.findByProtectedUserEmail(email).ifPresent(this::processDisconnectionState);
         }
     }
@@ -44,7 +45,6 @@ public class WebSocketDisconnectListener {
             if (savedLocation.getTrustContact().getCarer() != null) {
                 String carerEmail = savedLocation.getTrustContact().getCarer().getEmail();
                 log.info("Presentation Listener: Notificando desconexión al Dashboard global del Carer [{}]", carerEmail);
-
                 rtcProvider.publishCarerDashboardLocationUpdate(carerEmail, savedLocation);
             }
         }
