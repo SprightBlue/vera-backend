@@ -37,6 +37,7 @@ class AnalyzeContentUseCaseImplTest {
     @Mock private AlertsRepository alertsRepository;
     @Mock private TrustContactRepository trustContactRepository;
     @Mock private NotificationService notificationService;
+    @Mock private RtcProvider rtcProvider;
 
     @InjectMocks private AnalyzeContentUseCaseImpl analyzeContentUseCase;
 
@@ -85,6 +86,7 @@ class AnalyzeContentUseCaseImplTest {
         contact.setId(100L);
         contact.setSensitivityLevel(SensitivityLevel.BAJO);
         contact.setCarer(mockCarerUser);
+        contact.setProtectedUser(mockProtectedUser);
 
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockProtectedUser));
         when(urlExtractor.findUrls(rawText)).thenReturn(mockUrls);
@@ -103,11 +105,31 @@ class AnalyzeContentUseCaseImplTest {
         });
 
         when(trustContactRepository.findByProtectedUserId(mockProtectedUser.getId())).thenReturn(List.of(contact));
+
         when(alertsRepository.save(any(Alerts.class), eq(100L))).thenAnswer(inv -> {
             Alerts al = inv.getArgument(0);
             al.setId(UUID.randomUUID());
+
+            var domainTrustContact = TrustContact.builder()
+                    .id(contact.getId())
+                    .sensitivityLevel(contact.getSensitivityLevel())
+                    .carer(User.builder()
+                            .id(mockCarerUser.getId())
+                            .email(mockCarerUser.getEmail())
+                            .role(mockCarerUser.getRole())
+                            .build())
+                    .protectedUser(User.builder()
+                            .id(mockProtectedUser.getId())
+                            .email(mockProtectedUser.getEmail())
+                            .fullName(mockProtectedUser.getFullName())
+                            .build())
+                    .build();
+
+            al.setTrustContact(domainTrustContact);
             return al;
         });
+
+        doNothing().when(rtcProvider).publishCarerDashboardAlertUpdate(anyString(), any(Alerts.class));
 
         // Act
         Analysis result = analyzeContentUseCase.execute(userEmail, rawText, mockFile, "MOBILE");
@@ -117,6 +139,7 @@ class AnalyzeContentUseCaseImplTest {
         assertEquals(RiskLevel.HIGH, result.getRiskLevel());
         verify(alertsRepository, times(1)).save(any(Alerts.class), eq(100L));
         verify(notificationService, times(1)).createAndDispatch(eq(mockCarerUser), eq(NotificationsType.ALERT), eq("Protected User"), anyMap());
+        verify(rtcProvider, times(1)).publishCarerDashboardAlertUpdate(eq("carer@unlam.edu.ar"), any(Alerts.class));
     }
 
     @Test
@@ -177,11 +200,13 @@ class AnalyzeContentUseCaseImplTest {
         contactMedio.setId(201L);
         contactMedio.setSensitivityLevel(SensitivityLevel.MEDIO);
         contactMedio.setCarer(mockCarerUser);
+        contactMedio.setProtectedUser(mockProtectedUser);
 
         TrustContact contactBajo = new TrustContact();
         contactBajo.setId(202L);
         contactBajo.setSensitivityLevel(SensitivityLevel.BAJO);
         contactBajo.setCarer(mockCarerUser);
+        contactBajo.setProtectedUser(mockProtectedUser);
 
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockProtectedUser));
         when(aiProvider.analyzeContent(any(), any())).thenReturn(mediumRiskResult);
@@ -191,8 +216,14 @@ class AnalyzeContentUseCaseImplTest {
         when(alertsRepository.save(any(Alerts.class), eq(201L))).thenAnswer(inv -> {
             Alerts alert = inv.getArgument(0);
             alert.setId(UUID.randomUUID());
+
+            alert.setTrustContact(TrustContact.builder()
+                    .carer(User.builder().email("carer@unlam.edu.ar").build())
+                    .build());
             return alert;
         });
+
+        doNothing().when(rtcProvider).publishCarerDashboardAlertUpdate(anyString(), any(Alerts.class));
 
         // Act
         analyzeContentUseCase.execute(userEmail, "Texto", null, "WEB");
@@ -200,6 +231,7 @@ class AnalyzeContentUseCaseImplTest {
         // Assert
         verify(alertsRepository, times(1)).save(any(Alerts.class), eq(201L));
         verify(alertsRepository, never()).save(any(Alerts.class), eq(202L));
+        verify(rtcProvider, times(1)).publishCarerDashboardAlertUpdate(eq("carer@unlam.edu.ar"), any(Alerts.class));
     }
 
     @Test
@@ -247,7 +279,10 @@ class AnalyzeContentUseCaseImplTest {
 
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(mockProtectedUser));
         when(aiProvider.analyzeContent(any(), any())).thenReturn(corruptResult);
-        when(analysisRepository.save(any(Analysis.class))).thenReturn(new Analysis());
+
+        Analysis analysisWithNullRisk = new Analysis();
+        analysisWithNullRisk.setRiskLevel(null);
+        when(analysisRepository.save(any(Analysis.class))).thenReturn(analysisWithNullRisk);
 
         // Act
         Analysis result = analyzeContentUseCase.execute(userEmail, "Texto", null, "MOBILE");

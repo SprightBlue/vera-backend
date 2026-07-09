@@ -4,8 +4,11 @@ import com.unlam.verabackend.domain.model.UserLocation;
 import com.unlam.verabackend.domain.port.out.UserLocationRepository;
 import com.unlam.verabackend.infrastructure.entity.UserLocationEntity;
 import com.unlam.verabackend.infrastructure.mapper.UserLocationMapper;
+import com.unlam.verabackend.infrastructure.repository.jpa.JpaUserLocationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,12 +32,20 @@ public class UserLocationRepositoryAdapter implements UserLocationRepository {
     }
 
     @Override
-    public Optional<UserLocation> findByTrustContactId(Long trustContactId) {
-        return jpaRepository.findByTrustContactId(trustContactId).map(mapper::toDomain);
+    public Optional<UserLocation> findByProtectedUserEmail(String email) {
+        return jpaRepository.findByProtectedUserEmail(email).map(mapper::toDomain);
     }
 
     @Override
-    public Optional<UserLocation> findByProtectedUserEmail(String email) {
-        return jpaRepository.findByProtectedUserEmail(email).map(mapper::toDomain);
+    public List<UserLocation> findTop3LastConnectedByCarerEmail(String carerEmail) {
+        return jpaRepository.findTop3ByCarerEmailOrderByUpdatedAtDesc(carerEmail)
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countConnectedUsersByCarerEmail(String carerEmail) {
+        return jpaRepository.countConnectedUsersByCarerEmail(carerEmail);
     }
 }

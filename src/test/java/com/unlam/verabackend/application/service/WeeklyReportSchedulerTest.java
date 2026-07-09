@@ -2,7 +2,7 @@ package com.unlam.verabackend.application.service;
 
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.entity.User;
-import com.unlam.verabackend.infrastructure.repository.JpaAlertsRepository;
+import com.unlam.verabackend.infrastructure.repository.jpa.JpaAlertsRepository;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.provider.EmailService;
 import org.junit.jupiter.api.Test;

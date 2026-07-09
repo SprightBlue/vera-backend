@@ -16,7 +16,7 @@ public interface TrustContactUseCase {
 
     void acceptInvitation(String token, String protectedUserEmail);
 
-    void deleteProtectedPerson(Long id);
+    void deleteProtectedPerson(Long id, String status, String carerEmail);
 
     void updateConfiguration(Long id, String sensitivityLevelStr, Boolean notifyHighRisk);
 
@@ -28,7 +28,7 @@ public interface TrustContactUseCase {
 
     List<CarerResponse> getMyCarers(String protectedUserEmail);
 
-    ProtectedPersonResponse getProtectedPersonById(Long id);
+    ProtectedPersonResponse getProtectedPersonById(Long id, String status, String carerEmail);
 
     String uploadProtectedPersonImage(MultipartFile image) throws IOException;
 

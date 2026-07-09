@@ -2,6 +2,7 @@ package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.domain.model.Alerts;
 import com.unlam.verabackend.domain.model.RiskLevel;
+import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.domain.port.in.ManageAlertsUseCase;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.presentation.dto.AlertsDetailResponse;
@@ -65,6 +66,6 @@ public class AlertsController {
 
     private PagedResponse<AlertsResponse> convertToPagedAlertsResponse(Page<Alerts> alertsPage) {
         log.debug("REST Response: Convirtiendo {} alertas encontradas hacia el DTO adaptado de la UI.", alertsPage.getNumberOfElements());
-        return PagedResponse.fromPage(alertsPage, AlertsResponse::fromDomain);
+        return PagedResponse.fromPage(alertsPage, alert -> AlertsResponse.fromDomain(alert, Role.CARER));
     }
 }
