@@ -123,77 +123,53 @@ public class UserUseCaseImpl implements UserUseCase {
         }
 
         @Override
-        public AuthResponse googleLogin(
-                        String credential, String selectedRole) {
+        public AuthResponse googleLogin(String credential, String selectedRole) {
+                GoogleIdToken.Payload payload = verifyGoogleToken(credential);
+                User user = findOrCreateGoogleUser(payload, selectedRole);
+                String token = jwtService.generateToken(user);
+                return buildAuthResponse(user, token);
+        }
 
+        private GoogleIdToken.Payload verifyGoogleToken(String credential) {
                 try {
-
                         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
-                                        GoogleNetHttpTransport.newTrustedTransport(),
-                                        GsonFactory.getDefaultInstance())
-                                        .setAudience(
-                                                        Collections.singletonList(
-                                                                        googleClientId))
-                                        .build();
+                                GoogleNetHttpTransport.newTrustedTransport(),
+                                GsonFactory.getDefaultInstance())
+                                .setAudience(Collections.singletonList(googleClientId))
+                                .build();
 
                         GoogleIdToken idToken = verifier.verify(credential);
-
                         if (idToken == null) {
-                                throw new RuntimeException(
-                                                "Token Google inválido");
+                                throw new IllegalArgumentException("Token de Google inválido o expirado");
                         }
-
-                        GoogleIdToken.Payload payload = idToken.getPayload();
-
-                        String email = payload.getEmail();
-
-                        String fullName = (String) payload.get("name");
-
-                        Optional<User> existingUser = userRepository.findByEmail(email);
-
-                        User user;
-
-                        if (existingUser.isPresent()) {
-
-                                user = existingUser.get();
-
-                        } else {
-
-                                user = new User();
-
-                                user.setEmail(email);
-
-                                user.setFullName(fullName);
-
-                                user.setPassword(
-                                                passwordEncoder.encode(
-                                                                UUID.randomUUID().toString()));
-                                String roleToSet = (selectedRole != null && !selectedRole.isBlank()) ? selectedRole
-                                                : "CARER";
-
-                                user.setRole(Role.valueOf(roleToSet));
-
-                                user.setEnabled(true);
-
-                                user = userRepository.save(user);
-                        }
-
-                        String token = jwtService.generateToken(user);
-
-                        return new AuthResponse(
-                                        user.getId(),
-                                        token,
-                                        user.getEmail(),
-                                        user.getFullName(),
-                                        user.getRole().name(),
-                                        user.getImage());
-
+                        return idToken.getPayload();
+                } catch (IllegalArgumentException e) {
+                        throw e;
                 } catch (Exception e) {
-
-                        throw new RuntimeException(
-                                        "Error validando usuario Google",
-                                        e);
+                        throw new RuntimeException("Error al verificar credencial de Google", e);
                 }
+        }
+
+        private User findOrCreateGoogleUser(GoogleIdToken.Payload payload, String selectedRole) {
+                String email = payload.getEmail();
+                return userRepository.findByEmail(email)
+                        .orElseGet(() -> createGoogleUser(email, (String) payload.get("name"), selectedRole));
+        }
+
+        private User createGoogleUser(String email, String fullName, String selectedRole) {
+                String role = (selectedRole != null && !selectedRole.isBlank()) ? selectedRole : "CARER";
+                User user = User.builder()
+                        .email(email)
+                        .fullName(fullName)
+                        .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                        .role(Role.valueOf(role))
+                        .enabled(true)
+                        .build();
+                return userRepository.save(user);
+        }
+
+        private AuthResponse buildAuthResponse(User user, String token) {
+                return new AuthResponse(user.getId(), token, user.getEmail(), user.getFullName(), user.getRole().name(), user.getImage());
         }
 
         @Override
