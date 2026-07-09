@@ -439,4 +439,12 @@ public class UserUseCaseImpl implements UserUseCase {
                 userRepository.delete(user);
 
         }
+
+    @Override
+    public void deleteUserImage(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        user.setId(null);
+        userRepository.save(user);
+    }
 }

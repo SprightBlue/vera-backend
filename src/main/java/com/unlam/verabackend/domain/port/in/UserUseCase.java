@@ -46,4 +46,5 @@ public interface UserUseCase {
 
         void deleteAccount(String email);
 
+        void deleteUserImage(Long id);
 }
