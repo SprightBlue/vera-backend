@@ -372,18 +372,15 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
 
         trustInvitationRepository.save(protectedPerson);
 
-        return new ProtectedPersonResponse(
-                protectedPerson.getId(),
-                protectedPerson.getCarer().getId(),
-                protectedPerson.getFullName(),
-                protectedPerson.getEmail(),
-                protectedPerson.getContactNumber(),
-                protectedPerson.getRelationship(),
-                protectedPerson.getStatus().name(),
-                protectedPerson.getSensitivityLevel().name(),
-                protectedPerson.isNotifyHighRisk(),
-                protectedPerson.getImage()
-        );
+        return ProtectedPersonResponse.builder()
+                .id(protectedPerson.getId())
+                .fullName(protectedPerson.getFullName())
+                .email(protectedPerson.getEmail())
+                .contactNumber(protectedPerson.getContactNumber())
+                .relationship(protectedPerson.getRelationship())
+                .image(protectedPerson.getImage())
+                .status(protectedPerson.getStatus().name())
+                .build();
     }
 
     private ProtectedPersonResponse buildActivePersonResponse(TrustContact contact) {
