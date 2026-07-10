@@ -58,4 +58,10 @@ public class ChatRepositoryAdapter implements ChatsRepository {
     public boolean existsById(UUID chatId) {
         return jpaChatsRepository.existsById(chatId);
     }
+
+    @Override
+    public Optional<Chats> findLastUpdatedByUserEmail(String email) {
+        return jpaChatsRepository.findFirstByUserEmailOrderByUpdatedAtDesc(email)
+                .map(chatsMapper::toDomain);
+    }
 }

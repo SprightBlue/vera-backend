@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 public class AddTrustContactRequest {
-    
+
     @NotBlank(message = "El email no puede estar vacío")
     @Email(message = "Debe ser un formato de email válido")
     private String protectedUserEmail;

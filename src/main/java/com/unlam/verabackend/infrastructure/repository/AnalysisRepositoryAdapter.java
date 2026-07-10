@@ -63,8 +63,7 @@ public class AnalysisRepositoryAdapter implements AnalysisRepository {
     }
 
     @Override
-    public long countByUserEmailInLast24Hours(String email) {
-        LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusHours(24);
-        return jpaRepository.countByUserEmailAndCreatedAtAfter(email, twentyFourHoursAgo);
+    public long countByUserEmailSince(String email, LocalDateTime since) {
+        return jpaRepository.countByUserEmailAndCreatedAtAfter(email, since);
     }
 }

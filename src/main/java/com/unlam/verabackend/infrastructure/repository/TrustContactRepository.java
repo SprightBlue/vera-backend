@@ -16,7 +16,13 @@ public interface TrustContactRepository extends JpaRepository<TrustContact, Long
 
     Optional<TrustContact> findByProtectedUser_Email(String email);
 
+    Optional<TrustContact> findFirstByCarer_EmailOrderByCreatedAtDesc(String email);
+
+    Optional<TrustContact> findFirstByProtectedUser_EmailOrderByCreatedAtDesc(String email);
+
     boolean existsByCarerIdAndProtectedUser_Id(Long carerId, Long protectedUserId);
 
     List<TrustContact> findByReceiveAlertSummariesTrue();
+
+
 }
