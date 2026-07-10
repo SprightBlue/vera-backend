@@ -14,7 +14,7 @@ import java.util.UUID;
 public interface JpaChatsRepository extends JpaRepository<ChatsEntity, UUID> {
     List<ChatsEntity> findByUserEmailOrderByUpdatedAtDesc(String email);
     boolean existsById(@NonNull UUID id);
-
     @Query("SELECT c FROM ChatsEntity c LEFT JOIN FETCH c.analysis WHERE c.id = :id")
     Optional<ChatsEntity> findByIdWithAnalysis(@Param("id") UUID id);
+    Optional<ChatsEntity> findFirstByUserEmailOrderByUpdatedAtDesc(String email);
 }

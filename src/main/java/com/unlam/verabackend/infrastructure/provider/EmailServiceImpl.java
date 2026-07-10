@@ -1,5 +1,6 @@
-package com.unlam.verabackend.application.service;
+package com.unlam.verabackend.infrastructure.provider;
 
+import com.unlam.verabackend.domain.port.out.EmailService;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

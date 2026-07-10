@@ -23,17 +23,15 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.unlam.verabackend.application.service.EmailService;
+import com.unlam.verabackend.domain.port.out.EmailService;
 import com.unlam.verabackend.infrastructure.entity.PasswordResetToken;
 import com.unlam.verabackend.infrastructure.repository.PasswordResetTokenRepository;
 import com.unlam.verabackend.presentation.dto.ProfileResponse;
 import com.unlam.verabackend.presentation.dto.UpdateProfileRequest;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
-import com.unlam.verabackend.domain.model.Role;
 
 import java.io.IOException;
-import java.util.Optional;
 import java.util.Collections;
 
 import org.springframework.beans.factory.annotation.Value;
