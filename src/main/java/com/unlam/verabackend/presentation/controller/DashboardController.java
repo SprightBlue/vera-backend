@@ -4,6 +4,11 @@ import com.unlam.verabackend.domain.model.DashboardData;
 import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.domain.port.in.GetDashboardDataUseCase;
 import com.unlam.verabackend.presentation.dto.DashboardResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -19,11 +24,26 @@ import java.util.Objects;
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
+@Tag(name = "Dashboard", description = "Endpoints para la gestión y visualización de métricas del panel principal")
 public class DashboardController {
 
     private final GetDashboardDataUseCase getDashboardDataUseCase;
 
     @GetMapping
+    @Operation(
+            summary = "Obtener los datos del Dashboard del usuario",
+            description = "Devuelve contadores de la última semana, el último chat modificado y el último contacto agregado. " +
+                    "Si el rol es PROTECTED incluye los últimos 3 análisis. Si es CARER incluye las últimas 3 alertas activas.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Dashboard compilado exitosamente",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = DashboardResponse.class))
+                    ),
+                    @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT inválido o ausente", content = @Content),
+                    @ApiResponse(responseCode = "500", description = "Error interno del servidor", content = @Content)
+            }
+    )
     public ResponseEntity<DashboardResponse> getDashboard(Authentication authentication) {
         String email = authentication.getName();
         Role role = extractDomainRole(authentication);

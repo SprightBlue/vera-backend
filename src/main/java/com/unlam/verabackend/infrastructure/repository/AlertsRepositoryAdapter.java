@@ -63,22 +63,12 @@ public class AlertsRepositoryAdapter implements AlertsRepository {
     }
 
     @Override
-    public long countAlertsByCarerEmailInLast24Hours(String email) {
-        LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusHours(24);
-        return jpaRepository.countByTrustContactCarerEmailAndCreatedAtAfter(email, twentyFourHoursAgo);
+    public long countAlertsByEmailSince(String email, LocalDateTime since) {
+        return jpaRepository.countAlertsByEmailSince(email, since);
     }
 
     @Override
-    public List<Alerts> findTop3ResolvedAlertsByUserEmail(String email) {
-        return jpaRepository.findTop3ResolvedAlertsByUserEmail(email)
-                .stream()
-                .map(mapper::toDomain)
-                .toList();
-    }
-
-    @Override
-    public long countResolvedAlertsInLast24Hours(String email) {
-        LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusHours(24);
-        return jpaRepository.countResolvedAlertsInLast24Hours(email, twentyFourHoursAgo);
+    public long countResolvedAlertsByEmailSince(String email, LocalDateTime since) {
+        return jpaRepository.countResolvedAlertsByEmailSince(email, since);
     }
 }

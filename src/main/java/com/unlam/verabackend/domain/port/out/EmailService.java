@@ -1,4 +1,4 @@
-package com.unlam.verabackend.application.service;
+package com.unlam.verabackend.domain.port.out;
 
 public interface EmailService {
 

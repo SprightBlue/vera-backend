@@ -6,7 +6,6 @@ import com.unlam.verabackend.domain.model.UserLocation;
 import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.domain.port.out.RtcProvider;
 import com.unlam.verabackend.presentation.dto.AlertsResponse;
-import com.unlam.verabackend.presentation.dto.UserLocationMapResponse;
 import com.unlam.verabackend.presentation.dto.UserLocationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +25,7 @@ public class WebSocketRtcAdapter implements RtcProvider {
     @Override
     public void publishLocationUpdate(Long trustContactId, UserLocation location) {
         String destination = "/topic/trust-contact/" + trustContactId;
-        UserLocationMapResponse responseDto = UserLocationMapResponse.fromDomain(location);
+        UserLocationResponse responseDto = UserLocationResponse.fromDomain(location);
         log.debug("WS Provider: Transmitiendo coordenadas del PROTECTED al canal del CARER [{}]", destination);
         messagingTemplate.convertAndSend(destination, responseDto);
     }

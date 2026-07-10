@@ -36,21 +36,19 @@ public interface JpaAlertsRepository extends JpaRepository<AlertsEntity, UUID> {
             Pageable pageable
     );
     List<AlertsEntity> findTop3ByTrustContactCarerEmailAndIsResolvedFalseOrderByCreatedAtDesc(String email);
-    long countByTrustContactCarerEmailAndCreatedAtAfter(String email, LocalDateTime date);
     @Query("""
-       SELECT a FROM AlertsEntity a
+       SELECT COUNT(a) FROM AlertsEntity a
        WHERE (a.trustContact.carer.email = :email OR a.trustContact.protectedUser.email = :email)
-         AND a.isResolved = true
-       ORDER BY a.resolvedAt DESC
+         AND a.createdAt >= :date
     """)
-    List<AlertsEntity> findTop3ResolvedAlertsByUserEmail(@Param("email") String email);
+    long countAlertsByEmailSince(@Param("email") String email, @Param("date") LocalDateTime date);
     @Query("""
        SELECT COUNT(a) FROM AlertsEntity a
        WHERE (a.trustContact.carer.email = :email OR a.trustContact.protectedUser.email = :email)
          AND a.isResolved = true
          AND a.resolvedAt >= :date
     """)
-    long countResolvedAlertsInLast24Hours(@Param("email") String email, @Param("date") LocalDateTime date);
+    long countResolvedAlertsByEmailSince(@Param("email") String email, @Param("date") LocalDateTime date);
 
     long countByTrustContactIdAndRiskLevelAndCreatedAtAfter(Long trustContactId, String riskLevel, LocalDateTime date);
     List<AlertsEntity> findTop3ByTrustContactIdAndCreatedAtAfterOrderByCreatedAtDesc(Long trustContactId, LocalDateTime date);
