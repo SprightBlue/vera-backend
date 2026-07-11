@@ -24,15 +24,15 @@ El proceso de integración continua ya está configurado en el repositorio (`mai
 1. En [Render.com](https://render.com/), crea un nuevo **Web Service** apuntando a tu imagen externa de GHCR (`ghcr.io/...`).
 2. En la pestaña **Environment**, debes configurar obligatoriamente las siguientes variables de entorno:
 
-   | Variable | Descripción / Valor |
-      | :--- | :--- |
-   | `PORT` | `8080` *(Puerto requerido al ser una aplicación Spring Boot)* |
-   | `APP_FRONTEND_URL` | URL de producción generada por Vercel (Paso del Frontend) |
-   | `GOOGLE_GEMINI_API_KEY` | Clave API obtenida en Google AI Studio |
-   | `GOOGLE_SAFE_BROWSING_API_KEY` | Clave API obtenida en Google Cloud |
-   | `DB_URL` | URL de conexión provista por Neon |
-   | `DB_USERNAME` | Usuario de la base de datos de Neon |
-   | `DB_PASSWORD` | Contraseña de la base de datos de Neon |
+   | Variable                       | Descripción / Valor                                           |
+      |:-------------------------------|:--------------------------------------------------------------|
+   | `PORT`                         | `8080` *(Puerto requerido al ser una aplicación Spring Boot)* |
+   | `APP_FRONTEND_URL`             | URL de producción generada por Vercel (Paso del Frontend)     |
+   | `GOOGLE_GEMINI_API_KEY`        | Clave API obtenida en Google AI Studio                        |
+   | `GOOGLE_SAFE_BROWSING_API_KEY` | Clave API obtenida en Google Cloud                            |
+   | `DB_URL`                       | URL de conexión provista por Neon                             |
+   | `DB_USERNAME`                  | Usuario de la base de datos de Neon                           |
+   | `DB_PASSWORD`                  | Contraseña de la base de datos de Neon                        |
 
 3. En la configuración avanzada de Render, copia la URL del **Deploy Hook**.
 4. Ve a tu repositorio de GitHub (`Settings` > `Webhooks`), añade un nuevo webhook pegando esa URL (*Payload URL*), selecciona el formato `application/json` y actívalo para eventos de `push`.
@@ -41,7 +41,7 @@ El proceso de integración continua ya está configurado en el repositorio (`mai
 
 ## 💻 Despliegue del Frontend
 
-El frontend consiste en el panel de gestión y visualización de alertas construido en **React + TypeScript con Vite**. Su despliegue es gestionado de manera nativa por Vercel.
+El frontend consiste en la interfaz de usuario tanto del tipo CARER como PROTECTED construida en **React + TypeScript con Vite**. Su despliegue es gestionado de manera nativa por Vercel.
 
 ### Pasos para la Implementación:
 
