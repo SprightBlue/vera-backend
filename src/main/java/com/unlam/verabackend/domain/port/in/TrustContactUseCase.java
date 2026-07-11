@@ -32,6 +32,6 @@ public interface TrustContactUseCase {
 
     String uploadProtectedPersonImage(MultipartFile image) throws IOException;
 
-    ProtectedPersonResponse updateInformation(Long id, String fullName, String relationship, String contactNumber, String image);
+    ProtectedPersonResponse updateInformation(Long id, String status, String fullName, String relationship, String contactNumber, String image);
 
 }

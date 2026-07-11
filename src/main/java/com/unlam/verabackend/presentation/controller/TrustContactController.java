@@ -63,13 +63,13 @@ public class TrustContactController {
     }
 
     @PatchMapping("/protected-people/edit-person/{id}")
-    public ResponseEntity<ProtectedPersonResponse> updateInformation(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+    public ResponseEntity<ProtectedPersonResponse> updateInformation(@PathVariable Long id, @RequestParam String status, @RequestBody Map<String, Object> payload) {
         String fullName = (String) payload.get("fullName");
         String relationship = (String) payload.get("relationship");
         String contactNumber = (String) payload.get("contactNumber");
         String image = (String) payload.get("image");
 
-        ProtectedPersonResponse protectedPerson = trustContactUseCase.updateInformation(id, fullName, relationship, contactNumber, image);
+        ProtectedPersonResponse protectedPerson = trustContactUseCase.updateInformation(id, status, fullName, relationship, contactNumber, image);
 
         return ResponseEntity.ok(protectedPerson);
     }

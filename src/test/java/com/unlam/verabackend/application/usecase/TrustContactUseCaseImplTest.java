@@ -208,17 +208,85 @@ public class TrustContactUseCaseImplTest {
     }
 
     @Test
-    void deberiaActualizarInformacionDelProtegido() {
+    void deberiaActualizarInformacionDelProtegidoPendiente() {
         TrustInvitation invitacion = TrustInvitation.builder()
-                .carer(cuidador).status(InvitationStatus.PENDING).sensitivityLevel(SensitivityLevel.MEDIO)
+                .id(1L)
+                .carer(cuidador)
+                .status(InvitationStatus.PENDING)
+                .sensitivityLevel(SensitivityLevel.MEDIO)
                 .build();
+
         when(trustInvitationRepository.findById(1L)).thenReturn(Optional.of(invitacion));
 
-        ProtectedPersonResponse response = useCase.updateInformation(1L, "Nuevo Nombre", "Sobrino", "1234", "http://foto.jpg");
+        ProtectedPersonResponse response = useCase.updateInformation(
+                1L,
+                "PENDING",
+                "Nuevo Nombre",
+                "Sobrino",
+                "1234",
+                "http://foto.jpg"
+        );
 
         assertEquals("Nuevo Nombre", invitacion.getFullName());
+        assertEquals("Sobrino", invitacion.getRelationship());
+        assertEquals("1234", invitacion.getContactNumber());
         assertEquals("http://foto.jpg", invitacion.getImage());
+        assertEquals("PENDING", response.getStatus());
         verify(trustInvitationRepository, times(1)).save(invitacion);
+        assertNotNull(response);
+    }
+
+    @Test
+    void deberiaActualizarInformacionSinImagen() {
+        TrustInvitation inv = TrustInvitation.builder()
+                .id(1L)
+                .carer(cuidador)
+                .status(InvitationStatus.PENDING)
+                .sensitivityLevel(SensitivityLevel.MEDIO)
+                .build();
+
+        when(trustInvitationRepository.findById(1L)).thenReturn(Optional.of(inv));
+
+        ProtectedPersonResponse response = useCase.updateInformation(
+                1L,
+                "PENDING",
+                "Nombre",
+                "Hijo",
+                "123",
+                ""
+        );
+
+        assertNotNull(response);
+        assertEquals("", inv.getImage());
+        verify(trustInvitationRepository, times(1)).save(inv);
+    }
+
+    @Test
+    void deberiaActualizarInformacionDelProtegidoActivo() {
+        TrustContact contacto = TrustContact.builder()
+                .id(1L)
+                .carer(cuidador)
+                .protectedUser(protegido)
+                .relationship("Familiar")
+                .build();
+
+        when(trustContactRepository.findById(1L)).thenReturn(Optional.of(contacto));
+
+        ProtectedPersonResponse response = useCase.updateInformation(
+                1L,
+                "ACTIVE",
+                "Nuevo Nombre",
+                "Sobrino",
+                "1234",
+                "http://foto.jpg"
+        );
+
+        assertEquals("Nuevo Nombre", protegido.getFullName());
+        assertEquals("1234", protegido.getPhone());
+        assertEquals("http://foto.jpg", protegido.getImage());
+        assertEquals("Sobrino", contacto.getRelationship());
+        assertEquals("ACTIVE", response.getStatus());
+        verify(trustContactRepository, times(1)).save(contacto);
         assertNotNull(response);
     }
 
@@ -333,18 +401,6 @@ public class TrustContactUseCaseImplTest {
 
         List<CarerResponse> response = useCase.getMyCarers(protegido.getEmail());
         assertEquals(1, response.size());
-    }
-
-    @Test
-    void deberiaActualizarInformacionSinImagen() {
-        TrustInvitation inv = TrustInvitation.builder().carer(cuidador).status(InvitationStatus.PENDING).sensitivityLevel(SensitivityLevel.MEDIO).build();
-        when(trustInvitationRepository.findById(1L)).thenReturn(Optional.of(inv));
-
-        ProtectedPersonResponse response = useCase.updateInformation(1L, "Nombre", "Hijo", "123", "");
-
-        assertNotNull(response);
-        assertEquals("", inv.getImage());
-        verify(trustInvitationRepository, times(1)).save(inv);
     }
 
     @Test

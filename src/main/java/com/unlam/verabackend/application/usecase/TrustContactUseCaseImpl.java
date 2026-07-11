@@ -316,6 +316,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                         .contactId(contact.getId())
                         .fullName(contact.getCarer().getFullName())
                         .email(contact.getCarer().getEmail())
+                        .image(contact.getCarer().getImage())
                         .relationship(contact.getRelationship())
                         .sensitivityLevel(contact.getSensitivityLevel())
                         .notifyHighRisk(contact.isNotifyHighRisk())
@@ -355,32 +356,39 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
 
     @Override
     @Transactional
-    public ProtectedPersonResponse updateInformation(Long id, String fullName, String relationship, String contactNumber, String image) {
-        TrustInvitation protectedPerson = trustInvitationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Protegido no encontrado"));
-
-        protectedPerson.setFullName(fullName);
-        protectedPerson.setRelationship(relationship);
-        protectedPerson.setContactNumber(contactNumber);
-
-        if (StringUtils.hasText(image)) {
-            protectedPerson.setImage(image);
-        }
-        else {
-            protectedPerson.setImage("");
+    public ProtectedPersonResponse updateInformation(Long id, String status, String fullName, String relationship, String contactNumber, String image) {
+        if ("ACTIVE".equalsIgnoreCase(status)) {
+            TrustContact contact = trustContactRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Vínculo no encontrado"));
+            User protectedUser = contact.getProtectedUser();
+            protectedUser.setFullName(fullName);
+            protectedUser.setPhone(contactNumber);
+            protectedUser.setImage(StringUtils.hasText(image) ? image : "");
+            contact.setRelationship(relationship);
+            trustContactRepository.save(contact);
+            return buildActivePersonResponse(contact);
         }
 
-        trustInvitationRepository.save(protectedPerson);
+        if ("PENDING".equalsIgnoreCase(status)) {
+            TrustInvitation protectedPerson = trustInvitationRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Protegido no encontrado"));
 
-        return ProtectedPersonResponse.builder()
-                .id(protectedPerson.getId())
-                .fullName(protectedPerson.getFullName())
-                .email(protectedPerson.getEmail())
-                .contactNumber(protectedPerson.getContactNumber())
-                .relationship(protectedPerson.getRelationship())
-                .image(protectedPerson.getImage())
-                .status(protectedPerson.getStatus().name())
-                .build();
+            protectedPerson.setFullName(fullName);
+            protectedPerson.setRelationship(relationship);
+            protectedPerson.setContactNumber(contactNumber);
+
+            if (StringUtils.hasText(image)) {
+                protectedPerson.setImage(image);
+            } else {
+                protectedPerson.setImage("");
+            }
+
+            trustInvitationRepository.save(protectedPerson);
+
+            return buildPendingPersonResponse(protectedPerson);
+        }
+
+        throw new IllegalArgumentException("Status inválido: " + status);
     }
 
     private ProtectedPersonResponse buildActivePersonResponse(TrustContact contact) {
@@ -390,6 +398,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
                 .protectedUserId(u.getId())
                 .fullName(u.getFullName())
                 .email(u.getEmail())
+                .contactNumber(u.getPhone())
                 .image(u.getImage())
                 .relationship(contact.getRelationship())
                 .sensitivityLevel(contact.getSensitivityLevel() != null ? contact.getSensitivityLevel().name() : null)
