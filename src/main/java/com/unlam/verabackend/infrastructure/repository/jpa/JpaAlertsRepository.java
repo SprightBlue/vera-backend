@@ -1,4 +1,4 @@
-package com.unlam.verabackend.infrastructure.repository;
+package com.unlam.verabackend.infrastructure.repository.jpa;
 
 import com.unlam.verabackend.domain.model.RiskLevel;
 import com.unlam.verabackend.infrastructure.entity.AlertsEntity;
@@ -17,10 +17,8 @@ import java.util.UUID;
 
 @Repository
 public interface JpaAlertsRepository extends JpaRepository<AlertsEntity, UUID> {
-
     @EntityGraph(attributePaths = {"trustContact", "trustContact.carer", "trustContact.protectedUser"})
     Optional<AlertsEntity> findWithRelationshipsById(UUID id);
-
     @Query("""
        SELECT a FROM AlertsEntity a
        WHERE a.trustContact.id IN :trustContactIds
@@ -37,6 +35,20 @@ public interface JpaAlertsRepository extends JpaRepository<AlertsEntity, UUID> {
             @Param("search") String search,
             Pageable pageable
     );
+    List<AlertsEntity> findTop3ByTrustContactCarerEmailAndIsResolvedFalseOrderByCreatedAtDesc(String email);
+    @Query("""
+       SELECT COUNT(a) FROM AlertsEntity a
+       WHERE (a.trustContact.carer.email = :email OR a.trustContact.protectedUser.email = :email)
+         AND a.createdAt >= :date
+    """)
+    long countAlertsByEmailSince(@Param("email") String email, @Param("date") LocalDateTime date);
+    @Query("""
+       SELECT COUNT(a) FROM AlertsEntity a
+       WHERE (a.trustContact.carer.email = :email OR a.trustContact.protectedUser.email = :email)
+         AND a.isResolved = true
+         AND a.resolvedAt >= :date
+    """)
+    long countResolvedAlertsByEmailSince(@Param("email") String email, @Param("date") LocalDateTime date);
 
     long countByTrustContactIdAndRiskLevelAndCreatedAtAfter(Long trustContactId, String riskLevel, LocalDateTime date);
     List<AlertsEntity> findTop3ByTrustContactIdAndCreatedAtAfterOrderByCreatedAtDesc(Long trustContactId, LocalDateTime date);

@@ -5,6 +5,7 @@ import com.unlam.verabackend.domain.port.out.NotificationsRepository;
 import com.unlam.verabackend.infrastructure.entity.NotificationsEntity;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.mapper.NotificationMapper;
+import com.unlam.verabackend.infrastructure.repository.jpa.JpaNotificationRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -63,11 +64,8 @@ public class NotificationRepositoryAdapter implements NotificationsRepository {
     }
 
     @Override
-    public List<Notifications> findUnreadByUserEmail(String email) {
-        return jpaRepository.findByUserEmailAndIsReadFalse(email)
-                .stream()
-                .map(mapper::toDomain)
-                .toList();
+    public long countUnreadByUserEmail(String email) {
+        return jpaRepository.countByUserEmailAndIsReadFalse(email);
     }
 
     @Override

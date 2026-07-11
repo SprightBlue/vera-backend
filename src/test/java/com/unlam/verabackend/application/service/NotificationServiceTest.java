@@ -13,8 +13,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -61,15 +59,15 @@ class NotificationServiceTest {
             return n;
         });
 
-        when(notificationsRepository.findUnreadByUserEmail(targetUser.getEmail()))
-                .thenReturn(List.of(new Notifications()));
+        when(notificationsRepository.countUnreadByUserEmail(targetUser.getEmail()))
+                .thenReturn(1L);
 
         // Act
         notificationService.createAndDispatch(targetUser, NotificationsType.ALERT, triggerName, payload);
 
         // Assert
         verify(notificationsRepository, times(1)).save(any(Notifications.class));
-        verify(notificationsRepository, times(1)).findUnreadByUserEmail(targetUser.getEmail());
+        verify(notificationsRepository, times(1)).countUnreadByUserEmail(targetUser.getEmail());
 
         verify(rtcProvider, times(1)).publishNewNotification(
                 eq(targetUser.getEmail()),
@@ -92,7 +90,7 @@ class NotificationServiceTest {
             n.setId(UUID.randomUUID());
             return n;
         });
-        when(notificationsRepository.findUnreadByUserEmail(targetUser.getEmail())).thenReturn(Collections.emptyList());
+        when(notificationsRepository.countUnreadByUserEmail(targetUser.getEmail())).thenReturn(0L);
 
         // Act & Assert para ALERT_SOLVED
         notificationService.createAndDispatch(targetUser, NotificationsType.ALERT_SOLVED, triggerName, payload);

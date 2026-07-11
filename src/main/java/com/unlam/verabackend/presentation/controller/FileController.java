@@ -31,4 +31,10 @@ public class FileController {
         String imageUrl = trustContactUseCase.uploadProtectedPersonImage(image);
         return ResponseEntity.ok(imageUrl);
     }
+
+    @DeleteMapping("/delete-user-image/{id}")
+    public ResponseEntity<Void> deleteUserImage(@PathVariable Long id) {
+        userUseCase.deleteUserImage(id);
+        return ResponseEntity.noContent().build();
+    }
 }

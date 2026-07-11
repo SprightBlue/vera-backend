@@ -3,6 +3,8 @@ package com.unlam.verabackend.infrastructure.repository;
 import com.unlam.verabackend.domain.model.Incident;
 import com.unlam.verabackend.domain.port.out.IncidentRepository;
 import com.unlam.verabackend.infrastructure.mapper.IncidentMapper;
+import com.unlam.verabackend.infrastructure.repository.jpa.JpaIncidentRepository;
+import com.unlam.verabackend.infrastructure.repository.jpa.JpaIncidentStepRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

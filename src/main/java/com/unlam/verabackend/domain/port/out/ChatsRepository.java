@@ -11,4 +11,5 @@ public interface ChatsRepository {
     List<Chats> findByUserEmail(String email);
     void deleteById(UUID id);
     boolean existsById(UUID chatId);
+    Optional<Chats> findLastUpdatedByUserEmail(String email);
 }

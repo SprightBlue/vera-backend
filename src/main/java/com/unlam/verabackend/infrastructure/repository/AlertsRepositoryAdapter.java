@@ -6,6 +6,7 @@ import com.unlam.verabackend.domain.port.out.AlertsRepository;
 import com.unlam.verabackend.infrastructure.entity.AlertsEntity;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.mapper.AlertsMapper;
+import com.unlam.verabackend.infrastructure.repository.jpa.JpaAlertsRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -35,9 +36,8 @@ public class AlertsRepositoryAdapter implements AlertsRepository {
 
     @Override
     public void deleteById(UUID id) {
-        if (!jpaRepository.existsById(id)) {
+        if (!jpaRepository.existsById(id))
             throw new IllegalArgumentException("No se puede eliminar. Alerta no encontrada con ID: " + id);
-        }
         jpaRepository.deleteById(id);
     }
 
@@ -47,23 +47,28 @@ public class AlertsRepositoryAdapter implements AlertsRepository {
     }
 
     @Override
-    public void resolveAlert(UUID id, LocalDateTime resolvedAt) {
-        AlertsEntity entity = jpaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Alerta no encontrada con ID: " + id));
-        entity.setResolved(true);
-        if (resolvedAt != null) {
-            entity.setResolvedAt(resolvedAt);
-        }
-        jpaRepository.save(entity);
+    public Page<Alerts> findByCriteria(List<Long> trustContactIds, Boolean isResolved, RiskLevel riskLevel, String search, int page) {
+        Pageable pageable = PageRequest.of(page, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        return jpaRepository.filterAlerts(trustContactIds, isResolved, riskLevel, cleanSearch, pageable)
+                .map(mapper::toDomain);
     }
 
     @Override
-    public Page<Alerts> findByCriteria(List<Long> trustContactIds, Boolean isResolved, RiskLevel riskLevel, String search, int page) {
-        Pageable pageable = PageRequest.of(page, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public List<Alerts> findTop3ActiveAlertsByCarerEmail(String email) {
+        return jpaRepository.findTop3ByTrustContactCarerEmailAndIsResolvedFalseOrderByCreatedAtDesc(email)
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
 
-        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+    @Override
+    public long countAlertsByEmailSince(String email, LocalDateTime since) {
+        return jpaRepository.countAlertsByEmailSince(email, since);
+    }
 
-        return jpaRepository.filterAlerts(trustContactIds, isResolved, riskLevel, cleanSearch, pageable)
-                .map(mapper::toDomain);
+    @Override
+    public long countResolvedAlertsByEmailSince(String email, LocalDateTime since) {
+        return jpaRepository.countResolvedAlertsByEmailSince(email, since);
     }
 }

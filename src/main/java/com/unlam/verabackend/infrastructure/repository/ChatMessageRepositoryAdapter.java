@@ -5,6 +5,7 @@ import com.unlam.verabackend.domain.port.out.ChatMessagesRepository;
 import com.unlam.verabackend.infrastructure.entity.ChatMessagesEntity;
 import com.unlam.verabackend.infrastructure.entity.ChatsEntity;
 import com.unlam.verabackend.infrastructure.mapper.ChatMessagesMapper;
+import com.unlam.verabackend.infrastructure.repository.jpa.JpaChatMessagesRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;

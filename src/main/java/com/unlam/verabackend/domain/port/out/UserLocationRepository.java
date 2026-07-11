@@ -7,6 +7,5 @@ import java.util.UUID;
 public interface UserLocationRepository {
     UserLocation save(UserLocation userLocation);
     Optional<UserLocation> findById(UUID id);
-    Optional<UserLocation> findByTrustContactId(Long trustContactId);
     Optional<UserLocation> findByProtectedUserEmail(String email);
 }

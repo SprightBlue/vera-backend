@@ -51,14 +51,14 @@ public class TrustContactController {
     }
 
     @GetMapping("/protected-people/{id}")
-    public ResponseEntity<ProtectedPersonResponse> getProtectedPersonById(@PathVariable Long id) {
-        ProtectedPersonResponse protectedPerson = trustContactUseCase.getProtectedPersonById(id);
-        return ResponseEntity.ok(protectedPerson);
+    public ResponseEntity<ProtectedPersonResponse> getProtectedPersonById(@PathVariable Long id, @RequestParam String status, @AuthenticationPrincipal User user) {
+        ProtectedPersonResponse person = trustContactUseCase.getProtectedPersonById(id, status, user.getEmail());
+        return ResponseEntity.ok(person);
     }
 
     @DeleteMapping("/protected-people/{id}")
-    public ResponseEntity<Void> deleteProtectedPerson(@PathVariable Long id) {
-        trustContactUseCase.deleteProtectedPerson(id);
+    public ResponseEntity<Void> deleteProtectedPerson(@PathVariable Long id, @RequestParam String status, @AuthenticationPrincipal User user) {
+        trustContactUseCase.deleteProtectedPerson(id, status, user.getEmail());
         return ResponseEntity.noContent().build();
     }
 

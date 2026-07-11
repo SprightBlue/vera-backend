@@ -13,6 +13,8 @@ public interface AlertsRepository {
     Alerts save(Alerts alert, Long trustContactId);
     void deleteById(UUID id);
     Optional<Alerts> findById(UUID id);
-    void resolveAlert(UUID id, LocalDateTime resolvedAt);
     Page<Alerts> findByCriteria(List<Long> trustContactIds, Boolean isResolved, RiskLevel riskLevel, String search, int page);
+    List<Alerts> findTop3ActiveAlertsByCarerEmail(String email);
+    long countAlertsByEmailSince(String email, LocalDateTime since);
+    long countResolvedAlertsByEmailSince(String email, LocalDateTime since);
 }

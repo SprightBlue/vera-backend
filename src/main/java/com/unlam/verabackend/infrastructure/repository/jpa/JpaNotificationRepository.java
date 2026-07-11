@@ -1,4 +1,4 @@
-package com.unlam.verabackend.infrastructure.repository;
+package com.unlam.verabackend.infrastructure.repository.jpa;
 
 import com.unlam.verabackend.infrastructure.entity.NotificationsEntity;
 import org.springframework.data.domain.Page;
@@ -13,4 +13,5 @@ import java.util.UUID;
 public interface JpaNotificationRepository extends JpaRepository<NotificationsEntity, UUID> {
     Page<NotificationsEntity> findByUserEmail(String email, Pageable pageable);
     List<NotificationsEntity> findByUserEmailAndIsReadFalse(String email);
+    long countByUserEmailAndIsReadFalse(String email);
 }
