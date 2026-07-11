@@ -97,11 +97,11 @@ public class TrustContactUseCaseImplTest {
         when(request.getRelationship()).thenReturn("Abuelo");
 
         when(userRepository.findByEmail(cuidador.getEmail())).thenReturn(Optional.of(cuidador));
-        
+
         TrustInvitation invitacionGuardada = TrustInvitation.builder()
                 .id(10L).fullName("Pedro Abuelo").relationship("Abuelo").build();
         when(trustInvitationRepository.save(any())).thenReturn(invitacionGuardada);
-        
+
         when(userRepository.findByEmail("abuelo@gmail.com")).thenReturn(Optional.of(protegido));
 
         GenerateInvitationResponse response = useCase.generateInvitationLink(request, cuidador.getEmail());
@@ -110,7 +110,6 @@ public class TrustContactUseCaseImplTest {
         verify(trustInvitationRepository, times(1)).save(any(TrustInvitation.class));
         verify(notificationService, times(1)).createAndDispatch(eq(protegido), any(), anyString(), anyMap());
     }
-
 
     @Test
     void deberiaObtenerPersonasProtegidasCombinandoActivosYPendientes() {
@@ -131,13 +130,12 @@ public class TrustContactUseCaseImplTest {
         assertEquals("PENDING", resultado.get(1).getStatus());
     }
 
-
     @Test
     void deberiaLanzarExcepcionAlAceptarInvitacionExpirada() {
         String token = "token-viejo";
         TrustInvitation invitacionExpirada = TrustInvitation.builder()
                 .status(InvitationStatus.PENDING)
-                .expiresAt(LocalDateTime.now().minusDays(1)) 
+                .expiresAt(LocalDateTime.now().minusDays(1))
                 .build();
 
         when(trustInvitationRepository.findByToken(token)).thenReturn(Optional.of(invitacionExpirada));
@@ -190,7 +188,6 @@ public class TrustContactUseCaseImplTest {
         verify(notificationService, times(1)).createAndDispatch(eq(cuidador), any(), any(), any());
     }
 
-
     @Test
     void deberiaLanzarExcepcionAlActualizarConfiguracionConNivelInvalido() {
         assertThrows(RuntimeException.class, () -> {
@@ -225,7 +222,6 @@ public class TrustContactUseCaseImplTest {
         assertNotNull(response);
     }
 
-
     @Test
     void deberiaSubirImagenACloudinary() throws IOException {
         MultipartFile archivo = mock(MultipartFile.class);
@@ -236,7 +232,6 @@ public class TrustContactUseCaseImplTest {
         assertEquals("http://nube.com/foto.jpg", url);
         verify(cloudinaryService, times(1)).uploadImage(archivo, "protected");
     }
-
 
     @Test
     void deberiaObtenerDetallesDeInvitacionConExito() {
@@ -261,7 +256,7 @@ public class TrustContactUseCaseImplTest {
     void deberiaLanzarExcepcionEnDetalleInvitacionSiExpiro() {
         TrustInvitation inv = TrustInvitation.builder()
                 .status(InvitationStatus.PENDING)
-                .expiresAt(LocalDateTime.now().minusDays(1)) 
+                .expiresAt(LocalDateTime.now().minusDays(1))
                 .build();
         when(trustInvitationRepository.findByToken("token123")).thenReturn(Optional.of(inv));
 
@@ -273,8 +268,8 @@ public class TrustContactUseCaseImplTest {
     void deberiaAceptarInvitacionPorTokenConExito() {
         TrustInvitation inv = TrustInvitation.builder()
                 .carer(cuidador).status(InvitationStatus.PENDING).sensitivityLevel(SensitivityLevel.MEDIO)
-                .build(); 
-        
+                .build();
+
         when(trustInvitationRepository.findByToken("token123")).thenReturn(Optional.of(inv));
         when(userRepository.findByEmail(protegido.getEmail())).thenReturn(Optional.of(protegido));
         when(trustContactRepository.existsByCarerIdAndProtectedUser_Id(cuidador.getId(), protegido.getId())).thenReturn(false);
@@ -304,8 +299,8 @@ public class TrustContactUseCaseImplTest {
                 .thenReturn(List.of(invValida, invExpirada));
 
         List<InvitationDetailsResponse> response = useCase.getPendingInvitationsForMe("abuelo@gmail.com");
-        
-        assertEquals(1, response.size()); 
+
+        assertEquals(1, response.size());
     }
 
     @Test
@@ -322,7 +317,7 @@ public class TrustContactUseCaseImplTest {
         TrustInvitation inv = TrustInvitation.builder().id(1L).email(protegido.getEmail()).carer(cuidador).status(InvitationStatus.PENDING).build();
         when(trustInvitationRepository.findById(1L)).thenReturn(Optional.of(inv));
         when(userRepository.findByEmail(protegido.getEmail())).thenReturn(Optional.of(protegido));
-        
+
         when(trustContactRepository.existsByCarerIdAndProtectedUser_Id(cuidador.getId(), protegido.getId())).thenReturn(true);
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> useCase.acceptInvitationById(1L, protegido.getEmail()));
@@ -330,20 +325,10 @@ public class TrustContactUseCaseImplTest {
     }
 
     @Test
-    void deberiaEliminarPersonaProtegida() {
-        TrustInvitation inv = new TrustInvitation();
-        when(trustInvitationRepository.findById(1L)).thenReturn(Optional.of(inv));
-        
-        useCase.deleteProtectedPerson(1L);
-        
-        verify(trustInvitationRepository, times(1)).delete(inv);
-    }
-
-    @Test
     void deberiaObtenerMisCuidadores() {
         when(userRepository.findByEmail(protegido.getEmail())).thenReturn(Optional.of(protegido));
         TrustContact contacto = TrustContact.builder().carer(cuidador).protectedUser(protegido).build();
-        
+
         when(trustContactRepository.findByProtectedUserId(protegido.getId())).thenReturn(List.of(contacto));
 
         List<CarerResponse> response = useCase.getMyCarers(protegido.getEmail());
@@ -351,24 +336,106 @@ public class TrustContactUseCaseImplTest {
     }
 
     @Test
-    void deberiaObtenerPersonaProtegidaPorId() {
-        TrustInvitation inv = TrustInvitation.builder().id(1L).status(InvitationStatus.PENDING).build();
-        when(trustInvitationRepository.findById(1L)).thenReturn(Optional.of(inv));
-
-        ProtectedPersonResponse response = useCase.getProtectedPersonById(1L);
-        assertNotNull(response);
-    }
-
-    @Test
     void deberiaActualizarInformacionSinImagen() {
         TrustInvitation inv = TrustInvitation.builder().carer(cuidador).status(InvitationStatus.PENDING).sensitivityLevel(SensitivityLevel.MEDIO).build();
         when(trustInvitationRepository.findById(1L)).thenReturn(Optional.of(inv));
 
-        ProtectedPersonResponse response = useCase.updateInformation(1L, "Nombre", "Hijo", "123", ""); 
-        
+        ProtectedPersonResponse response = useCase.updateInformation(1L, "Nombre", "Hijo", "123", "");
+
         assertNotNull(response);
         assertEquals("", inv.getImage());
         verify(trustInvitationRepository, times(1)).save(inv);
     }
-    
+
+    @Test
+    void deberiaEliminarPersonaProtegidaActivaConExito() {
+        String status = "ACTIVE";
+        TrustContact contacto = TrustContact.builder().id(100L).carer(cuidador).build();
+
+        when(userRepository.findByEmail(cuidador.getEmail())).thenReturn(Optional.of(cuidador));
+        when(trustContactRepository.findById(100L)).thenReturn(Optional.of(contacto));
+
+        useCase.deleteProtectedPerson(100L, status, cuidador.getEmail());
+
+        verify(trustContactRepository, times(1)).delete(contacto);
+    }
+
+    @Test
+    void deberiaEliminarPersonaProtegidaPendienteConExito() {
+        String status = "PENDING";
+        TrustInvitation invitacion = TrustInvitation.builder().id(200L).carer(cuidador).status(InvitationStatus.PENDING).build();
+
+        when(userRepository.findByEmail(cuidador.getEmail())).thenReturn(Optional.of(cuidador));
+        when(trustInvitationRepository.findById(200L)).thenReturn(Optional.of(invitacion));
+
+        useCase.deleteProtectedPerson(200L, status, cuidador.getEmail());
+
+        verify(trustInvitationRepository, times(1)).delete(invitacion);
+    }
+
+    @Test
+    void deberiaLanzarExcepcionAlEliminarSiStatusEsInvalido() {
+        when(userRepository.findByEmail(cuidador.getEmail())).thenReturn(Optional.of(cuidador));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            useCase.deleteProtectedPerson(100L, "INVALID_STATUS", cuidador.getEmail());
+        });
+
+        assertEquals("Status inválido: INVALID_STATUS", exception.getMessage());
+    }
+
+    @Test
+    void deberiaObtenerPersonaProtegidaActivaPorId() {
+        String status = "ACTIVE";
+        TrustContact contacto = TrustContact.builder()
+                .id(100L)
+                .carer(cuidador)
+                .protectedUser(protegido)
+                .relationship("Abuelo")
+                .sensitivityLevel(SensitivityLevel.ALTO)
+                .build();
+
+        when(userRepository.findByEmail(cuidador.getEmail())).thenReturn(Optional.of(cuidador));
+        when(trustContactRepository.findById(100L)).thenReturn(Optional.of(contacto));
+
+        ProtectedPersonResponse response = useCase.getProtectedPersonById(100L, status, cuidador.getEmail());
+
+        assertNotNull(response);
+        assertEquals(100L, response.getId());
+        assertEquals("ACTIVE", response.getStatus());
+        assertEquals("Pedro Abuelo", response.getFullName());
+    }
+
+    @Test
+    void deberiaObtenerPersonaProtegidaPendientePorId() {
+        String status = "PENDING";
+        TrustInvitation invitacion = TrustInvitation.builder()
+                .id(200L)
+                .carer(cuidador)
+                .fullName("Tio Lucas")
+                .email("tio@gmail.com")
+                .status(InvitationStatus.PENDING)
+                .build();
+
+        when(userRepository.findByEmail(cuidador.getEmail())).thenReturn(Optional.of(cuidador));
+        when(trustInvitationRepository.findById(200L)).thenReturn(Optional.of(invitacion));
+
+        ProtectedPersonResponse response = useCase.getProtectedPersonById(200L, status, cuidador.getEmail());
+
+        assertNotNull(response);
+        assertEquals(200L, response.getId());
+        assertEquals("PENDING", response.getStatus());
+        assertEquals("Tio Lucas", response.getFullName());
+    }
+
+    @Test
+    void deberiaLanzarExcepcionAlObtenerSiStatusEsInvalido() {
+        when(userRepository.findByEmail(cuidador.getEmail())).thenReturn(Optional.of(cuidador));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            useCase.getProtectedPersonById(100L, "STATUS_ERROR", cuidador.getEmail());
+        });
+
+        assertEquals("Status inválido: STATUS_ERROR", exception.getMessage());
+    }
 }
