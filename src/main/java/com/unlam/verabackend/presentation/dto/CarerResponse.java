@@ -15,6 +15,7 @@ public class CarerResponse {
     private String fullName;
     private String email;
     private String relationship;
+    private String image;
     private SensitivityLevel sensitivityLevel;
     private boolean notifyHighRisk;
 }
