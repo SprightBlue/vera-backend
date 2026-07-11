@@ -3,13 +3,12 @@ package com.unlam.verabackend.presentation.dto;
 import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.entity.User;
+import com.unlam.verabackend.presentation.utils.DateFormatter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -22,7 +21,7 @@ public class TrustContactDashboardResponse {
     private Long id;
 
     @Schema(description = "Fecha y hora de creación del vínculo", example = "2026-03-30T10:15:30", requiredMode = Schema.RequiredMode.REQUIRED)
-    private LocalDateTime createdAt;
+    private String createdAt;
 
     @Schema(description = "ID del usuario contrario (protegido o cuidador)", example = "5", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long oppositeUserId;
@@ -36,6 +35,9 @@ public class TrustContactDashboardResponse {
     @Schema(description = "Email del usuario contrario", example = "juan.perez@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
     private String oppositeUserEmail;
 
+    @Schema(description = "URL o path de la imagen de perfil del usuario contrario", example = "https://bucket.s3.com/profiles/user5.jpg", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String oppositeUserImage;
+
     public static TrustContactDashboardResponse fromEntity(TrustContact contact, Role currentRole) {
         if (contact == null) return null;
 
@@ -43,11 +45,12 @@ public class TrustContactDashboardResponse {
 
         return TrustContactDashboardResponse.builder()
                 .id(contact.getId())
-                .createdAt(contact.getCreatedAt())
+                .createdAt(DateFormatter.formatRelativeDate(contact.getCreatedAt()))
                 .oppositeUserId(oppositeUser.getId())
                 .oppositeUserFullName(oppositeUser.getFullName())
                 .oppositeUserRole(oppositeUser.getRole())
                 .oppositeUserEmail(oppositeUser.getEmail())
+                .oppositeUserImage(oppositeUser.getImage())
                 .build();
     }
 }
