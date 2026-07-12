@@ -86,6 +86,21 @@ public class NotificationsController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/delete-all")
+    @Operation(
+            summary = "Eliminar todas las notificaciones del usuario",
+            description = "Remueve permanentemente todas las notificaciones (leídas y no leídas) del buzón personal del usuario autenticado de forma masiva.",
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "Todas las notificaciones fueron eliminadas con éxito (No Content)", content = @Content),
+                    @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido", content = @Content)
+            }
+    )
+    public ResponseEntity<Void> deleteAllNotifications(@AuthenticationPrincipal @Parameter(hidden = true) User user) {
+        log.info("REST Request: DELETE - Solicitando vaciado completo del buzón de notificaciones para el usuario [{}]", user.getEmail());
+        useCase.deleteAllMyNotifications(user.getEmail());
+        return ResponseEntity.noContent().build();
+    }
+
     private PagedResponse<NotificationsResponse> convertToPagedResponse(Page<Notifications> page) {
         return PagedResponse.fromPage(page, NotificationsResponse::fromDomain);
     }

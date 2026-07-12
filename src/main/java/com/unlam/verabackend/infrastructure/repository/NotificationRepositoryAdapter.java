@@ -15,7 +15,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,18 +25,6 @@ public class NotificationRepositoryAdapter implements NotificationsRepository {
     private final JpaNotificationRepository jpaRepository;
     private final NotificationMapper mapper;
     private final EntityManager entityManager;
-
-    @Override
-    public Page<Notifications> findByUserEmailCreatedAtDesc(String email, int page) {
-        Pageable customPageable = PageRequest.of(
-                page,
-                5,
-                Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-
-        return jpaRepository.findByUserEmail(email, customPageable)
-                .map(mapper::toDomain);
-    }
 
     @Override
     @Transactional
@@ -55,11 +42,22 @@ public class NotificationRepositoryAdapter implements NotificationsRepository {
     }
 
     @Override
+    public Page<Notifications> findByUserEmailCreatedAtDesc(String email, int page) {
+        Pageable customPageable = PageRequest.of(
+                page,
+                5,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return jpaRepository.findByUserEmail(email, customPageable)
+                .map(mapper::toDomain);
+    }
+
+    @Override
     @Transactional
     public void deleteById(UUID id) {
-        if (!jpaRepository.existsById(id)) {
+        if (!jpaRepository.existsById(id))
             throw new IllegalArgumentException("No se puede eliminar. Notificación no encontrada con ID: " + id);
-        }
         jpaRepository.deleteById(id);
     }
 
@@ -71,8 +69,12 @@ public class NotificationRepositoryAdapter implements NotificationsRepository {
     @Override
     @Transactional
     public void markAllAsReadByUserEmail(String email) {
-        List<NotificationsEntity> unreadNotifications = jpaRepository.findByUserEmailAndIsReadFalse(email);
-        unreadNotifications.forEach(notification -> notification.setRead(true));
-        jpaRepository.saveAllAndFlush(unreadNotifications);
+        jpaRepository.markAllAsReadByUserEmail(email);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAllByUserEmail(String email) {
+        jpaRepository.deleteByUserEmail(email);
     }
 }

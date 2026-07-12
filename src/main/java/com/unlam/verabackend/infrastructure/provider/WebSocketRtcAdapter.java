@@ -57,6 +57,18 @@ public class WebSocketRtcAdapter implements RtcProvider {
     }
 
     @Override
+    public void publishAllNotificationsDeleted(String email) {
+        String destination = "/topic/users/" + email + "/notifications";
+
+        log.debug("WS Provider: Despachando evento ALL_NOTIFICATIONS_DELETED a [{}]", destination);
+        messagingTemplate.convertAndSend(destination, (Object) Map.of(
+                "event", "ALL_NOTIFICATIONS_DELETED",
+                "unreadCount", 0,
+                "hasUnread", false
+        ));
+    }
+
+    @Override
     public void publishUnreadCountUpdate(String email, int unreadCount) {
         String destination = "/topic/users/" + email + "/notifications";
 

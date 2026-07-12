@@ -147,7 +147,7 @@ public class AnalysisController {
             summary = "Eliminar un registro de análisis",
             description = "Remueve físicamente el registro de análisis e informe técnico asociado del historial del usuario.",
             responses = {
-                    @ApiResponse(responseCode = "24", description = "Análisis eliminado con éxito (No Content)", content = @Content),
+                    @ApiResponse(responseCode = "204", description = "Análisis eliminado con éxito (No Content)", content = @Content),
                     @ApiResponse(responseCode = "403", description = "Operación denegada - Permisos insuficientes", content = @Content),
                     @ApiResponse(responseCode = "404", description = "El ID especificado no corresponde a ningún registro", content = @Content)
             }

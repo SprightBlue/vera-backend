@@ -6,10 +6,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface NotificationsRepository {
-    Page<Notifications> findByUserEmailCreatedAtDesc(String email, int page);
     Notifications save(Notifications notification);
     Optional<Notifications> findById(UUID id);
+    Page<Notifications> findByUserEmailCreatedAtDesc(String email, int page);
     void deleteById(UUID id);
     long countUnreadByUserEmail(String email);
     void markAllAsReadByUserEmail(String email);
+    void deleteAllByUserEmail(String email);
 }

@@ -77,7 +77,7 @@ class ManageNotificationsUseCaseImplTest {
 
         // Assert
         verify(repository, times(1)).markAllAsReadByUserEmail(userEmail);
-        verify(repository, times(1)).countUnreadByUserEmail(userEmail); // MODIFICADO
+        verify(repository, times(1)).countUnreadByUserEmail(userEmail);
         verify(rtcProvider, times(1)).publishUnreadCountUpdate(userEmail, 0);
     }
 
@@ -102,7 +102,7 @@ class ManageNotificationsUseCaseImplTest {
         // Assert
         verify(repository, times(1)).findById(notificationId);
         verify(repository, times(1)).deleteById(notificationId);
-        verify(repository, times(1)).countUnreadByUserEmail(userEmail); // MODIFICADO
+        verify(repository, times(1)).countUnreadByUserEmail(userEmail);
         verify(rtcProvider, times(1)).publishNotificationDeleted(userEmail, notificationId, 3);
     }
 
@@ -145,5 +145,20 @@ class ManageNotificationsUseCaseImplTest {
         assertEquals("No tenés permisos para interactuar con esta notificación.", exception.getMessage());
         verify(repository, never()).deleteById(any());
         verify(rtcProvider, never()).publishNotificationDeleted(anyString(), any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("Debería eliminar todas las notificaciones del usuario de la persistencia y publicar evento masivo por RTC")
+    void deleteAllMyNotifications_ValidScenario_ShouldDeleteAllAndPublish() {
+        // Arrange
+        doNothing().when(repository).deleteAllByUserEmail(userEmail);
+        doNothing().when(rtcProvider).publishAllNotificationsDeleted(userEmail);
+
+        // Act
+        assertDoesNotThrow(() -> manageNotificationsUseCase.deleteAllMyNotifications(userEmail));
+
+        // Assert
+        verify(repository, times(1)).deleteAllByUserEmail(userEmail);
+        verify(rtcProvider, times(1)).publishAllNotificationsDeleted(userEmail);
     }
 }

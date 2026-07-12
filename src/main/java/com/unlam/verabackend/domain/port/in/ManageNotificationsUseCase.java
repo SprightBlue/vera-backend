@@ -8,4 +8,5 @@ public interface ManageNotificationsUseCase {
     Page<Notifications> getMyNotifications(String email, int page);
     void markAllMyNotificationsAsRead(String email);
     void deleteNotification(UUID id, String email);
+    void deleteAllMyNotifications(String email);
 }
