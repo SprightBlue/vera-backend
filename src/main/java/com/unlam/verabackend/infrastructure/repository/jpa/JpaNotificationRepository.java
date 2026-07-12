@@ -4,6 +4,9 @@ import com.unlam.verabackend.infrastructure.entity.NotificationsEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -11,7 +14,16 @@ import java.util.UUID;
 
 @Repository
 public interface JpaNotificationRepository extends JpaRepository<NotificationsEntity, UUID> {
+
     Page<NotificationsEntity> findByUserEmail(String email, Pageable pageable);
-    List<NotificationsEntity> findByUserEmailAndIsReadFalse(String email);
+
     long countByUserEmailAndIsReadFalse(String email);
+
+    @Modifying
+    @Query("UPDATE NotificationsEntity n SET n.isRead = true WHERE n.user.email = :email AND n.isRead = false")
+    void markAllAsReadByUserEmail(@Param("email") String email);
+
+    @Modifying
+    @Query("DELETE FROM NotificationsEntity n WHERE n.user.email = :email")
+    void deleteByUserEmail(@Param("email") String email);
 }

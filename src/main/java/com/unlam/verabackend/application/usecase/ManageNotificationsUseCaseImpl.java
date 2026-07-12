@@ -26,7 +26,7 @@ public class ManageNotificationsUseCaseImpl implements ManageNotificationsUseCas
     @Transactional(readOnly = true)
     public Page<Notifications> getMyNotifications(String email, int page) {
         log.info("UseCase: Solicitando página [{}] de notificaciones indexadas para el usuario: [{}]", page, email);
-        return repository.findByUserEmailCreatedAtDesc(email, page); // <-- Pasa el int
+        return repository.findByUserEmailCreatedAtDesc(email, page);
     }
 
     @Override
@@ -53,6 +53,19 @@ public class ManageNotificationsUseCaseImpl implements ManageNotificationsUseCas
         int unreadCount = getUnreadNotificationCount(email);
         log.debug("UseCase: Notificando eliminación y actualizando delta de contador ({}) vía RTC...", unreadCount);
         rtcProvider.publishNotificationDeleted(email, id, unreadCount);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAllMyNotifications(String email) {
+        log.info("UseCase: Iniciando vaciado completo de notificaciones para el usuario: [{}]", email);
+
+        repository.deleteAllByUserEmail(email);
+
+        log.info("UseCase: Todas las notificaciones del usuario [{}] fueron eliminadas de la persistencia.", email);
+
+        log.debug("UseCase: Despachando evento de vaciado total vía RTC...");
+        rtcProvider.publishAllNotificationsDeleted(email);
     }
 
     private Notifications validateAndGetOwnedNotification(UUID id, String email) {

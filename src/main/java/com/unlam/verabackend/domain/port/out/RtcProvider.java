@@ -10,6 +10,7 @@ public interface RtcProvider {
     void publishLocationUpdate(Long trustContactId, UserLocation location);
     void publishNewNotification(String targetEmail, Notifications notification, int unreadCount);
     void publishNotificationDeleted(String email, UUID notificationId, int unreadCount);
+    void publishAllNotificationsDeleted(String email);
     void publishUnreadCountUpdate(String email, int unreadCount);
     void publishCarerDashboardLocationUpdate(String carerEmail, UserLocation location);
     void publishCarerDashboardAlertUpdate(String carerEmail, Alerts alert);
