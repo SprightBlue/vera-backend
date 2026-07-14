@@ -307,8 +307,9 @@ public class EmailServiceImpl implements EmailService {
             System.out.println("📩 Email de verificación enviado con éxito a: " + to);
 
         } catch (Exception e) {
-            throw new RuntimeException("Error enviando el email de verificación", e);
-        }
+    e.printStackTrace();
+    throw new RuntimeException("Error enviando el email de verificación", e);
+}
     }
 
     }

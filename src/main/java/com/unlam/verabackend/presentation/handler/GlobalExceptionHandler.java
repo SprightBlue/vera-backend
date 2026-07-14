@@ -78,13 +78,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleIntegrityViolation(DataIntegrityViolationException ex) {
         log.error("Violación de integridad de datos detectada en la persistencia: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("message", "No pudimos procesar la solicitud porque la información posee entidades o restricciones asociadas activos."));
+                .body(Map.of("message",
+                        "No pudimos procesar la solicitud porque la información posee entidades o restricciones asociadas activos."));
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
-        log.error("Error de regla de negocio no controlado explícitamente en tiempo de ejecución: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+
+        log.error(
+                "Error de regla de negocio no controlado explícitamente en tiempo de ejecución",
+                ex);
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
