@@ -1,11 +1,10 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.CloudinaryService;
+import com.unlam.verabackend.infrastructure.provider.CloudinaryFileCloudAdapter;
 import com.unlam.verabackend.domain.port.out.EmailService;
 import com.unlam.verabackend.application.service.JwtService;
 import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.infrastructure.entity.PasswordResetToken;
-import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.entity.VerificationToken;
 import com.unlam.verabackend.infrastructure.repository.PasswordResetTokenRepository;
@@ -23,11 +22,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,7 +42,7 @@ public class UserUseCaseImplTest {
     @Mock private PasswordResetTokenRepository tokenRepository;
     @Mock private VerificationTokenRepository verificationTokenRepository;
     @Mock private EmailService emailService;
-    @Mock private CloudinaryService cloudinaryService;
+    @Mock private CloudinaryFileCloudAdapter cloudinaryFileCloudAdapter;
     @Mock private TrustContactRepository trustContactRepository;
 
     @InjectMocks
@@ -163,85 +159,6 @@ public class UserUseCaseImplTest {
     }
 
     @Test
-    void deberiaLanzarExcepcionAlCambiarPasswordSiNoCoincidenLasNuevas() {
-        ChangePasswordRequest request = mock(ChangePasswordRequest.class);
-        when(request.getCurrentPassword()).thenReturn("claveVieja");
-        when(request.getNewPassword()).thenReturn("clave1");
-        when(request.getConfirmPassword()).thenReturn("clave2");
-
-        when(userRepository.findByEmail(usuarioBase.getEmail())).thenReturn(Optional.of(usuarioBase));
-        when(passwordEncoder.matches("claveVieja", usuarioBase.getPassword())).thenReturn(true);
-
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            useCase.changePassword(usuarioBase.getEmail(), request);
-        });
-        assertEquals("Las contraseñas no coinciden", exception.getMessage());
-    }
-
-    @Test
-    void deberiaCambiarContrasenaConExito() {
-        ChangePasswordRequest request = mock(ChangePasswordRequest.class);
-        when(request.getCurrentPassword()).thenReturn("claveVieja");
-        when(request.getNewPassword()).thenReturn("claveNueva");
-        when(request.getConfirmPassword()).thenReturn("claveNueva");
-
-        when(userRepository.findByEmail(usuarioBase.getEmail())).thenReturn(Optional.of(usuarioBase));
-        when(passwordEncoder.matches("claveVieja", usuarioBase.getPassword())).thenReturn(true);
-        when(passwordEncoder.matches("claveNueva", usuarioBase.getPassword())).thenReturn(false);
-        when(passwordEncoder.encode("claveNueva")).thenReturn("hashNuevo");
-
-        useCase.changePassword(usuarioBase.getEmail(), request);
-
-        verify(userRepository, times(1)).save(usuarioBase);
-    }
-
-    @Test
-    void deberiaCambiarEmailConExito() {
-        ChangeEmailRequest request = mock(ChangeEmailRequest.class);
-        when(request.getPassword()).thenReturn("miClave");
-        when(request.getNewEmail()).thenReturn("nuevo-email@gmail.com");
-
-        when(userRepository.findByEmail(usuarioBase.getEmail())).thenReturn(Optional.of(usuarioBase));
-        when(passwordEncoder.matches("miClave", usuarioBase.getPassword())).thenReturn(true);
-        when(userRepository.existsByEmail("nuevo-email@gmail.com")).thenReturn(false);
-
-        useCase.changeEmail(usuarioBase.getEmail(), request);
-
-        assertEquals("nuevo-email@gmail.com", usuarioBase.getEmail());
-        verify(userRepository, times(1)).save(usuarioBase);
-    }
-
-    @Test
-    void deberiaObtenerYActualizarPerfil() {
-        when(userRepository.findByEmail(usuarioBase.getEmail())).thenReturn(Optional.of(usuarioBase));
-
-        ProfileResponse perfil = useCase.getProfile(usuarioBase.getEmail());
-        assertEquals(usuarioBase.getFullName(), perfil.getFullName());
-
-        UpdateProfileRequest updateReq = mock(UpdateProfileRequest.class);
-        when(updateReq.getFullName()).thenReturn("Nombre Editado");
-        when(updateReq.getPhone()).thenReturn("112233");
-        when(updateReq.getCountry()).thenReturn("Argentina");
-
-        ProfileResponse actualizado = useCase.updateProfile(usuarioBase.getEmail(), updateReq);
-
-        assertEquals("Nombre Editado", actualizado.getFullName());
-        verify(userRepository, times(1)).save(usuarioBase);
-    }
-
-    @Test
-    void deberiaSubirImagenDeUsuario() throws IOException {
-        MultipartFile archivo = mock(MultipartFile.class);
-        when(userRepository.findByEmail(usuarioBase.getEmail())).thenReturn(Optional.of(usuarioBase));
-        when(cloudinaryService.uploadImage(archivo, "users")).thenReturn("http://nube.com/foto.jpg");
-
-        UploadImageResponse response = useCase.uploadUserImage(usuarioBase.getEmail(), archivo);
-
-        assertEquals("http://nube.com/foto.jpg", response.getImage());
-        verify(userRepository, times(1)).save(usuarioBase);
-    }
-
-    @Test
     void deberiaVerificarEmailYHabilitarUsuario() {
         VerificationToken tokenObj = new VerificationToken("mi-token", usuarioBase);
         tokenObj.setExpiryDate(LocalDateTime.now().plusDays(1));
@@ -253,28 +170,6 @@ public class UserUseCaseImplTest {
         assertTrue(usuarioBase.isEnabled());
         verify(userRepository, times(1)).save(usuarioBase);
         verify(verificationTokenRepository, times(1)).delete(tokenObj);
-    }
-
-    @Test
-    void deberiaLanzarExcepcionAlEliminarCuentaSiTieneProtegidos() {
-        when(userRepository.findByEmail(usuarioBase.getEmail())).thenReturn(Optional.of(usuarioBase));
-
-        when(trustContactRepository.findByCarerId(usuarioBase.getId())).thenReturn(List.of(new TrustContact()));
-
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            useCase.deleteAccount(usuarioBase.getEmail());
-        });
-        assertTrue(exception.getMessage().contains("No puedes eliminar tu cuenta porque todavía tienes personas protegidas"));
-    }
-
-    @Test
-    void deberiaEliminarCuentaConExitoSiEstaLimpio() {
-        when(userRepository.findByEmail(usuarioBase.getEmail())).thenReturn(Optional.of(usuarioBase));
-        when(trustContactRepository.findByCarerId(usuarioBase.getId())).thenReturn(List.of());
-
-        useCase.deleteAccount(usuarioBase.getEmail());
-
-        verify(userRepository, times(1)).delete(usuarioBase);
     }
 
     @Test

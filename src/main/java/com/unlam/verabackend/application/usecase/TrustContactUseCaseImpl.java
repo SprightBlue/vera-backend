@@ -1,6 +1,6 @@
 package com.unlam.verabackend.application.usecase;
 
-import com.unlam.verabackend.application.service.CloudinaryService;
+import com.unlam.verabackend.infrastructure.provider.CloudinaryFileCloudAdapter;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.NotificationsType;
 import com.unlam.verabackend.domain.port.in.TrustContactUseCase;
@@ -34,7 +34,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     private final UserRepository userRepository;
     private final TrustInvitationRepository trustInvitationRepository;
     private final NotificationService notificationService;
-    private final CloudinaryService cloudinaryService;
+    private final CloudinaryFileCloudAdapter cloudinaryFileCloudAdapter;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
@@ -351,7 +351,7 @@ public class TrustContactUseCaseImpl implements TrustContactUseCase {
     @Override
     @Transactional
     public String uploadProtectedPersonImage(MultipartFile image) throws IOException {
-        return cloudinaryService.uploadImage(image, "protected");
+        return cloudinaryFileCloudAdapter.uploadImage(image, "protected");
     }
 
     @Override
