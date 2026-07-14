@@ -80,7 +80,7 @@ class ChatUseCaseImplTest {
         // Assert
         assertNotNull(resultId);
         assertEquals(generatedChatId, resultId);
-        verify(chatsRepository, times(1)).save(any(Chats.class));
+        verify(chatsRepository, times(1)).save(any(Chats.class)); // Sigue siendo 1 porque no hay persistMessage
         verify(aiProvider, never()).generateChatResponse(any(), any());
         verify(chatMessagesRepository, never()).save(any());
     }
@@ -105,7 +105,7 @@ class ChatUseCaseImplTest {
 
         // Assert
         assertEquals(chatId, resultId);
-        verify(chatsRepository, times(1)).save(any(Chats.class));
+        verify(chatsRepository, times(2)).save(any(Chats.class));
         verify(chatMessagesRepository, times(1)).save(any(ChatMessages.class));
     }
 
@@ -133,7 +133,7 @@ class ChatUseCaseImplTest {
         // Assert
         assertEquals(mockAiResponse, response);
         assertEquals("Phishing Bancario", mockChat.getTitle());
-        verify(chatsRepository, times(1)).save(mockChat);
+        verify(chatsRepository, times(3)).save(mockChat);
         verify(chatMessagesRepository, times(2)).save(any(ChatMessages.class));
     }
 
@@ -158,7 +158,7 @@ class ChatUseCaseImplTest {
         assertEquals(mockAiResponse, response);
         assertEquals("Título Personalizado", mockChat.getTitle());
         verify(promptBuilder, never()).buildTitleGenerationPrompt(any());
-        verify(chatsRepository, never()).save(any(Chats.class));
+        verify(chatsRepository, times(2)).save(any(Chats.class));
     }
 
     @Test
