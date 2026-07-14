@@ -164,6 +164,7 @@ public class ChatUseCaseImpl implements ChatUseCase {
                 .content(content)
                 .build();
         chatMessagesRepository.save(message);
+        chatsRepository.save(chat);
     }
 
     private String sanitizeTitle(String rawTitle) {

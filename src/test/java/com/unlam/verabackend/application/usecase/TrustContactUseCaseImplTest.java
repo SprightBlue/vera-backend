@@ -27,7 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.unlam.verabackend.application.service.CloudinaryService;
+import com.unlam.verabackend.infrastructure.provider.CloudinaryFileCloudAdapter;
 import com.unlam.verabackend.application.service.NotificationService;
 import com.unlam.verabackend.domain.model.InvitationStatus;
 import com.unlam.verabackend.domain.model.SensitivityLevel;
@@ -55,7 +55,7 @@ public class TrustContactUseCaseImplTest {
     @Mock
     private NotificationService notificationService;
     @Mock
-    private CloudinaryService cloudinaryService;
+    private CloudinaryFileCloudAdapter cloudinaryFileCloudAdapter;
 
     @InjectMocks
     private TrustContactUseCaseImpl useCase;
@@ -293,12 +293,12 @@ public class TrustContactUseCaseImplTest {
     @Test
     void deberiaSubirImagenACloudinary() throws IOException {
         MultipartFile archivo = mock(MultipartFile.class);
-        when(cloudinaryService.uploadImage(archivo, "protected")).thenReturn("http://nube.com/foto.jpg");
+        when(cloudinaryFileCloudAdapter.uploadImage(archivo, "protected")).thenReturn("http://nube.com/foto.jpg");
 
         String url = useCase.uploadProtectedPersonImage(archivo);
 
         assertEquals("http://nube.com/foto.jpg", url);
-        verify(cloudinaryService, times(1)).uploadImage(archivo, "protected");
+        verify(cloudinaryFileCloudAdapter, times(1)).uploadImage(archivo, "protected");
     }
 
     @Test
