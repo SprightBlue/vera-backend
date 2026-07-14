@@ -19,7 +19,6 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
     @ExceptionHandler(InvalidFileException.class)
     public ResponseEntity<String> handleInvalidFile(InvalidFileException ex) {
         log.warn("Invalid file error: {}", ex.getMessage());
