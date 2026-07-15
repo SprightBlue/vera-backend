@@ -2,10 +2,7 @@ package com.unlam.verabackend.presentation.controller;
 
 import com.unlam.verabackend.domain.port.in.UserSettingsUseCase;
 import com.unlam.verabackend.infrastructure.entity.User;
-import com.unlam.verabackend.presentation.dto.ChangeEmailRequest;
-import com.unlam.verabackend.presentation.dto.ChangePasswordRequest;
-import com.unlam.verabackend.presentation.dto.ProfileResponse;
-import com.unlam.verabackend.presentation.dto.UpdateProfileRequest;
+import com.unlam.verabackend.presentation.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -116,18 +113,19 @@ public class UserSettingsController {
     @DeleteMapping
     @Operation(
             summary = "Dar de baja definitivamente la cuenta",
-            description = "Inicia el borrado lógico/físico permanente del usuario autenticado del sistema de manera segura. Valida que no tenga vínculos activos.",
+            description = "Inicia el borrado definitivo del usuario previa validación de su clave y asegurando que no posea dependencias activas.",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Cuenta del usuario removida con éxito de los registros", content = @Content),
-                    @ApiResponse(responseCode = "400", description = "Imposible remover cuenta (el usuario posee dependencias activas como personas protegidas o cuidadores)", content = @Content),
+                    @ApiResponse(responseCode = "400", description = "La contraseña es incorrecta o el usuario posee dependencias activas (personas protegidas/cuidadores)", content = @Content),
                     @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido", content = @Content)
             }
     )
     public ResponseEntity<Void> deleteAccount(
-            @AuthenticationPrincipal @Parameter(hidden = true) User user
+            @AuthenticationPrincipal @Parameter(hidden = true) User user,
+            @Valid @RequestBody DeleteAccountRequest request
     ) throws IOException {
         log.info("REST Request: DELETE - Iniciando solicitud de remoción absoluta de cuenta para el usuario [{}]", user.getEmail());
-        userSettingsUseCase.deleteAccount(user.getEmail());
+        userSettingsUseCase.deleteAccount(user.getEmail(), request);
         return ResponseEntity.noContent().build();
     }
 }

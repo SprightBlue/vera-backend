@@ -22,8 +22,8 @@ public interface UserSettingsUseCase {
     @Transactional
     void changePassword(String email, ChangePasswordRequest request);
 
-    @Transactional
-    void deleteAccount(String email) throws IOException;
+    // Modificá la firma en UserSettingsUseCase.java
+    void deleteAccount(String email, DeleteAccountRequest request) throws IOException;
 
     @Transactional
     void deleteUserImage(String email) throws IOException;

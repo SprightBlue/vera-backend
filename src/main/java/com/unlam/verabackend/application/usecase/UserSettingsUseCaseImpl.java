@@ -2,9 +2,7 @@ package com.unlam.verabackend.application.usecase;
 
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.port.out.FileCloudProvider;
-import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.domain.port.in.UserSettingsUseCase;
-import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.entity.User;
 import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
@@ -17,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -25,7 +22,6 @@ import java.util.List;
 public class UserSettingsUseCaseImpl implements UserSettingsUseCase {
 
     private final UserRepository userRepository;
-    private final TrustContactRepository trustContactRepository;
     private final FileCloudProvider cloudinaryFileCloudAdapter;
     private final PasswordEncoder passwordEncoder;
 
@@ -137,26 +133,15 @@ public class UserSettingsUseCaseImpl implements UserSettingsUseCase {
 
     @Override
     @Transactional
-    public void deleteAccount(String email) throws IOException {
-        log.info("Iniciando proceso de eliminación de cuenta para: {}", email);
+    public void deleteAccount(String email, DeleteAccountRequest request) throws IOException {
+        log.info("Iniciando proceso de eliminación absoluta de cuenta para: {}", email);
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
-        if (user.getRole() == Role.CARER) {
-            List<TrustContact> contacts = trustContactRepository.findByCarerId(user.getId());
-            if (!contacts.isEmpty()) {
-                log.warn("Cancelada eliminación de cuenta de cuidador ({}): posee personas protegidas activas", email);
-                throw new RuntimeException("No puedes eliminar tu cuenta porque todavía tienes personas protegidas asociadas.");
-            }
-        }
-
-        if (user.getRole() == Role.PROTECTED) {
-            List<TrustContact> contacts = trustContactRepository.findByProtectedUserId(user.getId());
-            if (!contacts.isEmpty()) {
-                log.warn("Cancelada eliminación de cuenta de protegido ({}): está asociado a un cuidador", email);
-                throw new RuntimeException("No puedes eliminar tu cuenta porque todavía estás asociado a un cuidador.");
-            }
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            log.warn("Intento fallido de eliminación de cuenta para {}: contraseña incorrecta", email);
+            throw new RuntimeException("La contraseña ingresada es incorrecta.");
         }
 
         if (user.getImage() != null) {
@@ -165,7 +150,7 @@ public class UserSettingsUseCaseImpl implements UserSettingsUseCase {
         }
 
         userRepository.delete(user);
-        log.info("Cuenta eliminada definitivamente del sistema de forma segura: {}", email);
+        log.info("Cuenta removida del sistema exitosamente: {}", email);
     }
 
     @Override

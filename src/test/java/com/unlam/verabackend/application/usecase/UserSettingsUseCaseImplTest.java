@@ -3,9 +3,7 @@ package com.unlam.verabackend.application.usecase;
 import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.domain.port.out.FileCloudProvider;
-import com.unlam.verabackend.infrastructure.entity.TrustContact;
 import com.unlam.verabackend.infrastructure.entity.User;
-import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import com.unlam.verabackend.presentation.dto.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,8 +19,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,7 +29,6 @@ import static org.mockito.Mockito.*;
 class UserSettingsUseCaseImplTest {
 
     @Mock private UserRepository userRepository;
-    @Mock private TrustContactRepository trustContactRepository;
     @Mock private FileCloudProvider cloudinaryFileCloudAdapter;
     @Mock private PasswordEncoder passwordEncoder;
 
@@ -321,16 +316,23 @@ class UserSettingsUseCaseImplTest {
     @DisplayName("Pruebas para deleteAccount")
     class DeleteAccountTests {
 
+        private DeleteAccountRequest request;
+
+        @BeforeEach
+        void setUp() {
+            request = new DeleteAccountRequest();
+            request.setPassword("correct_password");
+        }
+
         @Test
-        @DisplayName("Debería eliminar cuenta de CARER correctamente si no posee asociados")
-        void deleteAccount_CarerWithoutContacts_ShouldDelete() throws IOException {
+        @DisplayName("Debería eliminar cuenta de usuario y su multimedia si la clave es válida")
+        void deleteAccount_ValidPassword_ShouldDeleteUserAndImage() throws IOException {
             // Arrange
-            baseUser.setRole(Role.CARER);
             when(userRepository.findByEmail(email)).thenReturn(Optional.of(baseUser));
-            when(trustContactRepository.findByCarerId(baseUser.getId())).thenReturn(Collections.emptyList());
+            when(passwordEncoder.matches(request.getPassword(), baseUser.getPassword())).thenReturn(true);
 
             // Act
-            userSettingsUseCase.deleteAccount(email);
+            userSettingsUseCase.deleteAccount(email, request);
 
             // Assert
             verify(cloudinaryFileCloudAdapter, times(1)).deleteImage("http://cloudinary.com/old_image.png");
@@ -338,49 +340,20 @@ class UserSettingsUseCaseImplTest {
         }
 
         @Test
-        @DisplayName("Debería lanzar excepción si un CARER aún posee contactos asociados")
-        void deleteAccount_CarerWithContacts_ShouldThrowException() {
+        @DisplayName("Debería lanzar RuntimeException si la contraseña de confirmación es incorrecta")
+        void deleteAccount_IncorrectPassword_ShouldThrowRuntimeException() throws IOException {
             // Arrange
-            baseUser.setRole(Role.CARER);
             when(userRepository.findByEmail(email)).thenReturn(Optional.of(baseUser));
-            when(trustContactRepository.findByCarerId(baseUser.getId())).thenReturn(List.of(new TrustContact()));
+            when(passwordEncoder.matches(request.getPassword(), baseUser.getPassword())).thenReturn(false);
 
             // Act & Assert
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userSettingsUseCase.deleteAccount(email)
+                    userSettingsUseCase.deleteAccount(email, request)
             );
-            assertEquals("No puedes eliminar tu cuenta porque todavía tienes personas protegidas asociadas.", ex.getMessage());
+            assertEquals("La contraseña ingresada es incorrecta.", ex.getMessage());
+
+            verify(cloudinaryFileCloudAdapter, never()).deleteImage(anyString());
             verify(userRepository, never()).delete(any(User.class));
-        }
-
-        @Test
-        @DisplayName("Debería eliminar cuenta de PROTECTED correctamente si no posee asociados")
-        void deleteAccount_ProtectedWithoutContacts_ShouldDelete() throws IOException {
-            // Arrange
-            baseUser.setRole(Role.PROTECTED);
-            when(userRepository.findByEmail(email)).thenReturn(Optional.of(baseUser));
-            when(trustContactRepository.findByProtectedUserId(baseUser.getId())).thenReturn(Collections.emptyList());
-
-            // Act
-            userSettingsUseCase.deleteAccount(email);
-
-            // Assert
-            verify(userRepository, times(1)).delete(baseUser);
-        }
-
-        @Test
-        @DisplayName("Debería lanzar excepción si un PROTECTED aún está asociado a un cuidador")
-        void deleteAccount_ProtectedWithContacts_ShouldThrowException() {
-            // Arrange
-            baseUser.setRole(Role.PROTECTED);
-            when(userRepository.findByEmail(email)).thenReturn(Optional.of(baseUser));
-            when(trustContactRepository.findByProtectedUserId(baseUser.getId())).thenReturn(List.of(new TrustContact()));
-
-            // Act & Assert
-            RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userSettingsUseCase.deleteAccount(email)
-            );
-            assertEquals("No puedes eliminar tu cuenta porque todavía estás asociado a un cuidador.", ex.getMessage());
         }
     }
 
