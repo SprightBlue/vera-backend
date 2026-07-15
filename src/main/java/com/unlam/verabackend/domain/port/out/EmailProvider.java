@@ -1,6 +1,6 @@
 package com.unlam.verabackend.domain.port.out;
 
-public interface EmailService {
+public interface EmailProvider {
 
     void sendPasswordResetEmail(
             String to,
