@@ -1,7 +1,7 @@
 package com.unlam.verabackend.application.usecase;
 
 import com.unlam.verabackend.infrastructure.provider.CloudinaryFileCloudAdapter;
-import com.unlam.verabackend.domain.port.out.EmailService;
+import com.unlam.verabackend.domain.port.out.EmailProvider;
 import com.unlam.verabackend.application.service.JwtService;
 import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.infrastructure.entity.PasswordResetToken;
@@ -41,7 +41,7 @@ public class UserUseCaseImplTest {
     @Mock private AuthenticationManager authenticationManager;
     @Mock private PasswordResetTokenRepository tokenRepository;
     @Mock private VerificationTokenRepository verificationTokenRepository;
-    @Mock private EmailService emailService;
+    @Mock private EmailProvider emailProvider;
     @Mock private CloudinaryFileCloudAdapter cloudinaryFileCloudAdapter;
     @Mock private TrustContactRepository trustContactRepository;
 
@@ -91,7 +91,7 @@ public class UserUseCaseImplTest {
         assertEquals("nuevo@gmail.com", response.getEmail());
         verify(userRepository, times(1)).save(any(User.class));
         verify(verificationTokenRepository, times(1)).save(any(VerificationToken.class));
-        verify(emailService, times(1)).sendVerificationEmail(eq("nuevo@gmail.com"), anyString());
+        verify(emailProvider, times(1)).sendVerificationEmail(eq("nuevo@gmail.com"), anyString());
     }
 
     @Test
@@ -124,7 +124,7 @@ public class UserUseCaseImplTest {
         useCase.forgotPassword(usuarioBase.getEmail());
 
         verify(tokenRepository, times(1)).save(any(PasswordResetToken.class));
-        verify(emailService, times(1)).sendPasswordResetEmail(eq(usuarioBase.getEmail()), anyString());
+        verify(emailProvider, times(1)).sendPasswordResetEmail(eq(usuarioBase.getEmail()), anyString());
     }
 
     @Test

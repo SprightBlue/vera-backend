@@ -18,7 +18,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.unlam.verabackend.domain.port.out.EmailService;
+import com.unlam.verabackend.domain.port.out.EmailProvider;
 import com.unlam.verabackend.infrastructure.entity.PasswordResetToken;
 import com.unlam.verabackend.infrastructure.repository.PasswordResetTokenRepository;
 
@@ -44,7 +44,7 @@ public class UserUseCaseImpl implements UserUseCase {
         private final AuthenticationManager authenticationManager;
         private final PasswordResetTokenRepository tokenRepository;
         private final VerificationTokenRepository verificationTokenRepository;
-        private final EmailService emailService;
+        private final EmailProvider emailProvider;
 
         @Value("${google.client-id}")
         private String googleClientId;
@@ -76,7 +76,7 @@ public class UserUseCaseImpl implements UserUseCase {
                 VerificationToken verificationToken = new VerificationToken(tokenDeEmail, user);
                 verificationTokenRepository.save(verificationToken);
 
-                emailService.sendVerificationEmail(user.getEmail(), tokenDeEmail);
+                emailProvider.sendVerificationEmail(user.getEmail(), tokenDeEmail);
 
                 return new AuthResponse(
                                 user.getId(),
@@ -174,7 +174,7 @@ public class UserUseCaseImpl implements UserUseCase {
 
                 tokenRepository.save(resetToken);
 
-                emailService.sendPasswordResetEmail(
+                emailProvider.sendPasswordResetEmail(
                                 user.getEmail(),
                                 token);
         }
