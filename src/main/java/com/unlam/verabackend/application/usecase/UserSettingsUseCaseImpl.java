@@ -4,7 +4,6 @@ import com.unlam.verabackend.domain.exception.ResourceNotFoundException;
 import com.unlam.verabackend.domain.port.out.FileCloudProvider;
 import com.unlam.verabackend.domain.port.in.UserSettingsUseCase;
 import com.unlam.verabackend.infrastructure.entity.User;
-import com.unlam.verabackend.infrastructure.repository.TrustContactRepository;
 import com.unlam.verabackend.infrastructure.repository.UserRepository;
 import com.unlam.verabackend.presentation.dto.*;
 import lombok.RequiredArgsConstructor;

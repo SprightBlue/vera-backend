@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @Schema(description = "DTO que expone la información resumida del último contacto de confianza y el usuario opuesto")
-public class TrustContactDashboardResponse {
+public class TrustContactResponse {
 
     @Schema(description = "ID del contacto de confianza", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long id;
@@ -35,21 +35,25 @@ public class TrustContactDashboardResponse {
     @Schema(description = "Email del usuario contrario", example = "juan.perez@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
     private String oppositeUserEmail;
 
+    @Schema(description = "Teléfono del usuario contrario", example = "+541123456789", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String oppositeUserPhone;
+
     @Schema(description = "URL o path de la imagen de perfil del usuario contrario", example = "https://bucket.s3.com/profiles/user5.jpg", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String oppositeUserImage;
 
-    public static TrustContactDashboardResponse fromEntity(TrustContact contact, Role currentRole) {
+    public static TrustContactResponse fromEntity(TrustContact contact, Role currentRole) {
         if (contact == null) return null;
 
         User oppositeUser = (currentRole == Role.CARER) ? contact.getProtectedUser() : contact.getCarer();
 
-        return TrustContactDashboardResponse.builder()
+        return TrustContactResponse.builder()
                 .id(contact.getId())
                 .createdAt(DateFormatter.formatRelativeDate(contact.getCreatedAt()))
                 .oppositeUserId(oppositeUser.getId())
                 .oppositeUserFullName(oppositeUser.getFullName())
                 .oppositeUserRole(oppositeUser.getRole())
                 .oppositeUserEmail(oppositeUser.getEmail())
+                .oppositeUserPhone(oppositeUser.getPhone())
                 .oppositeUserImage(oppositeUser.getImage())
                 .build();
     }
