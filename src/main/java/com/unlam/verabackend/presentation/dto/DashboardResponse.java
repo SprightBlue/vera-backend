@@ -38,7 +38,7 @@ public class DashboardResponse {
     private ChatSessionResponse latestUpdatedChat;
 
     @Schema(description = "Último contacto de confianza añadido al sistema (mapeado dinámicamente con la contraparte).")
-    private TrustContactDashboardResponse latestTrustContact;
+    private TrustContactResponse latestTrustContact;
 
     public static DashboardResponse fromDomain(DashboardData data, Role role) {
         if (data == null) return null;
@@ -48,7 +48,7 @@ public class DashboardResponse {
                 .alertsCountSince(data.getAlertsCountSince())
                 .resolvedAlertsCountSince(data.getResolvedAlertsCountSince())
                 .latestUpdatedChat(data.getLatestUpdatedChat() != null ? ChatSessionResponse.fromDomain(data.getLatestUpdatedChat()) : null)
-                .latestTrustContact(TrustContactDashboardResponse.fromEntity(data.getLatestTrustContact(), role));
+                .latestTrustContact(TrustContactResponse.fromEntity(data.getLatestTrustContact(), role));
 
         if (role == Role.PROTECTED) {
             builder.top3Analysis(
