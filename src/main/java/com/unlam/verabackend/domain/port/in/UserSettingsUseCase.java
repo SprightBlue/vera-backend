@@ -22,6 +22,7 @@ public interface UserSettingsUseCase {
     @Transactional
     void changePassword(String email, ChangePasswordRequest request);
 
+    @Transactional
     void deleteAccount(String email, DeleteAccountRequest request) throws IOException;
 
     @Transactional

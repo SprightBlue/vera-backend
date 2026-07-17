@@ -36,25 +36,15 @@ public class AlertsResponse {
     @Schema(description = "Severidad del riesgo asociado a la alerta", example = "HIGH", allowableValues = {"LOW", "MEDIUM", "HIGH"}, requiredMode = Schema.RequiredMode.REQUIRED)
     private String riskLevel;
 
-    @Schema(description = "Nombre completo del usuario protegido afectado. Solo visible para el rol CARER.")
-    private String protectedFullName;
-
-    @Schema(description = "Nombre completo del cuidador asignado. Solo visible para el rol PROTECTED.")
-    private String carerFullName;
+    @Schema(description = "Detalle del contacto de confianza de donde se originó la alerta, adaptado dinámicamente según quién visualice")
+    private TrustContactResponse trustContact;
 
     public static AlertsResponse fromDomain(Alerts domain, Role viewerRole) {
         if (domain == null) return null;
 
-        String protectedName = null;
-        String carerName = null;
-
+        TrustContactResponse contactResponse = null;
         if (domain.getTrustContact() != null) {
-            if (viewerRole == Role.CARER && domain.getTrustContact().getProtectedUser() != null) {
-                protectedName = domain.getTrustContact().getProtectedUser().getFullName();
-            }
-            else if (viewerRole == Role.PROTECTED && domain.getTrustContact().getCarer() != null) {
-                carerName = domain.getTrustContact().getCarer().getFullName();
-            }
+            contactResponse = TrustContactResponse.fromEntity(domain.getTrustContact(), viewerRole);
         }
 
         return AlertsResponse.builder()
@@ -64,8 +54,7 @@ public class AlertsResponse {
                 .contentSummary(domain.getContentSummary())
                 .isResolved(domain.isResolved())
                 .riskLevel(domain.getRiskLevel() != null ? domain.getRiskLevel().name() : null)
-                .protectedFullName(protectedName)
-                .carerFullName(carerName)
+                .trustContact(contactResponse)
                 .build();
     }
 }

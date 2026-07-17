@@ -191,5 +191,4 @@ public class ManageContactsUseCaseImpl implements ManageContactsUseCase {
             throw new AccessDeniedException("No tenés acceso a los contactos de esta persona protegida");
         }
     }
-
 }

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unlam.verabackend.domain.model.ChatMessages;
 import com.unlam.verabackend.domain.model.ChatsRole;
 import com.unlam.verabackend.domain.port.out.AiProvider;
-import com.unlam.verabackend.domain.port.out.AiResult;
+import com.unlam.verabackend.domain.model.AiResult;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;

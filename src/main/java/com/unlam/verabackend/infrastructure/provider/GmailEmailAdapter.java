@@ -89,7 +89,7 @@ public class GmailEmailAdapter implements EmailProvider {
                         <table width="600" cellpadding="0" cellspacing="0" style="background:#0B0D17; border-radius:20px; overflow:hidden; border:1px solid #1A1D29;">
                             <tr>
                                 <td align="center" style="padding:50px 40px 20px 40px;">
-                                    <img src="https://vera-app.vercel.app/Isologo_Vera.png" alt="VERA" width="180" />
+                                    <img src="https://vera-frontend-gamma.vercel.app/Isologo_Vera.png" alt="VERA" width="180" />
                                 </td>
                             </tr>
                             <tr>
@@ -146,7 +146,7 @@ public class GmailEmailAdapter implements EmailProvider {
                             <table width="600" cellpadding="0" cellspacing="0" style="background:#0B0D17; border-radius:20px; overflow:hidden; border:1px solid #1A1D29;">
                                 <tr>
                                     <td align="center" style="padding:50px 40px 20px 40px;">
-                                        <img src="https://vera-app.vercel.app/Isologo_Vera.png" alt="VERA" width="180" />
+                                        <img src="https://vera-frontend-gamma.vercel.app/Isologo_Vera.png" alt="VERA" width="180" />
                                     </td>
                                 </tr>
                                 <tr>

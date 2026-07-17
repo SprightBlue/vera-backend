@@ -26,10 +26,18 @@ public class DateFormatter {
         if (days < 7) return "Hace " + days + " día" + (days == 1 ? "" : "s");
 
         long weeks = ChronoUnit.WEEKS.between(date, now);
-        if (weeks < 4) return "Hace " + weeks + (weeks == 1 ? " semana" : " semanas");
+        if (weeks < 5) {
+            return "Hace " + weeks + (weeks == 1 ? " semana" : " semanas");
+        }
 
         long months = ChronoUnit.MONTHS.between(date, now);
-        if (months < 12) return "Hace " + months + (months == 1 ? " mes" : " meses");
+        if (months < 1) {
+            months = 1;
+        }
+
+        if (months < 12) {
+            return "Hace " + months + (months == 1 ? " mes" : " meses");
+        }
 
         long years = ChronoUnit.YEARS.between(date, now);
         return "Hace " + years + (years == 1 ? " año" : " años");
