@@ -7,7 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface UserUseCase {
         @Transactional
-        AuthResponse register(RegisterRequest request);
+        AuthResponse register(RegisterRequest request) throws Exception;
 
         @Transactional
         AuthResponse login(LoginRequest request);
@@ -16,7 +16,7 @@ public interface UserUseCase {
         AuthResponse googleLogin(String credential, String selectedRole);
 
         @Transactional
-        void forgotPassword(String email);
+        void forgotPassword(String email) throws Exception;
 
         @Transactional
         void resetPassword(String token, String newPassword);

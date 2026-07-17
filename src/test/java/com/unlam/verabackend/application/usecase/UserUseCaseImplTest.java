@@ -72,7 +72,7 @@ class UserUseCaseImplTest {
 
         @Test
         @DisplayName("Debería registrar al usuario exitosamente y enviar correo de verificación")
-        void register_Success_ShouldSaveUserAndSendEmail() {
+        void register_Success_ShouldSaveUserAndSendEmail() throws Exception {
             User savedUser = User.builder()
                     .id(10L)
                     .fullName(registerRequest.getFullName())
@@ -190,7 +190,7 @@ class UserUseCaseImplTest {
 
         @Test
         @DisplayName("Debería generar token de reinicio y enviar email si el usuario existe")
-        void forgotPassword_UserExists_ShouldGenerateTokenAndSendEmail() {
+        void forgotPassword_UserExists_ShouldGenerateTokenAndSendEmail() throws Exception {
             User user = User.builder().email(email).build();
             when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
 
