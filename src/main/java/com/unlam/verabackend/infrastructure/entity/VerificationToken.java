@@ -3,7 +3,6 @@ package com.unlam.verabackend.infrastructure.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -29,6 +28,13 @@ public class VerificationToken {
     public VerificationToken(String token, User user) {
         this.token = token;
         this.user = user;
-        this.expiryDate = LocalDateTime.now().plusHours(24); 
+        this.expiryDate = LocalDateTime.now().plusHours(24);
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.expiryDate == null) {
+            this.expiryDate = LocalDateTime.now().plusHours(24);
+        }
     }
 }

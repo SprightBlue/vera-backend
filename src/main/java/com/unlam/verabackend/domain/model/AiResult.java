@@ -1,4 +1,4 @@
-package com.unlam.verabackend.domain.port.out;
+package com.unlam.verabackend.domain.model;
 
 public record AiResult(
         String title, String contentSummary, String riskLevel, String riskType,

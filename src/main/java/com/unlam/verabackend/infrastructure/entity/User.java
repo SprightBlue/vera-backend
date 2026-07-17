@@ -52,9 +52,11 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean accountNonLocked = true;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean enabled = false;
 

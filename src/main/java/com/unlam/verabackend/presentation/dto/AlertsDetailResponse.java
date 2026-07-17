@@ -2,6 +2,7 @@ package com.unlam.verabackend.presentation.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.unlam.verabackend.domain.model.Alerts;
+import com.unlam.verabackend.domain.model.Role;
 import com.unlam.verabackend.presentation.utils.DateFormatter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -51,11 +52,19 @@ public class AlertsDetailResponse {
     @Schema(description = "Fecha en formato relativo de cuándo se marcó la alerta como resuelta. Puede ser nulo o indicar estado si sigue activa.", example = "Hace 1 hora")
     private String resolvedAt;
 
+    @Schema(description = "Detalle del contacto de confianza de donde se originó la alerta", requiredMode = Schema.RequiredMode.REQUIRED)
+    private TrustContactResponse trustContact;
+
     public static AlertsDetailResponse fromDomain(Alerts alert) {
         if (alert == null) return null;
 
         String fullName = (alert.getTrustContact() != null && alert.getTrustContact().getProtectedUser() != null)
                 ? alert.getTrustContact().getProtectedUser().getFullName() : null;
+
+        TrustContactResponse contactResponse = null;
+        if (alert.getTrustContact() != null) {
+            contactResponse = TrustContactResponse.fromEntity(alert.getTrustContact(), Role.CARER);
+        }
 
         return AlertsDetailResponse.builder()
                 .id(alert.getId())
@@ -70,6 +79,7 @@ public class AlertsDetailResponse {
                 .suspiciousPatterns(alert.getSuspiciousPatterns())
                 .isResolved(alert.isResolved())
                 .resolvedAt(DateFormatter.formatRelativeDate(alert.getResolvedAt()))
+                .trustContact(contactResponse)
                 .build();
     }
 }
