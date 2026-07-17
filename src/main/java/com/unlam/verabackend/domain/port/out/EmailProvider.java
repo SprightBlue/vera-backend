@@ -5,7 +5,7 @@ public interface EmailProvider {
     void sendPasswordResetEmail(
             String to,
             String token
-    );
+    ) throws Exception;
 
-    void sendVerificationEmail(String to, String token);
+    void sendVerificationEmail(String to, String token) throws Exception;
 }

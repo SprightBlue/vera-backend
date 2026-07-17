@@ -46,7 +46,7 @@ public class AuthController {
             }
     )
     public ResponseEntity<AuthResponse> register(
-            @Valid @RequestBody RegisterRequest request) {
+            @Valid @RequestBody RegisterRequest request) throws Exception {
         log.info("REST Request: POST - Solicitando registro de nuevo usuario con email [{}]", request.getEmail());
         AuthResponse response = userService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -108,7 +108,7 @@ public class AuthController {
             }
     )
     public ResponseEntity<Void> forgotPassword(
-            @Valid @RequestBody ForgotPasswordRequest request) {
+            @Valid @RequestBody ForgotPasswordRequest request) throws Exception {
         log.info("REST Request: POST - Solicitando recuperación de clave para el email [{}]", request.getEmail());
         userService.forgotPassword(request.getEmail());
         return ResponseEntity.ok().build();

@@ -46,12 +46,12 @@ public class UserUseCaseImpl implements UserUseCase {
     private final VerificationTokenRepository verificationTokenRepository;
     private final EmailProvider emailProvider;
 
-    @Value("${google.client-id}")
+    @Value("${google.client.id}")
     private String googleClientId;
 
     @Override
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request) throws Exception {
         log.info("Iniciando proceso de registro para el email: {}", request.getEmail());
 
         if (request.getAcceptedTerms() == null || !request.getAcceptedTerms()) {
@@ -169,7 +169,7 @@ public class UserUseCaseImpl implements UserUseCase {
 
     @Override
     @Transactional
-    public void forgotPassword(String email) {
+    public void forgotPassword(String email) throws Exception {
         log.info("Solicitud de recuperación de contraseña para el email: {}", email);
 
         User user = userRepository.findByEmail(email)
