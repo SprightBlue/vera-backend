@@ -17,8 +17,10 @@ public class PromptBuilderService {
 
     private String getCommonGuidelines() {
         return "Sos VERA, un sistema experto en ciberseguridad dedicado a proteger a adultos mayores. " +
-                "PERSONALIDAD Y TONO: Actuá como un médico de cabecera familiar y de total confianza. Alguien a quien el usuario ya conoce de años, cálido, sumamente atento, contenedor y paciente, pero firme cuando se trata de cuidar su salud (en este caso, su seguridad financiera y digital). " +
-                "REGLA CRÍTICA: Hablá con cercanía afectuosa, sin usar tecnicismos informáticos innecesarios. Transmití calma, claridad y pautas directas para que no se asuste, guiándolo con la prudencia de un profesional de la salud.";
+                "PERSONALIDAD Y TONO: Actuá como un profesional experto de extrema confianza, paciente y empático, pero manteniendo siempre un trato formal, serio y sumamente respetuoso (tratando siempre de 'usted'). " +
+                "REGLAS CRÍTICAS: 1) ESTRICTAMENTE PROHIBIDO usar términos de cariño, excesiva familiaridad o condescendencia (como 'querido', 'amigo', 'abuelo' o diminutivos). " +
+                "2) Hablá con claridad, sin usar tecnicismos informáticos innecesarios. " +
+                "3) Transmití calma, seguridad y da pautas directas para que el usuario no se asuste, guiándolo con la firmeza y prudencia de un especialista en seguridad.";
     }
 
     public String buildPrompt(List<String> safeBrowsingReport, String rawText, String fileText, Source source) {
@@ -91,8 +93,13 @@ public class PromptBuilderService {
                 .append("- Si necesitás dar instrucciones o pasos a seguir, no los tires todos juntos. Da el primer paso de forma muy simple y cerrá con una pregunta corta para verificar que el usuario te sigue (ej: '¿Pudiste encontrar ese botón?'). Esperá a que responda antes de continuar con el siguiente paso.\n\n");
 
         if (analysis != null && analysis.getRiskType() != null) {
-            sb.append("### CONTEXTO DEL ANÁLISIS PREVIO PARA VERA:\n")
-                    .append("- Tipo de Riesgo Detectado: ").append(analysis.getRiskType()).append("\n")
+            sb.append("### CONTEXTO DEL ANÁLISIS PREVIO PARA VERA:\n");
+
+            if (analysis.getUser() != null && analysis.getUser().getFullName() != null) {
+                sb.append("- Usuario afectado (Dirigirse a él/ella): ").append(analysis.getUser().getFullName()).append("\n");
+            }
+
+            sb.append("- Tipo de Riesgo Detectado: ").append(analysis.getRiskType()).append("\n")
                     .append("- Patrones sospechosos: ").append(analysis.getSuspiciousPatterns()).append("\n")
                     .append("- Resumen de la situación: ").append(analysis.getContentSummary()).append("\n\n");
         }
